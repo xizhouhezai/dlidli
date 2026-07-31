@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Hls from 'hls.js'
+import { bindKeyboard, PlayerCore, qualityLabel } from '@dlidli/player'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
 import { ApiError, type CollectionItem, type StreamItem, type VideoCard, type VideoDetail } from '@dlidli/api-client'
@@ -24,8 +24,18 @@ const descExpanded = ref(false)
 
 // 播放器与清晰度
 const videoEl = ref<HTMLVideoElement>()
+const playerBox = ref<HTMLElement>()
 const currentStream = ref<StreamItem | null>(null)
-let hls: Hls | null = null
+let player: PlayerCore | null = null
+let unbindKeys: (() => void) | null = null
+
+// 倍速
+const playbackRate = ref(1)
+const rateOptions = [0.5, 0.75, 1, 1.25, 1.5, 2]
+function setRate(rate: number) {
+  playbackRate.value = rate
+  player?.setRate(rate)
+}
 
 // 弹幕
 const dmEnabled = ref(true)
@@ -302,53 +312,23 @@ async function tryAutoplay() {
   }
 }
 
-function qualityLabel(q: number) {
-  return q === 0 ? '原画' : `${q}P`
-}
-
-/** 默认清晰度：最高档 HLS，无 HLS 时回退原画 */
-function pickDefaultStream(streams: StreamItem[]): StreamItem | null {
-  return streams.find((s) => s.format === 'hls') ?? streams[0] ?? null
-}
-
-/** 挂载播放源：HLS 用 hls.js（Safari 原生），mp4 直接 src */
-function attachStream(stream: StreamItem, keepPosition = false) {
+/** 确保 PlayerCore 已创建（绑定到当前 <video>）。 */
+function ensurePlayer(): PlayerCore | null {
   const video = videoEl.value
-  if (!video) return
-  const pos = keepPosition ? video.currentTime : 0
-  const wasPlaying = keepPosition && !video.paused
-
-  hls?.destroy()
-  hls = null
-  video.removeAttribute('src')
-
-  if (stream.format === 'hls') {
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = stream.url
-    } else if (Hls.isSupported()) {
-      hls = new Hls()
-      hls.loadSource(stream.url)
-      hls.attachMedia(video)
-    } else {
-      // 极端兜底：换回原画
-      const raw = detail.value?.streams.find((s) => s.quality === 0)
-      if (raw) video.src = raw.url
-    }
-  } else {
-    video.src = stream.url
+  if (!video) return null
+  if (!player) {
+    player = new PlayerCore(video, {
+      onSourceChange: (s) => {
+        currentStream.value = s as StreamItem
+      },
+    })
   }
-
-  currentStream.value = stream
-  if (keepPosition) {
-    video.currentTime = pos
-    lastTime = pos
-    if (wasPlaying) void video.play()
-  }
+  return player
 }
 
 function switchQuality(stream: StreamItem) {
-  if (stream.url === currentStream.value?.url) return
-  attachStream(stream, true)
+  player?.switchTo(stream)
+  lastTime = videoEl.value?.currentTime ?? lastTime
 }
 
 async function load(bvid: string) {
@@ -360,8 +340,8 @@ async function load(bvid: string) {
   watchedSeconds = 0
   lastTime = 0
   lastProgressSave = 0
-  hls?.destroy()
-  hls = null
+  player?.destroy()
+  player = null
 
   try {
     detail.value = await api.video.detail(bvid)
@@ -370,8 +350,13 @@ async function load(bvid: string) {
     // 先结束骨架屏让 <video> 渲染，再挂播放源（否则 videoEl 尚未存在，挂流静默失败）
     loading.value = false
     await nextTick()
-    const def = pickDefaultStream(detail.value.streams)
-    if (def) attachStream(def) // 默认最高画质（streams 按 quality 降序，HLS 优先）
+    playbackRate.value = 1
+    const p = ensurePlayer()
+    p?.setSources(detail.value.streams) // 默认最高画质（streams 按 quality 降序，HLS 优先）
+    // 绑定快捷键（首次）
+    if (!unbindKeys && videoEl.value) {
+      unbindKeys = bindKeyboard(videoEl.value, { container: playerBox.value ?? null })
+    }
     tryResume(bvid)
     void tryAutoplay()
 
@@ -450,8 +435,10 @@ onBeforeUnmount(() => {
   if (userStore.token && detail.value && video && video.currentTime > 2) {
     api.video.saveProgress(detail.value.bvid, Math.floor(video.currentTime)).catch(() => {})
   }
-  hls?.destroy()
-  hls = null
+  player?.destroy()
+  player = null
+  unbindKeys?.()
+  unbindKeys = null
   document.title = 'DliDli - 视频社区'
 })
 </script>
@@ -503,7 +490,10 @@ onBeforeUnmount(() => {
       </p>
 
       <!-- 播放器：HLS 多清晰度（hls.js）+ 弹幕层 -->
-      <div class="player-box">
+      <div
+        ref="playerBox"
+        class="player-box"
+      >
         <video
           ref="videoEl"
           class="play-video"
@@ -532,6 +522,28 @@ onBeforeUnmount(() => {
           <span class="dm-toggle__text">弹幕</span>
         </span>
         <span class="play-controls__spacer" />
+        <!-- 倍速 -->
+        <el-dropdown
+          trigger="click"
+          @command="setRate"
+        >
+          <span class="play-toolbar__rate">
+            {{ playbackRate === 1 ? '倍速' : playbackRate + 'x' }}
+            <span class="i-mingcute-down-line" />
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item
+                v-for="r in rateOptions"
+                :key="r"
+                :command="r"
+                :class="{ 'is-active': playbackRate === r }"
+              >
+                {{ r === 1 ? '正常' : r + 'x' }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <span class="play-toolbar__label">清晰度</span>
         <el-button-group>
           <el-button
@@ -954,6 +966,23 @@ onBeforeUnmount(() => {
 .play-toolbar__label {
   font-size: 13px;
   color: var(--dli-text-2);
+}
+
+.play-toolbar__rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--dli-text-2);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    color: var(--dli-primary);
+    background: var(--dli-fill-1, rgba(0, 0, 0, 0.04));
+  }
 }
 
 /* 弹幕开关（图标 toggle） */

@@ -34,8 +34,12 @@ packages/
 ### 3.1 播放器（packages/player）
 
 - 内核：`hls.js`（Web/H5）；小程序用原生 `<video>` 传 HLS 地址。
-- 分层：`core`（加载/清晰度/进度）+ `danmaku`（Canvas 弹幕渲染，碰撞检测轨道分配）+ `ui`（控制栏皮肤，各端注入）。
-- 埋点：起播耗时、卡顿、清晰度切换事件统一上报。
+- 已落地（M1-VID-09），导出三块：
+  - `PlayerCore`（core.ts）：框架无关内核。`setSources`/`attach`/`switchTo`/`setRate`/`destroy`；HLS 走 hls.js（Safari 原生），mp4 直挂 src，不支持 MSE 时兜底原画；切清晰度保留进度与播放态。
+  - `bindKeyboard`（keyboard.ts）：空格/k 播停、←→ 快进退、↑↓ 音量、m 静音、f 全屏；输入框聚焦时不拦截；返回解绑函数。
+  - `qualityLabel`/`pickDefaultSource`（quality.ts）：清晰度文案与默认档选择（优先最高 HLS）。
+- 弹幕渲染：当前由 web `DanmakuLayer.vue`（Canvas 轨道分配）承担，后续可下沉入 player 包。
+- 埋点（规划）：起播耗时、卡顿、清晰度切换事件统一上报。
 
 ### 3.2 API 层（packages/api-client）
 
