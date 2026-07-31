@@ -90,8 +90,8 @@ type Category struct {
 	ID       int    `json:"id" gorm:"primaryKey"`
 	ParentID int    `json:"parent_id"`
 	Name     string `json:"name"`
-	Sort     int    `json:"-"`
-	Status   int8   `json:"-"`
+	Sort     int    `json:"sort"`
+	Status   int8   `json:"status"` // 0 正常 1 停用
 }
 
 func (Category) TableName() string { return "category" }
