@@ -194,8 +194,8 @@ func (s *Service) UpdateRole(adminID, id int64, req *SaveRoleReq) error {
 	if err := s.repo.UpdateRole(id, map[string]any{"name": req.Name, "remark": req.Remark}); err != nil {
 		return err
 	}
-	// 内置角色不改权限（super 恒全集；其余内置角色权限固定由 seed 管理）
-	if role.IsBuiltin == 0 {
+	// super 权限恒为全集，不可编辑；其余角色（含内置）允许管理权限
+	if role.Code != SuperRoleCode {
 		_ = s.repo.SetRolePerms(id, req.Perms)
 	}
 	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_role", ObjType: "role", Oid: id, Detail: req.Name})
