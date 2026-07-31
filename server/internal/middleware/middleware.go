@@ -7,6 +7,7 @@ import (
 
 	"github.com/dlidli/server/internal/pkg/errcode"
 	"github.com/dlidli/server/internal/pkg/jwtx"
+	"github.com/dlidli/server/internal/pkg/playsign"
 	"github.com/dlidli/server/internal/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -168,6 +169,23 @@ func RequirePerm(check PermChecker, code string) gin.HandlerFunc {
 		if !ok {
 			response.Fail(c, errcode.ErrForbidden)
 			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// PlaySignGuard 校验播放地址签名（置于 /static 静态服务前）。
+// 仅对 videos/ 下的播放入口（.m3u8/.mp4）强制签名；
+// HLS 分片（.ts）与封面/头像等非播放入口资源放行。
+func PlaySignGuard(secret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		rel := strings.TrimPrefix(c.Request.URL.Path, "/static/")
+		lower := strings.ToLower(rel)
+		needSign := strings.Contains(lower, "videos/") &&
+			(strings.HasSuffix(lower, ".m3u8") || strings.HasSuffix(lower, ".mp4"))
+		if needSign && !playsign.Verify(secret, rel, c.Query("e"), c.Query("s")) {
+			c.AbortWithStatus(403)
 			return
 		}
 		c.Next()

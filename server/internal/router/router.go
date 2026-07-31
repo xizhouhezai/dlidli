@@ -63,8 +63,9 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 	})
 
 	// 本地存储静态资源（dev；生产由 CDN/对象存储直出）
+	// 播放入口（videos 下 .m3u8/.mp4）需 HMAC 签名校验（VID-05），封面/头像放行
 	if cfg.Storage.Driver == "local" || cfg.Storage.Driver == "" {
-		e.Static("/static", cfg.Storage.LocalDir)
+		e.Group("/static", middleware.PlaySignGuard(cfg.JWT.Secret)).Static("/", cfg.Storage.LocalDir)
 	}
 
 	v1 := e.Group("/api/v1")

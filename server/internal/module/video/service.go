@@ -17,6 +17,7 @@ import (
 	"github.com/dlidli/server/internal/pkg/bvid"
 	"github.com/dlidli/server/internal/pkg/config"
 	"github.com/dlidli/server/internal/pkg/errcode"
+	"github.com/dlidli/server/internal/pkg/playsign"
 	"github.com/dlidli/server/internal/pkg/snowflake"
 	"github.com/dlidli/server/internal/pkg/storage"
 	"github.com/redis/go-redis/v9"
@@ -25,6 +26,16 @@ import (
 )
 
 const coverMaxSize = 5 << 20 // 5MB
+
+// playSignTTL 播放地址签名有效期（下发给客户端的 URL 过期时间）。
+const playSignTTL = 6 * time.Hour
+
+// signedPlayURL 拼接带 HMAC 签名与过期的播放地址。
+func (s *Service) signedPlayURL(playPath string) string {
+	base := strings.TrimRight(s.cfg.Storage.BaseURL, "/")
+	q := playsign.Query(s.cfg.JWT.Secret, playPath, playSignTTL)
+	return fmt.Sprintf("%s/%s?%s", base, playPath, q)
+}
 
 var coverExts = map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
 
@@ -386,7 +397,7 @@ func (s *Service) ReviewList(ctx context.Context, page, size int) ([]ReviewItem,
 		}
 		for _, st := range streams {
 			if st.Quality == 0 {
-				item.PlayURL = fmt.Sprintf("%s/%s", strings.TrimRight(s.cfg.Storage.BaseURL, "/"), st.PlayPath)
+				item.PlayURL = s.signedPlayURL(st.PlayPath)
 				break
 			}
 		}
@@ -572,8 +583,8 @@ func (s *Service) detail(ctx context.Context, v *Video, withStreams bool) (*Deta
 			d.Streams = append(d.Streams, StreamItem{
 				Quality: st.Quality,
 				Format:  st.Format,
-				// TODO(PLY-08): 生产环境换签名 URL + CDN；本地直出静态地址
-				URL: fmt.Sprintf("%s/%s", strings.TrimRight(s.cfg.Storage.BaseURL, "/"), st.PlayPath),
+				// 签名下发（PLY/VID-05）：HMAC + 过期；生产环境可叠加 CDN
+				URL: s.signedPlayURL(st.PlayPath),
 			})
 		}
 	}
