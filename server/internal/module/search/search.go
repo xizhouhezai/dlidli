@@ -27,6 +27,14 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup) {
 	v1.GET("/search", h.search)
 }
 
+// @Summary  搜索（视频/用户）
+// @Tags     搜索
+// @Produce  json
+// @Param    kw query string true "关键词"
+// @Param    type query string false "类型 video|user"
+// @Param    page query int false "页码"
+// @Success  200 {object} response.Body
+// @Router   /search [get]
 func (h *Handler) search(c *gin.Context) {
 	keyword := strings.TrimSpace(c.Query("keyword"))
 	if keyword == "" || len([]rune(keyword)) > 50 {

@@ -50,6 +50,14 @@ curl http://localhost:8000/api/v1/ping
 | `go test ./... -race` | 单元测试 |
 | `go run ./cmd/migrate` | 应用迁移 |
 | `go run ./cmd/migrate -down` | 回滚一步 |
+| `swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal` | 生成接口文档（改接口后重跑） |
+
+## 接口文档（Swagger / OpenAPI）
+
+- 基于 swaggo：handler 上写 `// @Summary/@Tags/@Router/@Param/@Success` 注解，`swag init` 生成 `docs/`。
+- 非生产环境启动后访问 **http://localhost:8000/swagger/index.html** 查看可交互文档（可直接调试）。
+- 需授权的接口在 UI 右上角 **Authorize** 填入 `Bearer {token}`。
+- 新增或修改接口后必须重跑 `swag init` 刷新（`docs/` 为生成产物但需提交，因 router 直接导入）。
 
 ## 约定
 

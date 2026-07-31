@@ -58,6 +58,13 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, adminAuth gin.HandlerFunc)
 	}
 }
 
+// @Summary  后台登录
+// @Tags     管理后台
+// @Accept   json
+// @Produce  json
+// @Param    body body LoginReq true "管理员账密"
+// @Success  200 {object} response.Body "data: {token, username, role}"
+// @Router   /admin/login [post]
 func (h *Handler) login(c *gin.Context) {
 	var req LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -72,6 +79,12 @@ func (h *Handler) login(c *gin.Context) {
 	response.OK(c, resp)
 }
 
+// @Summary  待审稿件队列
+// @Tags     管理后台
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /admin/videos/review [get]
 func (h *Handler) reviewList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
@@ -89,6 +102,15 @@ func (h *Handler) reviewList(c *gin.Context) {
 	response.OK(c, gin.H{"list": items, "total": total})
 }
 
+// @Summary  审核稿件（通过/驳回）
+// @Tags     管理后台
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    bvid path string true "视频 BV 号"
+// @Param    body body ReviewReq true "approve; reason"
+// @Success  200 {object} response.Body
+// @Router   /admin/videos/{bvid}/review [post]
 func (h *Handler) review(c *gin.Context) {
 	var req ReviewReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -103,6 +125,12 @@ func (h *Handler) review(c *gin.Context) {
 	response.OK(c, nil)
 }
 
+// @Summary  敏感词列表
+// @Tags     管理后台
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /admin/sensitive-words [get]
 func (h *Handler) listWords(c *gin.Context) {
 	list, err := h.svc.ListWords()
 	if err != nil {
@@ -112,6 +140,14 @@ func (h *Handler) listWords(c *gin.Context) {
 	response.OK(c, gin.H{"list": list})
 }
 
+// @Summary  新增敏感词
+// @Tags     管理后台
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body body AddWordReq true "word"
+// @Success  200 {object} response.Body
+// @Router   /admin/sensitive-words [post]
 func (h *Handler) addWord(c *gin.Context) {
 	var req AddWordReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -127,6 +163,13 @@ func (h *Handler) addWord(c *gin.Context) {
 	response.OK(c, w)
 }
 
+// @Summary  删除敏感词
+// @Tags     管理后台
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "敏感词ID"
+// @Success  200 {object} response.Body
+// @Router   /admin/sensitive-words/{id} [delete]
 func (h *Handler) deleteWord(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -141,6 +184,14 @@ func (h *Handler) deleteWord(c *gin.Context) {
 	response.OK(c, nil)
 }
 
+// @Summary  用户查询（UID/手机号/昵称+状态）
+// @Tags     管理后台
+// @Produce  json
+// @Security BearerAuth
+// @Param    keyword query string false "UID/手机号/昵称"
+// @Param    status query int false "状态 -1全部/0正常/1禁言/2封禁"
+// @Success  200 {object} response.Body
+// @Router   /admin/users [get]
 func (h *Handler) listUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
@@ -159,6 +210,15 @@ func (h *Handler) listUsers(c *gin.Context) {
 	response.OK(c, gin.H{"list": list, "total": total})
 }
 
+// @Summary  用户处罚（禁言/封禁/解除）
+// @Tags     管理后台
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "用户ID"
+// @Param    body body PunishReq true "action; days; reason"
+// @Success  200 {object} response.Body
+// @Router   /admin/users/{id}/punish [post]
 func (h *Handler) punishUser(c *gin.Context) {
 	uid, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
