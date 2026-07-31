@@ -92,7 +92,8 @@ export default defineConfig({
             { text: '路线图（Roadmap）', link: '/project/roadmap' },
             { text: '开发进度管理', link: '/project/progress' },
             { text: '开发清单（Checklist）', link: '/project/checklist' },
-            { text: '协作规范', link: '/project/conventions' }
+            { text: '协作规范', link: '/project/conventions' },
+            { text: '部署与运行指南', link: '/project/deployment' }
           ]
         }
       ]
