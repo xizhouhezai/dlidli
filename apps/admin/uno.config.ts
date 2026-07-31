@@ -17,6 +17,17 @@ export default defineConfig({
     }),
   ],
   transformers: [transformerDirectives()],
+  // 侧边栏菜单图标由后端 /me/permissions 动态下发（:class="item.icon"），
+  // 非源码字面量，UnoCSS 静态扫描不到会漏生成，需 safelist 强制纳入。
+  // 新增后台菜单（builtinPermissions 的 menu 图标）时同步补充此处。
+  safelist: [
+    'i-mingcute-dashboard-3-line',
+    'i-mingcute-task-2-line',
+    'i-mingcute-shield-line',
+    'i-mingcute-user-3-line',
+    'i-mingcute-safe-lock-line',
+    'i-mingcute-group-line',
+  ],
   theme: {
     colors: {
       primary: '#fb7299',
