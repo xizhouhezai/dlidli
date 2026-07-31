@@ -42,6 +42,16 @@ export interface AdminPermission {
   sort: number
 }
 
+export interface SavePermissionPayload {
+  code?: string
+  name: string
+  type: 'menu' | 'button'
+  parent?: string
+  path?: string
+  icon?: string
+  sort?: number
+}
+
 export interface AdminMenuItem {
   code: string
   name: string
@@ -148,6 +158,15 @@ export function createAdminApi(http: HttpClient) {
     /** 权限点全集 */
     permissions: () =>
       http.get<{ list: AdminPermission[] }>('/api/v1/admin/permissions'),
+
+    createPermission: (payload: SavePermissionPayload) =>
+      http.post<AdminPermission>('/api/v1/admin/permissions', payload),
+
+    updatePermission: (id: string, payload: SavePermissionPayload) =>
+      http.put<null>(`/api/v1/admin/permissions/${id}`, payload),
+
+    deletePermission: (id: string) =>
+      http.delete<null>(`/api/v1/admin/permissions/${id}`),
 
     /** 角色列表 */
     roles: () =>

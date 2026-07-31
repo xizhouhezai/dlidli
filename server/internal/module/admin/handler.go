@@ -40,8 +40,11 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, adminAuth gin.HandlerFunc)
 			authed.GET("/users", perm("user:view"), h.listUsers)
 			authed.POST("/users/:id/punish", perm("user:punish"), h.punishUser)
 
-			// 权限点全集（角色分配树用）
-			authed.GET("/permissions", perm("role:view"), h.listPermissions)
+			// 权限点：目录为元数据（角色分配树与权限管理页共用），读取仅需登录；写操作需 permission:edit
+			authed.GET("/permissions", h.listPermissions)
+			authed.POST("/permissions", perm("permission:edit"), h.createPermission)
+			authed.PUT("/permissions/:id", perm("permission:edit"), h.updatePermission)
+			authed.DELETE("/permissions/:id", perm("permission:edit"), h.deletePermission)
 			// 角色管理
 			authed.GET("/roles", perm("role:view"), h.listRoles)
 			authed.POST("/roles", perm("role:edit"), h.createRole)

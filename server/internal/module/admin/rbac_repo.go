@@ -97,6 +97,48 @@ func (r *Repo) AllPermissions() ([]Permission, error) {
 	return list, err
 }
 
+// ---- 权限点 CRUD（M2-RBAC-06） ----
+
+func (r *Repo) FindPermission(id int64) (*Permission, error) {
+	var p Permission
+	err := r.db.First(&p, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &p, err
+}
+
+func (r *Repo) FindPermissionByCode(code string) (*Permission, error) {
+	var p Permission
+	err := r.db.Where("code = ?", code).First(&p).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &p, err
+}
+
+func (r *Repo) CreatePermission(p *Permission) error { return r.db.Create(p).Error }
+
+func (r *Repo) UpdatePermission(id int64, fields map[string]any) error {
+	return r.db.Model(&Permission{}).Where("id = ?", id).Updates(fields).Error
+}
+
+func (r *Repo) DeletePermission(id int64) error { return r.db.Delete(&Permission{}, id).Error }
+
+// PermissionChildCount 子权限点数（删除菜单前校验：parent = 该菜单 code）。
+func (r *Repo) PermissionChildCount(code string) (int64, error) {
+	var cnt int64
+	err := r.db.Model(&Permission{}).Where("parent = ?", code).Count(&cnt).Error
+	return cnt, err
+}
+
+// PermissionRoleRefCount 被角色引用次数（删除前校验）。
+func (r *Repo) PermissionRoleRefCount(id int64) (int64, error) {
+	var cnt int64
+	err := r.db.Model(&RolePermission{}).Where("permission_id = ?", id).Count(&cnt).Error
+	return cnt, err
+}
+
 // ListRoles 角色列表。
 func (r *Repo) ListRoles() ([]Role, error) {
 	var list []Role

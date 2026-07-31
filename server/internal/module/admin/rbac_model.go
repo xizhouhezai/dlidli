@@ -73,6 +73,9 @@ var builtinPermissions = []Permission{
 	// 系统 - 角色
 	{Code: "role:view", Name: "角色管理", Type: "menu", Path: "/roles", Icon: "i-mingcute-group-line", Sort: 6},
 	{Code: "role:edit", Name: "增删改角色/分配权限", Type: "button", Parent: "role:view"},
+	// 系统 - 权限点
+	{Code: "permission:view", Name: "权限管理", Type: "menu", Path: "/permissions", Icon: "i-mingcute-key-2-line", Sort: 8},
+	{Code: "permission:edit", Name: "增删改权限点", Type: "button", Parent: "permission:view"},
 }
 
 // 内置角色定义（code → 权限码集合；super 特殊，拥有全部）。
