@@ -1,17 +1,43 @@
 # 协作规范
 
-> 状态：`V1.0` ｜ 更新日期：2026-07-28
+> 状态：`V1.1` ｜ 更新日期：2026-07-31
 
 ## 1. 分支与提交
 
-### 分支模型（Trunk-Based 简化版）
+### 分支模型（Git Flow）
 
 ```
-main        ── 随时可发布，受保护，仅 PR 合入
-feature/*   ── 功能分支：feature/m1-acc-01-phone-login
-fix/*       ── 缺陷修复
-release/*   ── 发布分支（公测后启用）
+main        ── 生产发布分支，受保护；只接受 release/hotfix 合入，每次发布打 tag
+develop     ── 集成分支，日常开发成果的汇聚处（默认开发基线）
+feature/*   ── 功能分支：每个任务一个，如 feature/m1-adm-03-user-ban
+release/*   ── 发布分支：release/v0.2.0，从 develop 切出做发布准备
+hotfix/*    ── 线上紧急修复，从 main 切出
 ```
+
+### 任务开发完整流程（每个任务遵循）
+
+1. **开分支**：从 `develop` 切出 feature 分支
+   ```bash
+   git checkout develop && git pull
+   git checkout -b feature/<任务编号-短描述>   # 如 feature/m1-vid-05-play-sign
+   ```
+2. **开发**：在 feature 分支提交（Conventional Commits，关联任务编号）
+3. **任务完成 → 合入 develop 与 main**（先验证 lint/build/测试全绿）
+   ```bash
+   git checkout develop && git merge --no-ff feature/<...> && git push
+   git checkout main    && git merge --no-ff feature/<...> && git push
+   git branch -d feature/<...>                              # 删除已合分支
+   ```
+4. **发布 → 切 release 分支并打 tag**
+   ```bash
+   git checkout -b release/v<X.Y.Z> develop
+   # 只做版本号/CHANGELOG/阶段性修复，不加新功能
+   git checkout main && git merge --no-ff release/v<X.Y.Z>
+   git tag -a v<X.Y.Z> -m "release v<X.Y.Z>" && git push --follow-tags
+   git push origin release/v<X.Y.Z>
+   ```
+
+> 约定：feature 始终从 `develop` 切出；任务完成同时合回 `develop` 和 `main`；`release/*` 从 `develop` 切出做发布，合 `main` 后打 tag。单人开发可直推，团队协作走 PR（CI 全绿 + ≥ 1 人 Review）。
 
 ### 提交规范（Conventional Commits）
 
