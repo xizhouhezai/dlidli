@@ -1,0 +1,39 @@
+app:
+  name: dlidli-api
+  env: dev
+  port: 8000
+  # 审核工作台已上线：走真实"先审后播"，在 /admin/review 人工过审
+  autoApprove: false
+  allowOrigins:
+    - http://localhost:5173
+    - http://localhost:5174
+    - http://localhost:5175 # apps/admin 管理后台
+
+log:
+  level: debug
+
+mysql:
+  dsn: "root:root@tcp(127.0.0.1:3307)/dlidli?charset=utf8mb4&parseTime=True&loc=Local"
+  maxOpenConns: 50
+  maxIdleConns: 10
+
+redis:
+  addr: 127.0.0.1:6379
+  password: ""
+  db: 0
+
+jwt:
+  # 生产环境必须通过环境变量 DLIDLI_JWT_SECRET 覆盖
+  secret: "dev-secret-do-not-use-in-prod"
+  accessTtlMin: 120
+
+storage:
+  driver: local
+  localDir: ./uploads
+  baseUrl: http://localhost:8000/static
+
+transcode:
+  enabled: true
+  workers: 1
+  ffmpegPath: C:\Users\yr137\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe
+  ffprobePath: C:\Users\yr137\AppData\Local\Microsoft\WinGet\Links\ffprobe.exe

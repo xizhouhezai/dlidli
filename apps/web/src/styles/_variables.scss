@@ -1,0 +1,50 @@
+// DliDli 品牌设计 tokens（SCSS 单一真源）。
+// 与 uno.config.ts theme、main.scss 的 CSS 变量三处保持同源；改色只需同步这三处。
+
+// 品牌色
+$primary: #fb7299;
+$primary-light: #ffd9e4;
+$primary-hover: #fc8bab;
+
+// 中性色
+$bg: #f6f7f8;
+$surface: #fff;
+$text-1: #18191c;
+$text-2: #61666d;
+$text-3: #9499a0;
+$border: #e3e5e7;
+
+// 圆角
+$radius-sm: 6px;
+$radius-md: 8px;
+$radius-lg: 12px;
+
+// 阴影
+$shadow-card: 0 4px 14px rgba(0, 0, 0, 0.08);
+$shadow-pop: 0 6px 20px rgba(0, 0, 0, 0.12);
+
+// 层级
+$z-header: 100;
+$z-popover: 20;
+
+// 文本省略（行数）
+@mixin ellipsis($lines: 1) {
+  overflow: hidden;
+  @if $lines == 1 {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    line-clamp: $lines;
+    -webkit-box-orient: vertical;
+  }
+}
+
+// 卡片悬浮
+@mixin hover-lift {
+  transition: box-shadow 0.15s;
+  &:hover {
+    box-shadow: $shadow-card;
+  }
+}

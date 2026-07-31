@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS `relation`;
+DROP TABLE IF EXISTS `danmaku`;
+DROP TABLE IF EXISTS `comment`;
+DROP TABLE IF EXISTS `user_action`;
+DROP TABLE IF EXISTS `transcode_job`;
+DROP TABLE IF EXISTS `video_stat`;
+DROP TABLE IF EXISTS `video_stream`;
+DROP TABLE IF EXISTS `video`;
+DROP TABLE IF EXISTS `category`;
+DROP TABLE IF EXISTS `user_auth`;
+DROP TABLE IF EXISTS `user`;

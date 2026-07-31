@@ -1,0 +1,20 @@
+/* DliDli 品牌色：将主题色统一为产品粉（对齐 Web 端 --dli-primary #fb7299） */
+:root {
+  --vp-c-brand-1: #fb7299;
+  --vp-c-brand-2: #fc8bab;
+  --vp-c-brand-3: #fda1bc;
+  --vp-c-brand-soft: rgba(251, 114, 153, 0.14);
+}
+
+.dark {
+  --vp-c-brand-1: #fc8bab;
+  --vp-c-brand-2: #fb7299;
+  --vp-c-brand-3: #e45c84;
+  --vp-c-brand-soft: rgba(251, 114, 153, 0.16);
+}
+
+/* 首页 hero 按钮与高亮沿用品牌色 */
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #fb7299 30%, #ffb45a);
+}

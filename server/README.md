@@ -1,0 +1,58 @@
+# dlidli-server（Go 后端）
+
+Go 后端服务，模块化单体架构。详细设计见文档站：[后端架构](../docs/architecture/backend.md)、[数据模型](../docs/architecture/data-model.md)、[视频流水线](../docs/architecture/video-pipeline.md)。
+
+## 目录结构
+
+```
+server/
+├── cmd/
+│   ├── api/                # 核心业务 API（已就绪：/health、/api/v1/ping）
+│   └── migrate/            # 数据库迁移工具
+│   # admin / comet / worker 按里程碑逐步添加
+├── configs/
+│   └── dev.yaml            # dev 配置（环境变量 DLIDLI_* 可覆盖）
+├── internal/
+│   ├── module/             # 业务模块（M1 起：account / video / danmaku ...）
+│   ├── pkg/                # config / logger / errcode / response / jwtx
+│   ├── infra/              # MySQL / Redis 客户端（后续扩展 Kafka / OSS / ES）
+│   ├── middleware/         # TraceID / AccessLog / Recovery / CORS / Auth
+│   └── router/             # 路由组装
+├── scripts/migrations/     # golang-migrate 迁移文件
+└── deploy/docker-compose.yaml  # 本地依赖：MySQL / Redis / Kafka / MinIO
+```
+
+## 快速开始
+
+```bash
+# 1. 启动依赖（需要 Docker）
+docker compose -f deploy/docker-compose.yaml up -d
+
+# 2. 初始化数据库
+go run ./cmd/migrate
+
+# 3. 启动 API（默认端口 8000）
+go run ./cmd/api
+
+# 验证
+curl http://localhost:8000/health
+curl http://localhost:8000/api/v1/ping
+```
+
+> M0 阶段 MySQL/Redis 连接失败时服务会降级启动（仅告警），便于无 Docker 环境开发框架代码；M1 业务模块接入后将改为强依赖。
+
+## 常用命令
+
+| 命令 | 说明 |
+| --- | --- |
+| `go build ./...` | 全量构建 |
+| `go vet ./...` | 静态检查 |
+| `go test ./... -race` | 单元测试 |
+| `go run ./cmd/migrate` | 应用迁移 |
+| `go run ./cmd/migrate -down` | 回滚一步 |
+
+## 约定
+
+- 统一响应：`{ code, message, data, trace_id }`；错误码分段见 `internal/pkg/errcode`。
+- 模块间只允许通过 service 接口调用，禁止跨模块访问 repo。
+- 配置密钥不入库：生产环境通过 `DLIDLI_JWT_SECRET`、`DLIDLI_MYSQL_DSN` 等环境变量注入。

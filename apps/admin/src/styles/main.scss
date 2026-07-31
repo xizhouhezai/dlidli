@@ -1,0 +1,60 @@
+// DliDli 管理后台全局样式入口（SCSS）。token 真源见 _variables.scss。
+@use './variables' as v;
+
+:root {
+  --dli-primary: #{v.$primary};
+  --dli-primary-hover: #{v.$primary-hover};
+  --dli-text-1: #{v.$text-1};
+  --dli-text-2: #{v.$text-2};
+  --dli-text-3: #{v.$text-3};
+  --dli-border: #{v.$border};
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  color: v.$text-1;
+  background: v.$bg;
+}
+
+/* 页面通用块（配合 AdminLayout 内容区） */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.page-head__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: v.$text-1;
+}
+
+.page-head__sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: v.$text-2;
+}
+
+.page-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: v.$shadow-card;
+}
+
+/* 品牌粉按钮（覆盖 Element Plus 主色），多页复用，不再逐页写 scoped */
+.pink-btn {
+  --el-button-bg-color: #{v.$primary};
+  --el-button-border-color: #{v.$primary};
+  --el-button-hover-bg-color: #{v.$primary-hover};
+  --el-button-hover-border-color: #{v.$primary-hover};
+}

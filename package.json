@@ -1,0 +1,27 @@
+{
+  "name": "dlidli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DliDli 视频社区 - Monorepo（Go 后端 + 多端前端 + 文档）",
+  "scripts": {
+    "docs:dev": "pnpm --filter @dlidli/docs dev",
+    "docs:build": "pnpm --filter @dlidli/docs build",
+    "docs:preview": "pnpm --filter @dlidli/docs preview",
+    "web:dev": "pnpm --filter @dlidli/web dev",
+    "web:build": "pnpm --filter @dlidli/web build",
+    "web:lint": "pnpm --filter @dlidli/web lint",
+    "admin:dev": "pnpm --filter @dlidli/admin dev",
+    "admin:build": "pnpm --filter @dlidli/admin build",
+    "admin:lint": "pnpm --filter @dlidli/admin lint",
+    "h5:dev": "pnpm --filter @dlidli/h5 dev",
+    "h5:build": "pnpm --filter @dlidli/h5 build"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@10.18.3",
+  "devDependencies": {
+    "sharp": "^0.35.3"
+  }
+}

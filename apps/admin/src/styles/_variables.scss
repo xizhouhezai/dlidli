@@ -1,0 +1,33 @@
+// DliDli 管理后台品牌设计 tokens（SCSS 真源，与 C 端 web 同源 + 后台深色调）。
+$primary: #fb7299;
+$primary-light: #ffd9e4;
+$primary-hover: #fc8bab;
+
+$bg: #f1f2f3;
+$surface: #fff;
+$text-1: #18191c;
+$text-2: #61666d;
+$text-3: #9499a0;
+$border: #e3e5e7;
+
+// 后台深色调（登录页背景/审核台顶栏）
+$dark: #1e2022;
+$dark-deep: #131419;
+
+$radius-md: 8px;
+$radius-lg: 12px;
+$shadow-card: 0 4px 14px rgba(0, 0, 0, 0.08);
+$shadow-pop: 0 6px 20px rgba(0, 0, 0, 0.12);
+
+@mixin ellipsis($lines: 1) {
+  overflow: hidden;
+  @if $lines == 1 {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    line-clamp: $lines;
+    -webkit-box-orient: vertical;
+  }
+}

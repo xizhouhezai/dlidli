@@ -1,0 +1,33 @@
+// DliDli web 端全局样式入口（SCSS）。
+// 设计 token 单一真源见 _variables.scss；此处将其导出为 CSS 变量，
+// 兼容既有页面的 var(--dli-*) 写法，实现渐进式迁移（旧页面零改动、新页面用 Uno/SCSS）。
+@use './variables' as v;
+
+:root {
+  --dli-primary: #{v.$primary};
+  --dli-primary-light: #{v.$primary-light};
+  --dli-primary-hover: #{v.$primary-hover};
+  --dli-bg: #{v.$bg};
+  --dli-surface: #{v.$surface};
+  --dli-text: #{v.$text-1};
+  --dli-text-1: #{v.$text-1};
+  --dli-text-2: #{v.$text-2};
+  --dli-text-3: #{v.$text-3};
+  --dli-border: #{v.$border};
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: v.$bg;
+  color: v.$text-1;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
