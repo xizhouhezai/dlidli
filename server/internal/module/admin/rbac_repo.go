@@ -24,6 +24,10 @@ func (r *Repo) SeedRBAC(nextID func() int64) error {
 	}
 	// 2. upsert 内置角色 + 绑定权限
 	for _, br := range builtinRoles {
+		// 判断角色是否已存在：已存在的内置角色权限交由后台维护，重启不覆盖（避免管理员编辑被 seed 冲掉）
+		var existing Role
+		findErr := r.db.Where("code = ?", br.Code).First(&existing).Error
+		isNew := errors.Is(findErr, gorm.ErrRecordNotFound)
 		role := Role{ID: nextID(), Code: br.Code, Name: br.Name, Remark: br.Remark, IsBuiltin: 1}
 		if err := r.db.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "code"}},
@@ -39,7 +43,10 @@ func (r *Repo) SeedRBAC(nextID func() int64) error {
 		if br.Code == SuperRoleCode {
 			continue // super 不落权限关联，鉴权时短路放行
 		}
-		// 重建该角色的权限关联
+		if !isNew {
+			continue // 已存在：保留当前权限（含后台编辑结果），仅首次创建时绑定默认权限
+		}
+		// 首次创建：绑定默认权限关联
 		if err := r.db.Where("role_id = ?", saved.ID).Delete(&RolePermission{}).Error; err != nil {
 			return err
 		}
