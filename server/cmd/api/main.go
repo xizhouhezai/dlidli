@@ -19,6 +19,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @title           DliDli API
+// @version         0.1.0
+// @description     DliDli 视频社区后端 API（C 端 + 管理后台）。统一响应：{ code, message, data, trace_id }，code=0 为成功。
+// @BasePath        /api/v1
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 在值中填入：Bearer {token}
 func main() {
 	configPath := flag.String("config", "configs/dev.yaml", "配置文件路径")
 	flag.Parse()

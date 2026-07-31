@@ -38,6 +38,11 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 	}
 }
 
+// @Summary  分区列表
+// @Tags     视频
+// @Produce  json
+// @Success  200 {object} response.Body
+// @Router   /categories [get]
 func (h *Handler) categories(c *gin.Context) {
 	list, err := h.svc.Categories(c.Request.Context())
 	if err != nil {
@@ -47,6 +52,14 @@ func (h *Handler) categories(c *gin.Context) {
 	response.OK(c, list)
 }
 
+// @Summary  投稿（登记稿件）
+// @Tags     视频
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body body SubmitReq true "投稿信息"
+// @Success  200 {object} response.Body
+// @Router   /videos [post]
 func (h *Handler) submit(c *gin.Context) {
 	var req SubmitReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -62,6 +75,14 @@ func (h *Handler) submit(c *gin.Context) {
 	response.OK(c, detail)
 }
 
+// @Summary  上传封面
+// @Tags     视频
+// @Accept   multipart/form-data
+// @Produce  json
+// @Security BearerAuth
+// @Param    file formData file true "封面图片"
+// @Success  200 {object} response.Body
+// @Router   /videos/cover [post]
 func (h *Handler) uploadCover(c *gin.Context) {
 	fh, err := c.FormFile("file")
 	if err != nil {
@@ -77,6 +98,15 @@ func (h *Handler) uploadCover(c *gin.Context) {
 	response.OK(c, gin.H{"cover": url})
 }
 
+// @Summary  公开视频列表（分页/分区/排序）
+// @Tags     视频
+// @Produce  json
+// @Param    category_id query int false "分区ID"
+// @Param    sort query string false "排序 new|hot"
+// @Param    page query int false "页码"
+// @Param    page_size query int false "每页数"
+// @Success  200 {object} response.Body
+// @Router   /videos [get]
 func (h *Handler) publicList(c *gin.Context) {
 	categoryID, _ := strconv.Atoi(c.DefaultQuery("category_id", "0"))
 	uid, _ := strconv.ParseInt(c.DefaultQuery("uid", "0"), 10, 64)
@@ -91,6 +121,12 @@ func (h *Handler) publicList(c *gin.Context) {
 	response.OK(c, gin.H{"list": cards})
 }
 
+// @Summary  视频详情（含播放地址/流）
+// @Tags     视频
+// @Produce  json
+// @Param    bvid path string true "视频 BV 号"
+// @Success  200 {object} response.Body
+// @Router   /videos/{bvid} [get]
 func (h *Handler) publicDetail(c *gin.Context) {
 	detail, err := h.svc.PublicDetail(c.Request.Context(), c.Param("bvid"))
 	if err != nil {
@@ -100,6 +136,12 @@ func (h *Handler) publicDetail(c *gin.Context) {
 	response.OK(c, detail)
 }
 
+// @Summary  我的稿件列表
+// @Tags     视频
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /videos/mine [get]
 func (h *Handler) mine(c *gin.Context) {
 	uid := c.GetInt64(middleware.CtxUserID)
 	page, size := pagination(c)
@@ -111,6 +153,12 @@ func (h *Handler) mine(c *gin.Context) {
 	response.OK(c, gin.H{"list": cards, "total": total})
 }
 
+// @Summary  上报播放（游客也计数）
+// @Tags     视频
+// @Produce  json
+// @Param    bvid path string true "视频 BV 号"
+// @Success  200 {object} response.Body
+// @Router   /videos/{bvid}/view [post]
 func (h *Handler) addView(c *gin.Context) {
 	// 登录用户按 UID 去重，游客按 IP 去重
 	viewer := c.ClientIP()
@@ -124,6 +172,13 @@ func (h *Handler) addView(c *gin.Context) {
 	response.OK(c, nil)
 }
 
+// @Summary  获取播放进度
+// @Tags     视频
+// @Produce  json
+// @Security BearerAuth
+// @Param    bvid path string true "视频 BV 号"
+// @Success  200 {object} response.Body
+// @Router   /videos/{bvid}/progress [get]
 func (h *Handler) getProgress(c *gin.Context) {
 	uid := c.GetInt64(middleware.CtxUserID)
 	pos, err := h.svc.GetProgress(c.Request.Context(), uid, c.Param("bvid"))
@@ -134,6 +189,14 @@ func (h *Handler) getProgress(c *gin.Context) {
 	response.OK(c, gin.H{"position": pos})
 }
 
+// @Summary  保存播放进度
+// @Tags     视频
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    bvid path string true "视频 BV 号"
+// @Success  200 {object} response.Body
+// @Router   /videos/{bvid}/progress [post]
 func (h *Handler) saveProgress(c *gin.Context) {
 	var req struct {
 		Position int `json:"position" binding:"min=0"`
@@ -150,6 +213,13 @@ func (h *Handler) saveProgress(c *gin.Context) {
 	response.OK(c, nil)
 }
 
+// @Summary  删除稿件
+// @Tags     视频
+// @Produce  json
+// @Security BearerAuth
+// @Param    bvid path string true "视频 BV 号"
+// @Success  200 {object} response.Body
+// @Router   /videos/{bvid} [delete]
 func (h *Handler) remove(c *gin.Context) {
 	uid := c.GetInt64(middleware.CtxUserID)
 	if err := h.svc.Delete(c.Request.Context(), uid, c.Param("bvid")); err != nil {

@@ -39,6 +39,12 @@ func targetID(c *gin.Context) (int64, bool) {
 	return id, true
 }
 
+// @Summary  用户空间资料
+// @Tags     关系
+// @Produce  json
+// @Param    id path string true "用户ID"
+// @Success  200 {object} response.Body
+// @Router   /space/{id}/profile [get]
 func (h *Handler) profile(c *gin.Context) {
 	target, ok := targetID(c)
 	if !ok {
@@ -52,6 +58,13 @@ func (h *Handler) profile(c *gin.Context) {
 	response.OK(c, p)
 }
 
+// @Summary  关注/取消关注
+// @Tags     关系
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "目标用户ID"
+// @Success  200 {object} response.Body
+// @Router   /space/{id}/follow [post]
 func (h *Handler) toggle(c *gin.Context) {
 	target, ok := targetID(c)
 	if !ok {
@@ -66,6 +79,12 @@ func (h *Handler) toggle(c *gin.Context) {
 	response.OK(c, gin.H{"following": following})
 }
 
+// @Summary  关系统计（关注/粉丝数+是否已关注）
+// @Tags     关系
+// @Produce  json
+// @Param    id path string true "用户ID"
+// @Success  200 {object} response.Body
+// @Router   /space/{id}/relation [get]
 func (h *Handler) stat(c *gin.Context) {
 	target, ok := targetID(c)
 	if !ok {
@@ -80,6 +99,12 @@ func (h *Handler) stat(c *gin.Context) {
 	response.OK(c, st)
 }
 
+// @Summary  关注列表
+// @Tags     关系
+// @Produce  json
+// @Param    id path string true "用户ID"
+// @Success  200 {object} response.Body
+// @Router   /space/{id}/followings [get]
 func (h *Handler) followings(c *gin.Context) {
 	target, ok := targetID(c)
 	if !ok {
@@ -94,6 +119,12 @@ func (h *Handler) followings(c *gin.Context) {
 	response.OK(c, gin.H{"list": list, "total": total})
 }
 
+// @Summary  粉丝列表
+// @Tags     关系
+// @Produce  json
+// @Param    id path string true "用户ID"
+// @Success  200 {object} response.Body
+// @Router   /space/{id}/followers [get]
 func (h *Handler) followers(c *gin.Context) {
 	target, ok := targetID(c)
 	if !ok {
