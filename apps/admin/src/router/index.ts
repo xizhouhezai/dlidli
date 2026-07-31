@@ -52,9 +52,15 @@ const router = createRouter({
           component: () => import('@/views/system/RolesView.vue'),
           meta: { title: '角色管理', requiresAuth: true },
         },
+        {
+          path: 'categories',
+          name: 'categories',
+          component: () => import('@/views/operation/CategoriesView.vue'),
+          meta: { title: '分区管理', requiresAuth: true },
+        },
       ],
     },
-    // 后续：分区管理（M1-ADM-06）、审计日志（M2-SYS-01）
+    // 后续：审计日志（M2-SYS-01）
   ],
 })
 

@@ -212,3 +212,38 @@ func (s *Service) PunishUser(ctx context.Context, adminID, uid int64, action str
 	})
 	return nil
 }
+
+// ---- 分区管理（M1-ADM-06，转调 video 服务） ----
+
+// ListCategories 后台分区列表（含停用）。
+func (s *Service) ListCategories(ctx context.Context) ([]video.Category, error) {
+	return s.videoSvc.AdminCategories(ctx)
+}
+
+// CreateCategory 新建分区并留痕。
+func (s *Service) CreateCategory(ctx context.Context, adminID int64, req *video.SaveCategoryReq) (*video.Category, error) {
+	c, err := s.videoSvc.CreateCategory(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_category", ObjType: "category", Oid: int64(c.ID), Detail: req.Name})
+	return c, nil
+}
+
+// UpdateCategory 编辑分区并留痕。
+func (s *Service) UpdateCategory(ctx context.Context, adminID int64, id int, req *video.SaveCategoryReq) error {
+	if err := s.videoSvc.UpdateCategory(ctx, id, req); err != nil {
+		return err
+	}
+	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_category", ObjType: "category", Oid: int64(id), Detail: req.Name})
+	return nil
+}
+
+// DeleteCategory 删除分区并留痕。
+func (s *Service) DeleteCategory(ctx context.Context, adminID int64, id int) error {
+	if err := s.videoSvc.DeleteCategory(ctx, id); err != nil {
+		return err
+	}
+	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_category", ObjType: "category", Oid: int64(id)})
+	return nil
+}
