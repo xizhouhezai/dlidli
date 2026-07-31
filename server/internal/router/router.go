@@ -23,6 +23,10 @@ import (
 	"github.com/dlidli/server/internal/pkg/response"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+
+	_ "github.com/dlidli/server/docs" // swag 生成的 OpenAPI 文档（swag init）
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine {
@@ -41,6 +45,11 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 
 	// Prometheus 指标抓取端点（REL-02：Grafana 基础面板数据源）
 	e.GET("/metrics", metrics.Handler())
+
+	// Swagger 在线接口文档（仅非生产环境；访问 /swagger/index.html）
+	if cfg.App.Env != "prod" {
+		e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	// 健康检查（供负载均衡/监控拨测）
 	e.GET("/health", func(c *gin.Context) {

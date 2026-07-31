@@ -26,6 +26,12 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth gin.HandlerFunc) {
 	}
 }
 
+// @Summary  通知列表
+// @Tags     通知
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /notifications [get]
 func (h *Handler) list(c *gin.Context) {
 	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	if size < 1 || size > 50 {
@@ -40,6 +46,12 @@ func (h *Handler) list(c *gin.Context) {
 	response.OK(c, gin.H{"list": items, "next_cursor": next, "has_more": hasMore})
 }
 
+// @Summary  未读数
+// @Tags     通知
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /notifications/unread-count [get]
 func (h *Handler) unreadCount(c *gin.Context) {
 	uid := c.GetInt64(middleware.CtxUserID)
 	cnt, err := h.svc.UnreadCount(c.Request.Context(), uid)
@@ -50,6 +62,12 @@ func (h *Handler) unreadCount(c *gin.Context) {
 	response.OK(c, gin.H{"count": cnt})
 }
 
+// @Summary  全部标记已读
+// @Tags     通知
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /notifications/read [post]
 func (h *Handler) markAllRead(c *gin.Context) {
 	uid := c.GetInt64(middleware.CtxUserID)
 	if err := h.svc.MarkAllRead(c.Request.Context(), uid); err != nil {

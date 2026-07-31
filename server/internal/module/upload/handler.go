@@ -28,6 +28,13 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth gin.HandlerFunc) {
 	}
 }
 
+// @Summary  初始化分片上传（秒传检测）
+// @Tags     上传
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /upload/init [post]
 func (h *Handler) init(c *gin.Context) {
 	var req InitReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -43,6 +50,15 @@ func (h *Handler) init(c *gin.Context) {
 	response.OK(c, resp)
 }
 
+// @Summary  上传分片
+// @Tags     上传
+// @Accept   multipart/form-data
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "上传任务ID"
+// @Param    index path int true "分片序号"
+// @Success  200 {object} response.Body
+// @Router   /upload/{id}/parts/{index} [put]
 func (h *Handler) uploadPart(c *gin.Context) {
 	index, err := strconv.Atoi(c.Param("index"))
 	if err != nil {
@@ -57,6 +73,13 @@ func (h *Handler) uploadPart(c *gin.Context) {
 	response.OK(c, nil)
 }
 
+// @Summary  查询上传进度
+// @Tags     上传
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "上传任务ID"
+// @Success  200 {object} response.Body
+// @Router   /upload/{id} [get]
 func (h *Handler) progress(c *gin.Context) {
 	uid := c.GetInt64(middleware.CtxUserID)
 	resp, err := h.svc.Progress(c.Request.Context(), uid, c.Param("id"))
@@ -67,6 +90,13 @@ func (h *Handler) progress(c *gin.Context) {
 	response.OK(c, resp)
 }
 
+// @Summary  完成上传（合并分片）
+// @Tags     上传
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "上传任务ID"
+// @Success  200 {object} response.Body
+// @Router   /upload/{id}/complete [post]
 func (h *Handler) complete(c *gin.Context) {
 	uid := c.GetInt64(middleware.CtxUserID)
 	resp, err := h.svc.Complete(c.Request.Context(), uid, c.Param("id"))

@@ -30,7 +30,7 @@ server/
 │   ├── pkg/                   # 内部共享：jwt、response、errcode、pagination
 │   ├── infra/                 # 基础设施：mysql、redis、kafka、oss、es 客户端
 │   └── middleware/            # 认证、限流、日志、恢复、CORS
-├── api/                       # OpenAPI 定义（swagger）
+├── docs/                      # swag 生成的 OpenAPI 文档（swagger.json/yaml + docs.go）
 ├── scripts/                   # 数据库迁移（migrate）、构建脚本
 └── deploy/                    # Dockerfile、docker-compose、k8s 清单
 ```
@@ -85,7 +85,7 @@ handler(HTTP 层，参数校验/DTO) → service(业务编排/事务) → repo(�
 
 - REST 风格：`GET /api/v1/videos/{bvid}`、`POST /api/v1/videos/{bvid}/like`
 - 统一响应包裹 + 分页游标（`cursor` + `page_size`，避免深分页）。
-- OpenAPI 3 文档自动生成，前端据此生成 TS 类型（`packages/api-client`）。
+- **接口文档（swaggo/OpenAPI）已落地**：handler 上用 `// @Summary/@Tags/@Router` 注解，`swag init -g cmd/api/main.go -o docs` 生成 `server/docs/`（swagger.json/yaml + docs.go）；非生产环境启动后访问 **`http://localhost:8000/swagger/index.html`** 查看可交互文档。新增/改接口后重跑 `swag init` 刷新（注解写在 handler 旁，不易脱节）。未来可用 `openapi-typescript` 据此反向生成 `packages/api-client`。
 
 ## 4. 质量保障
 
