@@ -130,6 +130,9 @@ importers:
       '@dlidli/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@dlidli/player':
+        specifier: workspace:*
+        version: link:../../packages/player
       '@dlidli/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -201,6 +204,12 @@ importers:
       '@dlidli/shared':
         specifier: workspace:*
         version: link:../shared
+
+  packages/player:
+    dependencies:
+      hls.js:
+        specifier: ^1.6.0
+        version: 1.6.16
 
   packages/shared: {}
 

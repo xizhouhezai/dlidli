@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@dlidli/api-client": "workspace:*",
+    "@dlidli/player": "workspace:*",
     "@dlidli/shared": "workspace:*",
     "element-plus": "^2.10.0",
     "hash-wasm": "^4.12.0",
