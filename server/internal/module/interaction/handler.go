@@ -88,6 +88,12 @@ func (h *Handler) listComments(c *gin.Context) {
 	response.OK(c, gin.H{"list": items, "total": total})
 }
 
+// @Summary  楼中楼回复列表
+// @Tags     互动-评论
+// @Produce  json
+// @Param    id path string true "一级评论ID"
+// @Success  200 {object} response.Body
+// @Router   /comments/{id}/replies [get]
 func (h *Handler) listReplies(c *gin.Context) {
 	rootID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -105,6 +111,13 @@ func (h *Handler) listReplies(c *gin.Context) {
 	response.OK(c, gin.H{"list": items, "total": total})
 }
 
+// @Summary  删除评论（本人或 UP 主）
+// @Tags     互动-评论
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "评论ID"
+// @Success  200 {object} response.Body
+// @Router   /comments/{id} [delete]
 func (h *Handler) deleteComment(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -152,6 +165,13 @@ func (h *Handler) videoLiked(c *gin.Context) {
 	response.OK(c, gin.H{"liked": liked})
 }
 
+// @Summary  评论点赞/取消
+// @Tags     互动-评论
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "评论ID"
+// @Success  200 {object} response.Body
+// @Router   /comments/{id}/like [post]
 func (h *Handler) toggleCommentLike(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
