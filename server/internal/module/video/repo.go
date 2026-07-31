@@ -28,6 +28,48 @@ func (r *Repo) CategoryExists(id int) (bool, error) {
 	return cnt > 0, err
 }
 
+// AllCategories 后台：全部分区（含停用），按 parent_id, sort 排序。
+func (r *Repo) AllCategories() ([]Category, error) {
+	var list []Category
+	err := r.db.Order("parent_id, sort, id").Find(&list).Error
+	return list, err
+}
+
+func (r *Repo) CreateCategory(c *Category) error {
+	return r.db.Create(c).Error
+}
+
+func (r *Repo) UpdateCategory(id int, fields map[string]any) error {
+	return r.db.Model(&Category{}).Where("id = ?", id).Updates(fields).Error
+}
+
+func (r *Repo) DeleteCategory(id int) error {
+	return r.db.Delete(&Category{}, id).Error
+}
+
+// CategoryChildCount 子分区数（删除一级分区前校验）。
+func (r *Repo) CategoryChildCount(parentID int) (int64, error) {
+	var cnt int64
+	err := r.db.Model(&Category{}).Where("parent_id = ?", parentID).Count(&cnt).Error
+	return cnt, err
+}
+
+// CategoryVideoCount 分区下稿件数（删除前校验）。
+func (r *Repo) CategoryVideoCount(id int) (int64, error) {
+	var cnt int64
+	err := r.db.Model(&Video{}).Where("category_id = ?", id).Count(&cnt).Error
+	return cnt, err
+}
+
+func (r *Repo) FindCategory(id int) (*Category, error) {
+	var c Category
+	err := r.db.First(&c, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &c, err
+}
+
 // CreateWithStat 事务创建稿件 + 计数行 + 原画流 + 转码任务。
 func (r *Repo) CreateWithStat(v *Video, stream *Stream, jobQualities []int16) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {

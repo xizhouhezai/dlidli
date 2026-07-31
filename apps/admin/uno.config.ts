@@ -27,6 +27,7 @@ export default defineConfig({
     'i-mingcute-user-3-line',
     'i-mingcute-safe-lock-line',
     'i-mingcute-group-line',
+    'i-mingcute-classify-2-line',
   ],
   theme: {
     colors: {

@@ -54,6 +54,11 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, adminAuth gin.HandlerFunc)
 			authed.POST("/admins/:id/toggle", perm("admin:edit"), h.toggleAdmin)
 			authed.POST("/admins/:id/reset-password", perm("admin:edit"), h.resetAdminPwd)
 			authed.DELETE("/admins/:id", perm("admin:edit"), h.deleteAdmin)
+			// 分区管理
+			authed.GET("/categories", perm("category:view"), h.listCategories)
+			authed.POST("/categories", perm("category:edit"), h.createCategory)
+			authed.PUT("/categories/:id", perm("category:edit"), h.updateCategory)
+			authed.DELETE("/categories/:id", perm("category:edit"), h.deleteCategory)
 		}
 	}
 }

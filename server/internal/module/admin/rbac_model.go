@@ -64,6 +64,9 @@ var builtinPermissions = []Permission{
 	// 用户
 	{Code: "user:view", Name: "用户管理", Type: "menu", Path: "/users", Icon: "i-mingcute-user-3-line", Sort: 4},
 	{Code: "user:punish", Name: "封禁/禁言用户", Type: "button", Parent: "user:view"},
+	// 分区（运营）
+	{Code: "category:view", Name: "分区管理", Type: "menu", Path: "/categories", Icon: "i-mingcute-classify-2-line", Sort: 7},
+	{Code: "category:edit", Name: "增删改分区", Type: "button", Parent: "category:view"},
 	// 系统 - 账号
 	{Code: "admin:view", Name: "账号管理", Type: "menu", Path: "/admins", Icon: "i-mingcute-safe-lock-line", Sort: 5},
 	{Code: "admin:edit", Name: "增删改账号", Type: "button", Parent: "admin:view"},
@@ -91,8 +94,8 @@ var builtinRoles = []builtinRole{
 	{Code: "moderator", Name: "用户治理", Remark: "用户查询与处罚", Perms: []string{
 		"dashboard:view", "user:view", "user:punish",
 	}},
-	{Code: "operator", Name: "运营", Remark: "运营配置（预留）", Perms: []string{
-		"dashboard:view",
+	{Code: "operator", Name: "运营", Remark: "运营配置（分区等）", Perms: []string{
+		"dashboard:view", "category:view", "category:edit",
 	}},
 	{Code: "analyst", Name: "数据分析", Remark: "数据大盘只读（预留）", Perms: []string{
 		"dashboard:view",

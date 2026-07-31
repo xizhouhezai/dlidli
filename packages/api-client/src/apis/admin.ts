@@ -90,6 +90,21 @@ export interface SaveAdminPayload {
   role_ids: string[]
 }
 
+export interface AdminCategory {
+  id: number
+  parent_id: number
+  name: string
+  sort: number
+  status: number
+}
+
+export interface SaveCategoryPayload {
+  parent_id: number
+  name: string
+  sort: number
+  status: number
+}
+
 /** 后台管理接口（对应 /api/v1/admin，需管理员令牌）。 */
 export function createAdminApi(http: HttpClient) {
   return {
@@ -165,5 +180,19 @@ export function createAdminApi(http: HttpClient) {
 
     deleteAdmin: (id: string) =>
       http.delete<null>(`/api/v1/admin/admins/${id}`),
+
+    // ---- 分区管理 ----
+    /** 分区列表（含停用） */
+    categories: () =>
+      http.get<{ list: AdminCategory[] }>('/api/v1/admin/categories'),
+
+    createCategory: (payload: SaveCategoryPayload) =>
+      http.post<AdminCategory>('/api/v1/admin/categories', payload),
+
+    updateCategory: (id: number, payload: SaveCategoryPayload) =>
+      http.put<null>(`/api/v1/admin/categories/${id}`, payload),
+
+    deleteCategory: (id: number) =>
+      http.delete<null>(`/api/v1/admin/categories/${id}`),
   }
 }
