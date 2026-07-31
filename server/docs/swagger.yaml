@@ -59,12 +59,58 @@ definitions:
     required:
     - action
     type: object
+  internal_module_admin.ResetPwdReq:
+    properties:
+      password:
+        maxLength: 64
+        minLength: 6
+        type: string
+    required:
+    - password
+    type: object
   internal_module_admin.ReviewReq:
     properties:
       approve:
         type: boolean
       reason:
         type: string
+    type: object
+  internal_module_admin.SaveAdminReq:
+    properties:
+      nickname:
+        maxLength: 32
+        type: string
+      password:
+        maxLength: 64
+        type: string
+      role_ids:
+        description: 雪花 ID 字符串化（防 JS 精度丢失）
+        items:
+          type: string
+        type: array
+      username:
+        maxLength: 32
+        type: string
+    required:
+    - username
+    type: object
+  internal_module_admin.SaveRoleReq:
+    properties:
+      code:
+        maxLength: 32
+        type: string
+      name:
+        maxLength: 32
+        type: string
+      perms:
+        items:
+          type: string
+        type: array
+      remark:
+        maxLength: 128
+        type: string
+    required:
+    - name
     type: object
   internal_module_interaction.AddCommentReq:
     properties:
@@ -119,6 +165,145 @@ info:
   title: DliDli API
   version: 0.1.0
 paths:
+  /admin/admins:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 管理员账号列表
+      tags:
+      - 管理后台-RBAC
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: username; nickname; password; role_ids
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_module_admin.SaveAdminReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 新建管理员账号
+      tags:
+      - 管理后台-RBAC
+  /admin/admins/{id}:
+    delete:
+      parameters:
+      - description: 账号ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 删除管理员账号
+      tags:
+      - 管理后台-RBAC
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 账号ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: nickname; role_ids
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_module_admin.SaveAdminReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 编辑管理员账号
+      tags:
+      - 管理后台-RBAC
+  /admin/admins/{id}/reset-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 账号ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_module_admin.ResetPwdReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 重置账号密码
+      tags:
+      - 管理后台-RBAC
+  /admin/admins/{id}/toggle:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 账号ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'status: 0启用/1停用'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 启用/停用账号
+      tags:
+      - 管理后台-RBAC
   /admin/login:
     post:
       consumes:
@@ -140,6 +325,117 @@ paths:
       summary: 后台登录
       tags:
       - 管理后台
+  /admin/me/permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 当前登录者权限码与可见菜单
+      tags:
+      - 管理后台-RBAC
+  /admin/permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 权限点全集
+      tags:
+      - 管理后台-RBAC
+  /admin/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 角色列表
+      tags:
+      - 管理后台-RBAC
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: name; code; remark; perms
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_module_admin.SaveRoleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 新建角色
+      tags:
+      - 管理后台-RBAC
+  /admin/roles/{id}:
+    delete:
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 删除角色（内置角色禁删）
+      tags:
+      - 管理后台-RBAC
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: name; remark; perms
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_module_admin.SaveRoleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 编辑角色/分配权限
+      tags:
+      - 管理后台-RBAC
   /admin/sensitive-words:
     get:
       produces:
@@ -439,6 +735,64 @@ paths:
       summary: 分区列表
       tags:
       - 视频
+  /comments/{id}:
+    delete:
+      parameters:
+      - description: 评论ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 删除评论（本人或 UP 主）
+      tags:
+      - 互动-评论
+  /comments/{id}/like:
+    post:
+      parameters:
+      - description: 评论ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 评论点赞/取消
+      tags:
+      - 互动-评论
+  /comments/{id}/replies:
+    get:
+      parameters:
+      - description: 一级评论ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      summary: 楼中楼回复列表
+      tags:
+      - 互动-评论
   /dynamics:
     post:
       consumes:
