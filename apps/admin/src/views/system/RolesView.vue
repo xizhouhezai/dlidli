@@ -22,6 +22,14 @@ const permTree = computed<TreeNode[]>(() => {
   }))
 })
 
+// 所有叶子权限码（button，以及无子节点的 menu）——用于 super 全选
+const allLeafCodes = computed<string[]>(() => {
+  const menuWithChildren = new Set(
+    permissions.value.filter(p => p.type === 'menu' && permissions.value.some(x => x.parent === p.code)).map(p => p.code),
+  )
+  return permissions.value.filter(p => !menuWithChildren.has(p.code)).map(p => p.code)
+})
+
 async function load() {
   loading.value = true
   try {
@@ -34,28 +42,54 @@ async function load() {
 }
 onMounted(load)
 
-// 对话框
+// 对话框：mode = create | edit | view
+type DialogMode = 'create' | 'edit' | 'view'
 const dialogVisible = ref(false)
+const dialogMode = ref<DialogMode>('create')
 const editing = ref<AdminRole | null>(null)
 const form = ref({ name: '', code: '', remark: '' })
 const treeRef = ref()
+const readonly = computed(() => dialogMode.value === 'view')
+// 待回填的勾选码：配合 :key 强制重建树 + default-checked-keys 回填
+const pendingChecked = ref<string[]>([])
+// 每次打开对话框递增，作为 el-tree 的 key 强制重建新实例（避免上一次勾选残留）
+const treeSeq = ref(0)
+
+// 计算某角色应勾选的叶子权限码（super 为全部叶子）
+function checkedCodesOf(role: AdminRole | null): string[] {
+  if (role?.code === 'super') return allLeafCodes.value
+  const codes = role?.perms ?? []
+  // 只勾选叶子（button）与无子的 menu，避免父级半选逻辑干扰
+  return codes.filter(c => !permTree.value.some(m => m.code === c && m.children?.length))
+}
+
+// el-dialog 打开前先设好 pendingChecked，配合 destroy-on-close + default-checked-keys 回填勾选
 
 function openCreate() {
+  dialogMode.value = 'create'
   editing.value = null
   form.value = { name: '', code: '', remark: '' }
+  pendingChecked.value = []
+  treeSeq.value++
   dialogVisible.value = true
-  requestAnimationFrame(() => treeRef.value?.setCheckedKeys([]))
+}
+
+function openView(role: AdminRole) {
+  dialogMode.value = 'view'
+  editing.value = role
+  form.value = { name: role.name, code: role.code, remark: role.remark }
+  pendingChecked.value = checkedCodesOf(role)
+  treeSeq.value++
+  dialogVisible.value = true
 }
 
 function openEdit(role: AdminRole) {
+  dialogMode.value = 'edit'
   editing.value = role
   form.value = { name: role.name, code: role.code, remark: role.remark }
+  pendingChecked.value = checkedCodesOf(role)
+  treeSeq.value++
   dialogVisible.value = true
-  requestAnimationFrame(() => {
-    // 只勾选叶子（button）与无子的 menu，避免父级半选逻辑干扰
-    const leafCodes = role.perms.filter(c => !permTree.value.some(m => m.code === c && m.children?.length))
-    treeRef.value?.setCheckedKeys(leafCodes)
-  })
 }
 
 async function save() {
@@ -165,11 +199,19 @@ async function remove(role: AdminRole) {
         >
           <template #default="{ row }">
             <el-button
+              size="small"
+              @click="openView(row)"
+            >
+              查看
+            </el-button>
+            <el-button
+              v-if="row.code !== 'super'"
               v-perm="'role:edit'"
               size="small"
+              type="primary"
               @click="openEdit(row)"
             >
-              {{ row.is_builtin ? '查看' : '编辑' }}
+              编辑
             </el-button>
             <el-button
               v-if="!row.is_builtin"
@@ -185,17 +227,18 @@ async function remove(role: AdminRole) {
       </el-table>
     </div>
 
-    <!-- 新建/编辑对话框 -->
+    <!-- 新建/编辑/查看对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="editing ? (editing.is_builtin ? '查看角色' : '编辑角色') : '新建角色'"
+      :title="dialogMode === 'view' ? '查看角色' : (dialogMode === 'edit' ? '编辑角色' : '新建角色')"
       width="560px"
+      destroy-on-close
     >
       <el-form label-width="72px">
         <el-form-item label="角色名">
           <el-input
             v-model="form.name"
-            :disabled="!!editing?.is_builtin"
+            :disabled="readonly || !!editing?.is_builtin"
             maxlength="32"
           />
         </el-form-item>
@@ -210,29 +253,37 @@ async function remove(role: AdminRole) {
         <el-form-item label="说明">
           <el-input
             v-model="form.remark"
-            :disabled="!!editing?.is_builtin"
+            :disabled="readonly || !!editing?.is_builtin"
             maxlength="128"
           />
         </el-form-item>
         <el-form-item label="权限">
           <el-tree
             ref="treeRef"
+            :key="treeSeq"
             :data="permTree"
             :props="{ label: 'name', children: 'children' }"
+            :default-checked-keys="pendingChecked"
             node-key="code"
             show-checkbox
             default-expand-all
-            :disabled="!!editing?.is_builtin"
             class="w-full"
+            :class="{ 'tree-readonly': readonly }"
           />
+          <div
+            v-if="editing?.code === 'super'"
+            class="text-3 text-text-3 mt-1"
+          >
+            超级管理员拥有全部权限，不可编辑
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">
-          {{ editing?.is_builtin ? '关闭' : '取消' }}
+          {{ readonly ? '关闭' : '取消' }}
         </el-button>
         <el-button
-          v-if="!editing?.is_builtin"
+          v-if="!readonly"
           type="primary"
           class="pink-btn"
           :loading="saving"
@@ -244,3 +295,11 @@ async function remove(role: AdminRole) {
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+/* 只读权限树：禁用交互但保留勾选展示（避免用 node.disabled——会使 setCheckedKeys 失效） */
+.tree-readonly {
+  pointer-events: none;
+  opacity: 0.85;
+}
+</style>
