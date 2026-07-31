@@ -114,6 +114,7 @@ scope: acc | vid | dm | itr | flw | msg | srh | rec | crt | adm | eng | web | h5
 | TS/Vue | ESLint + Prettier；组件 PascalCase；组合式 API（`<script setup>`） |
 | SQL | 禁止 `SELECT *`；DDL 变更走 migration 文件评审 |
 | API | REST 命名复数资源；破坏性变更须升 `/api/v2` |
+| 后台权限 | **新增任何管理后台（apps/admin）功能必须同步登记权限点**：新页面登记页面权限（menu），页内每个受控操作登记按钮权限（button，挂到该 menu 下），在 `seedRBAC` 的 `builtinPermissions` 登记、按需分配到内置角色，后端路由挂 `RequirePerm(code)`、前端按钮加 `v-perm` + 菜单图标加 uno safelist。权限点是验收项，缺失视为未完成。详见 [管理后台 PRD §6.4](/product/prd/admin) |
 
 ## 3. 文档维护约定
 
