@@ -33,6 +33,7 @@ function groupOf(code: string): string {
   if (code.startsWith('user')) return '用户治理'
   if (code.startsWith('category')) return '运营管理'
   if (code.startsWith('admin') || code.startsWith('role')) return '系统管理'
+  if (code.startsWith('permission')) return '系统管理'
   return '其他'
 }
 const groupOrder = ['概览', '内容审核', '用户治理', '运营管理', '系统管理', '其他']
@@ -46,6 +47,7 @@ const pathToName: Record<string, string> = {
   '/categories': 'categories',
   '/admins': 'admins',
   '/roles': 'roles',
+  '/permissions': 'permissions',
 }
 
 const menuGroups = computed<MenuGroup[]>(() => {

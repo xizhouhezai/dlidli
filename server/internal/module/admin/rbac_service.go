@@ -148,6 +148,96 @@ func (s *Service) AllPermissions() ([]Permission, error) {
 	return s.repo.AllPermissions()
 }
 
+// SavePermissionReq 新建/编辑权限点请求。
+type SavePermissionReq struct {
+	Code   string `json:"code" binding:"max=64"`
+	Name   string `json:"name" binding:"required,max=64"`
+	Type   string `json:"type" binding:"omitempty,oneof=menu button"`
+	Parent string `json:"parent" binding:"max=64"`
+	Path   string `json:"path" binding:"max=128"`
+	Icon   string `json:"icon" binding:"max=64"`
+	Sort   int    `json:"sort"`
+}
+
+// CreatePermission 新建权限点（页面 menu / 按钮 button）。
+func (s *Service) CreatePermission(adminID int64, req *SavePermissionReq) (*Permission, error) {
+	if req.Code == "" {
+		return nil, errcode.ErrInvalidParams.WithMsg("权限码必填")
+	}
+	if req.Type != "menu" && req.Type != "button" {
+		return nil, errcode.ErrInvalidParams.WithMsg("类型只能为 menu 或 button")
+	}
+	if exist, _ := s.repo.FindPermissionByCode(req.Code); exist != nil {
+		return nil, errcode.ErrInvalidParams.WithMsg("权限码已存在")
+	}
+	if req.Type == "button" {
+		if req.Parent == "" {
+			return nil, errcode.ErrInvalidParams.WithMsg("按钮权限必须挂到一个页面权限下")
+		}
+		parent, _ := s.repo.FindPermissionByCode(req.Parent)
+		if parent == nil || parent.Type != "menu" {
+			return nil, errcode.ErrInvalidParams.WithMsg("父权限不存在或非页面权限")
+		}
+	}
+	p := &Permission{ID: snowflake.NextID(), Code: req.Code, Name: req.Name, Type: req.Type, Parent: req.Parent, Path: req.Path, Icon: req.Icon, Sort: req.Sort}
+	if err := s.repo.CreatePermission(p); err != nil {
+		return nil, err
+	}
+	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_permission", ObjType: "permission", Oid: p.ID, Detail: req.Code})
+	return p, nil
+}
+
+// UpdatePermission 编辑权限点（code 锁定，不可改）。
+func (s *Service) UpdatePermission(adminID, id int64, req *SavePermissionReq) error {
+	p, err := s.repo.FindPermission(id)
+	if err != nil {
+		return err
+	}
+	if p == nil {
+		return errcode.ErrNotFound
+	}
+	if req.Type == "button" && req.Parent != "" {
+		parent, _ := s.repo.FindPermissionByCode(req.Parent)
+		if parent == nil || parent.Type != "menu" {
+			return errcode.ErrInvalidParams.WithMsg("父权限不存在或非页面权限")
+		}
+	}
+	fields := map[string]any{"name": req.Name, "path": req.Path, "icon": req.Icon, "sort": req.Sort}
+	if req.Type != "" {
+		fields["type"] = req.Type
+		fields["parent"] = req.Parent
+	}
+	if err := s.repo.UpdatePermission(id, fields); err != nil {
+		return err
+	}
+	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_permission", ObjType: "permission", Oid: id, Detail: p.Code})
+	return nil
+}
+
+// DeletePermission 删除权限点（有子节点或被角色引用时禁删）。
+func (s *Service) DeletePermission(adminID, id int64) error {
+	p, err := s.repo.FindPermission(id)
+	if err != nil {
+		return err
+	}
+	if p == nil {
+		return errcode.ErrNotFound
+	}
+	if p.Type == "menu" {
+		if n, _ := s.repo.PermissionChildCount(p.Code); n > 0 {
+			return errcode.ErrInvalidParams.WithMsg("该页面权限下还有按钮权限，请先删除子项")
+		}
+	}
+	if n, _ := s.repo.PermissionRoleRefCount(id); n > 0 {
+		return errcode.ErrInvalidParams.WithMsg("该权限点已被角色引用，请先从角色中移除")
+	}
+	if err := s.repo.DeletePermission(id); err != nil {
+		return err
+	}
+	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_permission", ObjType: "permission", Oid: id, Detail: p.Code})
+	return nil
+}
+
 // ---- 角色 ----
 
 func (s *Service) ListRoles() ([]RoleItem, error) {
