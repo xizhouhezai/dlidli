@@ -456,6 +456,118 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-权限点"
+                ],
+                "summary": "新建权限点（页面 menu / 按钮 button）",
+                "parameters": [
+                    {
+                        "description": "code; name; type=menu|button; parent; path; icon; sort",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_module_admin.SavePermissionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/permissions/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-权限点"
+                ],
+                "summary": "编辑权限点（code 锁定）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "权限点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "name; type; parent; path; icon; sort",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_module_admin.SavePermissionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-权限点"
+                ],
+                "summary": "删除权限点（有子节点或被角色引用时禁删）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "权限点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
             }
         },
         "/admin/roles": {
@@ -2727,6 +2839,44 @@ const docTemplate = `{
                 "username": {
                     "type": "string",
                     "maxLength": 32
+                }
+            }
+        },
+        "internal_module_admin.SavePermissionReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "parent": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "path": {
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "menu",
+                        "button"
+                    ]
                 }
             }
         },

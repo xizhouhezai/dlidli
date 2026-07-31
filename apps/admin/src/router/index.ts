@@ -54,6 +54,12 @@ const router = createRouter({
           meta: { title: '角色管理', requiresAuth: true },
         },
         {
+          path: 'permissions',
+          name: 'permissions',
+          component: () => import('@/views/system/PermissionsView.vue'),
+          meta: { title: '权限管理', requiresAuth: true },
+        },
+        {
           path: 'categories',
           name: 'categories',
           component: () => import('@/views/operation/CategoriesView.vue'),

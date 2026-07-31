@@ -111,6 +111,33 @@ definitions:
     required:
     - username
     type: object
+  internal_module_admin.SavePermissionReq:
+    properties:
+      code:
+        maxLength: 64
+        type: string
+      icon:
+        maxLength: 64
+        type: string
+      name:
+        maxLength: 64
+        type: string
+      parent:
+        maxLength: 64
+        type: string
+      path:
+        maxLength: 128
+        type: string
+      sort:
+        type: integer
+      type:
+        enum:
+        - menu
+        - button
+        type: string
+    required:
+    - name
+    type: object
   internal_module_admin.SaveRoleReq:
     properties:
       code:
@@ -453,6 +480,75 @@ paths:
       summary: 权限点全集
       tags:
       - 管理后台-RBAC
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: code; name; type=menu|button; parent; path; icon; sort
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_module_admin.SavePermissionReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 新建权限点（页面 menu / 按钮 button）
+      tags:
+      - 管理后台-权限点
+  /admin/permissions/{id}:
+    delete:
+      parameters:
+      - description: 权限点ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 删除权限点（有子节点或被角色引用时禁删）
+      tags:
+      - 管理后台-权限点
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 权限点ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: name; type; parent; path; icon; sort
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_module_admin.SavePermissionReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 编辑权限点（code 锁定）
+      tags:
+      - 管理后台-权限点
   /admin/roles:
     get:
       produces:
