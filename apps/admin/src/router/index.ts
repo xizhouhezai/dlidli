@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { readAdminToken } from '@/utils/token'
+import { permissionStore } from '@/stores/permission'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -64,9 +65,18 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   if (to.meta.requiresAuth && !readAdminToken()) {
     return { name: 'login' }
+  }
+  // 进入受保护页面前先加载权限，确保 v-perm 指令首次挂载即有正确权限（修复刷新后按钮消失）
+  if (to.meta.requiresAuth && readAdminToken() && !permissionStore.state.loaded) {
+    try {
+      await permissionStore.load()
+    } catch {
+      // 令牌失效等：清理并回登录
+      return { name: 'login' }
+    }
   }
 })
 

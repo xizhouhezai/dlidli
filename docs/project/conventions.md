@@ -11,6 +11,7 @@ main        ── 生产发布分支，受保护；只接受 release/hotfix 合
 develop     ── 集成分支，日常开发成果的汇聚处（默认开发基线）
 feature/*   ── 功能分支：每个任务一个，如 feature/m1-adm-03-user-ban
 optimize/*  ── 轻量优化分支：文案修改/样式微调/小重构等“无新功能”需求
+fix/*       ── 缺陷修复分支：开发/测试阶段的 bug 修复，从 develop 切出，如 fix/category-status
 release/*   ── 发布分支：release/v0.2.0，从 develop 切出做发布准备
 hotfix/*    ── 线上紧急修复，从 main 切出
 ```
@@ -27,6 +28,28 @@ hotfix/*    ── 线上紧急修复，从 main 切出
 
 - feature 任务 → MINOR（含破坏性升 MAJOR）；optimize/fix 任务 → PATCH。
 - 当前处于 0.x 阶段（未正式发布）：新功能走 MINOR，优化/修复走 PATCH；首个正式版再定 v1.0.0。
+
+### 铁律：任何改动禁止直接在 main/develop 上进行
+
+- **不允许在 main 或 develop 上直接改代码/提交**；任何改动（含一行修复）都必须先从 develop 切出对应类型分支（feature/optimize/fix），在分支上完成后再合入。
+- **bug 修复也必须在 fix/* 分支上进行**，完成后合 develop+main 并发一个 PATCH release（与 optimize 同流程）。
+- 若发现已误在 main/develop 上产生未提交改动：先 stash → 切到正确的分支 → pop → 再提交，不得将非 release/hotfix 提交直推 main。
+
+### 缺陷修复流程（fix/*）
+
+> 适用场景：开发/测试阶段发现的 bug（非线上紧急）。流程与 optimize 一致，仅分支名为 fix/<短描述>，版本位 PATCH。
+
+```bash
+git checkout develop && git pull
+git checkout -b fix/<短描述>              # 如 fix/category-status
+# 开发提交（fix: 类型）
+git checkout develop && git merge --no-ff fix/<...> && git push
+git checkout main    && git merge --no-ff fix/<...> && git push
+git branch -d fix/<...>
+# 然后按“发布步骤”切 release 打 PATCH tag
+```
+
+- 线上已发布版本的紧急修复走 hotfix/*（从 main 切出，修完回合 main+develop）；开发期 bug 走 fix/*。
 
 ### 轻量优化流程（optimize/*，适用于纯优化/小改动）
 
