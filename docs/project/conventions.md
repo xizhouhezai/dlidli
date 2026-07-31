@@ -10,9 +10,40 @@
 main        ── 生产发布分支，受保护；只接受 release/hotfix 合入，每次发布打 tag
 develop     ── 集成分支，日常开发成果的汇聚处（默认开发基线）
 feature/*   ── 功能分支：每个任务一个，如 feature/m1-adm-03-user-ban
+optimize/*  ── 轻量优化分支：文案修改/样式微调/小重构等“无新功能”需求
 release/*   ── 发布分支：release/v0.2.0，从 develop 切出做发布准备
 hotfix/*    ── 线上紧急修复，从 main 切出
 ```
+
+### 版本号规则（SemVer，任务完成必发 release）
+
+> 铁律：**无论大任务还是小任务，完成后都要发布一个 release 并打 tag**，版本号按改动大小调整（`vMAJOR.MINOR.PATCH`）：
+
+| 改动类型 | 版本位 | 示例 | 典型场景 |
+| --- | --- | --- | --- |
+| 破坏性变更（不兼容） | MAJOR | v1.0.0 → v2.0.0 | API v2、大重构、不兼容迁移 |
+| 新功能（feature） | MINOR | v0.2.0 → v0.3.0 | 一个新业务模块/页面/接口 |
+| 优化/修复（optimize/fix） | PATCH | v0.3.0 → v0.3.1 | 样式微调、小重构、bug 修复 |
+
+- feature 任务 → MINOR（含破坏性升 MAJOR）；optimize/fix 任务 → PATCH。
+- 当前处于 0.x 阶段（未正式发布）：新功能走 MINOR，优化/修复走 PATCH；首个正式版再定 v1.0.0。
+
+### 轻量优化流程（optimize/*，适用于纯优化/小改动）
+
+> 适用场景：纯 UI/样式微调、文案/文档修改、小重构、依赖升级等**不引入新功能**且风险低的改动。分支命名比 feature 轻（无需任务编号），但**完成后同样合 develop+main 并发一个 PATCH release**。
+
+```bash
+git checkout develop && git pull
+git checkout -b optimize/<短描述>          # 如 optimize/admin-menu-icon
+# 开发提交（多用 fix/refactor/style/chore/docs 类型）
+git checkout develop && git merge --no-ff optimize/<...> && git push
+git checkout main    && git merge --no-ff optimize/<...> && git push
+git branch -d optimize/<...>
+# 然后按下方“发布步骤”切 release 打 PATCH tag
+```
+
+- 与 feature 的区别：仅分支命名（feature 带任务编号，optimize 带短描述）与版本位（feature=MINOR，optimize=PATCH）；合入与发布流程一致。
+- 区分不确定时的经验法则：改动引入/改变用户可感知的新行为 → feature；仅打磨现有行为/观感 → optimize。
 
 ### 任务开发完整流程（每个任务遵循）
 
@@ -37,7 +68,7 @@ hotfix/*    ── 线上紧急修复，从 main 切出
    git push origin release/v<X.Y.Z>
    ```
 
-> 约定：feature 始终从 `develop` 切出；任务完成同时合回 `develop` 和 `main`；`release/*` 从 `develop` 切出做发布，合 `main` 后打 tag。单人开发可直推，团队协作走 PR（CI 全绿 + ≥ 1 人 Review）。
+> 约定：feature 始终从 `develop` 切出；任务完成同时合回 `develop` 和 `main`；**无论大小任务，完成后都切 `release/vX.Y.Z` 合 `main` 并打 tag**（版本位按上方 SemVer 规则：feature=MINOR、optimize/fix=PATCH、破坏性=MAJOR）。单人开发可直推，团队协作走 PR（CI 全绿 + ≥ 1 人 Review）。
 
 ### 提交规范（Conventional Commits）
 
