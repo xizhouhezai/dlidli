@@ -3,6 +3,7 @@ package video
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -20,6 +21,7 @@ import (
 	"github.com/dlidli/server/internal/pkg/storage"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 const coverMaxSize = 5 << 20 // 5MB
@@ -44,6 +46,82 @@ func NewService(repo *Repo, uploadSvc *upload.Service, accountSvc *account.Servi
 // Categories 分区列表。
 func (s *Service) Categories(_ context.Context) ([]Category, error) {
 	return s.repo.Categories()
+}
+
+// ---- 后台分区管理（M1-ADM-06） ----
+
+// SaveCategoryReq 新建/编辑分区请求。
+type SaveCategoryReq struct {
+	ParentID int    `json:"parent_id"`
+	Name     string `json:"name" binding:"required,max=32"`
+	Sort     int    `json:"sort"`
+	Status   int8   `json:"status" binding:"oneof=0 1"`
+}
+
+// AdminCategories 后台：全部分区（含停用）。
+func (s *Service) AdminCategories(_ context.Context) ([]Category, error) {
+	return s.repo.AllCategories()
+}
+
+// CreateCategory 新建分区。
+func (s *Service) CreateCategory(_ context.Context, req *SaveCategoryReq) (*Category, error) {
+	if req.ParentID != 0 {
+		parent, err := s.repo.FindCategory(req.ParentID)
+		if err != nil {
+			return nil, err
+		}
+		if parent == nil || parent.ParentID != 0 {
+			return nil, errcode.ErrInvalidParams.WithMsg("父分区不存在或非一级分区")
+		}
+	}
+	c := &Category{ParentID: req.ParentID, Name: req.Name, Sort: req.Sort, Status: req.Status}
+	if err := s.repo.CreateCategory(c); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errcode.ErrInvalidParams.WithMsg("同级分区名已存在")
+		}
+		return nil, err
+	}
+	return c, nil
+}
+
+// UpdateCategory 编辑分区（名称/排序/状态）。
+func (s *Service) UpdateCategory(_ context.Context, id int, req *SaveCategoryReq) error {
+	c, err := s.repo.FindCategory(id)
+	if err != nil {
+		return err
+	}
+	if c == nil {
+		return errcode.ErrNotFound
+	}
+	if err := s.repo.UpdateCategory(id, map[string]any{
+		"name": req.Name, "sort": req.Sort, "status": req.Status,
+	}); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return errcode.ErrInvalidParams.WithMsg("同级分区名已存在")
+		}
+		return err
+	}
+	return nil
+}
+
+// DeleteCategory 删除分区（有子分区或稿件时禁删）。
+func (s *Service) DeleteCategory(_ context.Context, id int) error {
+	c, err := s.repo.FindCategory(id)
+	if err != nil {
+		return err
+	}
+	if c == nil {
+		return errcode.ErrNotFound
+	}
+	if c.ParentID == 0 {
+		if n, _ := s.repo.CategoryChildCount(id); n > 0 {
+			return errcode.ErrInvalidParams.WithMsg("该分区下还有子分区，请先删除子分区")
+		}
+	}
+	if n, _ := s.repo.CategoryVideoCount(id); n > 0 {
+		return errcode.ErrInvalidParams.WithMsg("该分区下还有稿件，不可删除")
+	}
+	return s.repo.DeleteCategory(id)
 }
 
 // Submit 投稿：禁言/封禁拦截 → 登记稿件 + 原画流；dev autoApprove 直接发布。

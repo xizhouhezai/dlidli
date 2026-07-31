@@ -1,5 +1,22 @@
 basePath: /api/v1
 definitions:
+  github_com_dlidli_server_internal_module_video.SaveCategoryReq:
+    properties:
+      name:
+        maxLength: 32
+        type: string
+      parent_id:
+        type: integer
+      sort:
+        type: integer
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+    required:
+    - name
+    type: object
   github_com_dlidli_server_internal_pkg_response.Body:
     properties:
       code:
@@ -304,6 +321,89 @@ paths:
       summary: 启用/停用账号
       tags:
       - 管理后台-RBAC
+  /admin/categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 分区列表（含停用）
+      tags:
+      - 管理后台-分区
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: parent_id; name; sort; status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_dlidli_server_internal_module_video.SaveCategoryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 新建分区
+      tags:
+      - 管理后台-分区
+  /admin/categories/{id}:
+    delete:
+      parameters:
+      - description: 分区ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 删除分区（有子分区或稿件时禁删）
+      tags:
+      - 管理后台-分区
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 分区ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: name; sort; status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_dlidli_server_internal_module_video.SaveCategoryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 编辑分区
+      tags:
+      - 管理后台-分区
   /admin/login:
     post:
       consumes:
