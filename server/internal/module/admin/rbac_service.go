@@ -38,14 +38,14 @@ type RoleItem struct {
 
 // AdminItem 账号列表项（带角色）。
 type AdminItem struct {
-	ID          int64   `json:"id,string"`
-	Username    string  `json:"username"`
-	Nickname    string  `json:"nickname"`
-	Status      int8    `json:"status"`
-	RoleIDs     []int64 `json:"role_ids"`
-	RoleNames   string  `json:"role_names"`
-	CreatedAt   string  `json:"created_at"`
-	LastLoginAt *string `json:"last_login_at"`
+	ID          int64    `json:"id,string"`
+	Username    string   `json:"username"`
+	Nickname    string   `json:"nickname"`
+	Status      int8     `json:"status"`
+	RoleIDs     []string `json:"role_ids"` // 雪花 ID 字符串化（防 JS 精度丢失，与角色 id 类型一致供前端回显）
+	RoleNames   string   `json:"role_names"`
+	CreatedAt   string   `json:"created_at"`
+	LastLoginAt *string  `json:"last_login_at"`
 }
 
 // ---- 请求体 ----
@@ -328,8 +328,10 @@ func (s *Service) ListAdmins(page, size int) ([]AdminItem, int64, error) {
 		if ids == nil {
 			ids = []int64{}
 		}
+		idStrs := make([]string, 0, len(ids))
 		names := ""
 		for i, rid := range ids {
+			idStrs = append(idStrs, strconv.FormatInt(rid, 10))
 			if i > 0 {
 				names += "、"
 			}
@@ -337,7 +339,7 @@ func (s *Service) ListAdmins(page, size int) ([]AdminItem, int64, error) {
 		}
 		item := AdminItem{
 			ID: a.ID, Username: a.Username, Nickname: a.Nickname, Status: a.Status,
-			RoleIDs: ids, RoleNames: names, CreatedAt: a.CreatedAt.Format("2006-01-02 15:04"),
+			RoleIDs: idStrs, RoleNames: names, CreatedAt: a.CreatedAt.Format("2006-01-02 15:04"),
 		}
 		if a.LastLoginAt != nil {
 			t := a.LastLoginAt.Format("2006-01-02 15:04")
