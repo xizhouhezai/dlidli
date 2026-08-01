@@ -12,6 +12,7 @@ import (
 	"github.com/dlidli/server/internal/module/admin"
 	"github.com/dlidli/server/internal/module/danmaku"
 	"github.com/dlidli/server/internal/module/dynamic"
+	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/module/interaction"
 	"github.com/dlidli/server/internal/module/notify"
 	"github.com/dlidli/server/internal/module/relation"
@@ -80,14 +81,16 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 
 	// 业务模块路由（依赖 MySQL/Redis，缺失时跳过并告警）
 	if res.DB != nil && res.Redis != nil {
-		accountSvc := account.NewService(account.NewRepo(res.DB), res.Redis, cfg, log)
+		growthSvc := growth.NewService(growth.NewRepo(res.DB), res.Redis, log)
+
+		accountSvc := account.NewService(account.NewRepo(res.DB), res.Redis, cfg, log, growthSvc)
 		account.NewHandler(accountSvc, res.Storage).RegisterRoutes(v1, authMW)
 
 		uploadTmp := filepath.Join(cfg.Storage.LocalDir, "chunks")
 		uploadSvc := upload.NewService(upload.NewRepo(res.DB), res.Redis, res.Storage, uploadTmp, log)
 		upload.NewHandler(uploadSvc).RegisterRoutes(v1, authMW)
 
-		videoSvc := video.NewService(video.NewRepo(res.DB), uploadSvc, accountSvc, res.Redis, cfg, log)
+		videoSvc := video.NewService(video.NewRepo(res.DB), uploadSvc, accountSvc, growthSvc, res.Redis, cfg, log)
 		video.NewHandler(videoSvc, res.Storage).RegisterRoutes(v1, authMW, optionalAuthMW)
 
 		// dev 内嵌转码 Worker（部署环境由独立 cmd/worker 承担）
@@ -95,14 +98,16 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 			videoSvc.StartTranscodeWorkers(context.Background(), res.Storage)
 		}
 
-		danmakuSvc := danmaku.NewService(danmaku.NewRepo(res.DB), videoSvc, accountSvc, res.Redis, log)
+		danmakuSvc := danmaku.NewService(danmaku.NewRepo(res.DB), videoSvc, accountSvc, growthSvc, res.Redis, log)
 		danmaku.NewHandler(danmakuSvc).RegisterRoutes(v1, authMW)
 
 		notifySvc := notify.NewService(notify.NewRepo(res.DB), accountSvc, log)
 		notify.NewHandler(notifySvc).RegisterRoutes(v1, authMW)
 
-		interactionSvc := interaction.NewService(interaction.NewRepo(res.DB), videoSvc, accountSvc, notifySvc, log)
+		interactionSvc := interaction.NewService(interaction.NewRepo(res.DB), videoSvc, accountSvc, notifySvc, growthSvc, log)
 		interaction.NewHandler(interactionSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
+
+		growth.NewHandler(growthSvc).RegisterRoutes(v1, authMW)
 
 		adminSvc := admin.NewService(admin.NewRepo(res.DB), videoSvc, accountSvc, cfg, log)
 		admin.NewHandler(adminSvc).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret))

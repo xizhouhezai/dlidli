@@ -10,6 +10,7 @@ import { createRelationApi } from './apis/relation'
 import { createDynamicApi } from './apis/dynamic'
 import { createSearchApi } from './apis/search'
 import { createNotifyApi } from './apis/notify'
+import { createGrowthApi } from './apis/growth'
 
 export * from './http'
 export * from './error'
@@ -22,6 +23,7 @@ export type { AdminLoginResp, ReviewItem, SensitiveWord, AdminUserItem, PunishAc
 export type { UserBrief, RelationStat } from './apis/relation'
 export type { FeedItem } from './apis/dynamic'
 export type { NotifyItem } from './apis/notify'
+export type { GrowthSummary, GrowthTask, AssetLogItem } from './apis/growth'
 
 /**
  * 创建 API 客户端。业务模块接口（account/video/...）随 M1 后端接口逐步补充，
@@ -42,6 +44,7 @@ export function createApiClient(cfg: ClientConfig = {}) {
     dynamic: createDynamicApi(http),
     search: createSearchApi(http),
     notify: createNotifyApi(http),
+    growth: createGrowthApi(http),
   }
 }
 

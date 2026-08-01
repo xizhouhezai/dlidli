@@ -10,7 +10,7 @@
 | --- | --- | --- | :-: | --- |
 | M0 基建 | W1-W4 | 🟢 进行中 | 92% | 仅剩 M0-ENG-13 staging 部署 |
 | M1 MVP 内测 | W5-W12 | 🟢 进行中 | 100% | player 内核封装（VID-09），M1 功能全部完成 |
-| M2 V1.0 公测 | W13-W24 | 🟢 进行中 | 60% | 权限点管理（M2-RBAC-06）上线，RBAC 闭环 |
+| M2 V1.0 公测 | W13-W24 | 🟢 进行中 | 68% | 成长体系（GRW-01/02/03）上线，含经验/等级/权益引擎 |
 | M3 V2.0 增长 | W25-W48 | ⚪ 未开始 | 0% | - |
 | M4 V3.0 商业化 | W49+ | ⚪ 未开始 | 0% | - |
 
@@ -93,6 +93,7 @@
 - [x] 后台 UI 参考 vue-vben-admin 改造（M1-ADM-07）：新增 AdminLayout（深色侧边栏分组菜单+顶栏面包屑+用户下拉退出）；路由重组为 layout 子路由（登录独立）；新增 Dashboard 工作台（渐变欢迎条+待审/用户/封禁/敏感词 4 统计卡+快捷入口）；审核/敏感词/用户三页去自带 header 改 page-head+page-card 卡片化；装 @iconify-json/mingcute 统一图标；lint/build 通过，浏览器实测菜单/面包屑/统计卡/跳转全正常
 - [x] RBAC 权限体系全套（M2-RBAC-01~05）：0011 迁移 admin_role/permission/user_role/role_permission 4 表 + admin_user 加 nickname/last_login_at；seedRBAC 幂等 upsert 11 权限点（menu/button，模块:操作命名）+ 6 内置角色（super 不落权限关联鉴权时短路），默认 admin 绑 super；middleware.RequirePerm(HasPerm, code) 按权限码鉴权，每个业务路由挂对应 code；/me/permissions 下发当前登录者权限码+可见菜单；账号 CRUD/启停/重置密码（禁操作自己）、角色 CRUD+分配权限（内置禁删）；前端 permissionStore + v-perm 指令（无权移除元素）+ AdminLayout 动态菜单（后端下发按权限过滤）+ 账号管理页/角色管理页（el-tree 权限树）；E2E 全绿：super 11权限6菜单、无权访问返10004、内置角色禁删返10002、停用登录20003、moderator 登录只见工作台/用户管理
 - [x] 前端公用抽取规范落地（DRY）：新增规范 docs/architecture/frontend.md §4.0（同一逻辑/结构出现第2次就抽公用，分层归属 shared/composables/components/全局样式）；api-client 新增 apiErrorMessage(err,fallback) 错误文案归一化；admin 抽出 PageHead 组件 + useApiAction/usePagedList composable + 全局 .pink-btn，应用到 Review/SensitiveWords/Users/Admins/Roles 5 页（删 4 处 scoped 按钮样式 + 统一 19 处 try/catch 兼底）；web 抽出 useCountdown（修复 LoginView 定时器泄漏，应用 Login/ResetPassword）+ VideoCard 组件（应用 Search/Space）；web/admin lint 0 + build 通过，搜索页 VideoCard 实测渲染正常
+- [x] 成长体系上线（M2-GRW-01~03）：0012 迁移 exp_log 流水表；growth 模块规则引擎（5 类经验来源：每日登录/观看 +5 每日一次、投稿 +10 日 2 次、弹幕/评论 +1 日 20 次，Redis 每日去重/限量；等级表 Lv0-Lv6 阈值自动重算；今日任务状态聚合）；触发点接入：登录/有效观看(≥5s)/投稿发布(转码自动过审与人工过审双触点)/发弹幕/发评论；GET /growth/summary + /growth/exp-logs；硬币明细接口 GET /users/me/coin-logs；Lv3 解锁彩色/顶部/底部弹幕（低等级返 40003）；Web 成长中心页 /growth（等级卡徽章/经验进度条/权益预告 + 今日任务 + 经验/硬币明细 Tab 分页）+ 头部下拉入口 + 弹幕栏 Lv3 解锁提示；E2E 实测：登录+5/弹幕+1/评论+1/观看+5/投稿+10 全累计、每日去重、彩色弹幕拦截 40003、升级 Lv1→Lv2 重算全通
 
 ### 进行中
 
@@ -100,8 +101,8 @@
 
 ### 下阶段计划
 
-- [ ] 管理平台：用户查询/封禁/禁言（M1-ADM-03）+ 用户/分区管理页（M1-ADM-06）
-- [ ] Web 端：播放地址签名（M1-VID-05）、player 抽包（M1-VID-09）、M2 成长/机审/运营位
+- [ ] Web 端 M2 功能：机审合规（M2-AUD-01~04）、弹幕进阶（M2-DM-01~04）、审计日志中心（M2-SYS-01）、系统配置（M2-SYS-02）
+- [ ] 管理平台：运营位/Banner 配置（M3-OPS-01 提前）
 - [ ] （后置）多端：H5 剩余页、小程序、App
 
 ### 开发优先级策略（调整于 2026-07-30）

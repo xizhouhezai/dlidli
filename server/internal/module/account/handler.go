@@ -2,6 +2,7 @@ package account
 
 import (
 	"regexp"
+	"strconv"
 
 	"github.com/dlidli/server/internal/middleware"
 	"github.com/dlidli/server/internal/pkg/errcode"
@@ -40,6 +41,7 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth gin.HandlerFunc) {
 		users.PUT("/me/password", h.changePassword)
 		users.PATCH("/me", h.updateProfile)
 		users.POST("/me/avatar", h.uploadAvatar)
+		users.GET("/me/coin-logs", h.coinLogs)
 	}
 }
 
@@ -200,6 +202,42 @@ func (h *Handler) me(c *gin.Context) {
 		return
 	}
 	response.OK(c, profile)
+}
+
+// coinLogs 硬币流水分页
+// @Summary  硬币流水分页
+// @Tags     账号-资产
+// @Produce  json
+// @Security BearerAuth
+// @Param    page query int false "页码（默认1）"
+// @Param    size query int false "每页条数（默认20）"
+// @Success  200 {object} response.Body
+// @Router   /users/me/coin-logs [get]
+func (h *Handler) coinLogs(c *gin.Context) {
+	page, size := pagination(c)
+	uid := c.GetInt64(middleware.CtxUserID)
+	list, total, err := h.svc.CoinLogs(c.Request.Context(), uid, page, size)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"list": list, "total": total})
+}
+
+func pagination(c *gin.Context) (page, size int) {
+	page = 1
+	size = 20
+	if p := c.Query("page"); p != "" {
+		if v, err := strconv.Atoi(p); err == nil && v > 0 {
+			page = v
+		}
+	}
+	if s := c.Query("size"); s != "" {
+		if v, err := strconv.Atoi(s); err == nil && v > 0 && v <= 100 {
+			size = v
+		}
+	}
+	return page, size
 }
 
 // changePassword 修改密码
