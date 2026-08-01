@@ -77,6 +77,12 @@ const router = createRouter({
           component: () => import('@/views/account/SettingsView.vue'),
           meta: { title: '账号设置', requiresAuth: true },
         },
+        {
+          path: 'growth',
+          name: 'growth',
+          component: () => import('@/views/account/GrowthView.vue'),
+          meta: { title: '成长中心', requiresAuth: true },
+        },
       ],
     },
     // 管理后台已拆为独立应用 apps/admin（dev :5175）

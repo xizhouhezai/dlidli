@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/pkg/captcha"
 	"github.com/dlidli/server/internal/pkg/config"
 	"github.com/dlidli/server/internal/pkg/errcode"
@@ -28,14 +29,15 @@ const (
 )
 
 type Service struct {
-	repo *Repo
-	rdb  *redis.Client
-	cfg  *config.Config
-	log  *zap.Logger
+	repo      *Repo
+	rdb       *redis.Client
+	cfg       *config.Config
+	log       *zap.Logger
+	growthSvc *growth.Service
 }
 
-func NewService(repo *Repo, rdb *redis.Client, cfg *config.Config, log *zap.Logger) *Service {
-	return &Service{repo: repo, rdb: rdb, cfg: cfg, log: log}
+func NewService(repo *Repo, rdb *redis.Client, cfg *config.Config, log *zap.Logger, growthSvc *growth.Service) *Service {
+	return &Service{repo: repo, rdb: rdb, cfg: cfg, log: log, growthSvc: growthSvc}
 }
 
 // SendSmsCode 发送短信验证码。当前为 mock 实现：仅写入 Redis 并打日志；
@@ -291,6 +293,42 @@ func (s *Service) GrantCoins(_ context.Context, uid int64, count int, reason str
 	return err
 }
 
+// coinReasonNames 硬币流水来源文案（未登记回退原样）。
+var coinReasonNames = map[string]string{
+	"daily_login": "每日登录",
+	"coin_video": "投币",
+	"coin_refund": "投币退款",
+}
+
+// CoinLogItem 硬币流水项（ID 字符串化避免 JS 精度丢失）。
+type CoinLogItem struct {
+	ID         string    `json:"id"`
+	Delta      int       `json:"delta"`
+	Reason     string    `json:"reason"`
+	ReasonName string    `json:"reason_name"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// CoinLogs 硬币流水分页（M2-GRW-03 硬币明细页）。
+func (s *Service) CoinLogs(_ context.Context, uid int64, page, size int) ([]CoinLogItem, int64, error) {
+	list, total, err := s.repo.ListCoinLogs(uid, page, size)
+	if err != nil {
+		return nil, 0, err
+	}
+	items := make([]CoinLogItem, 0, len(list))
+	for _, l := range list {
+		name := l.Reason
+		if v, ok := coinReasonNames[l.Reason]; ok {
+			name = v
+		}
+		items = append(items, CoinLogItem{
+			ID: fmt.Sprintf("%d", l.ID), Delta: l.Delta, Reason: l.Reason,
+			ReasonName: name, CreatedAt: l.CreatedAt,
+		})
+	}
+	return items, total, nil
+}
+
 func (s *Service) issueTokens(ctx context.Context, user *User) (*TokenPair, error) {
 	if user == nil {
 		return nil, errcode.ErrAccountNotExists
@@ -306,7 +344,10 @@ func (s *Service) issueTokens(ctx context.Context, user *User) (*TokenPair, erro
 			user.Coin++
 		}
 	}
-
+	// 每日首次登录 +5 经验（M2-GRW-01）
+	if s.growthSvc != nil {
+		s.growthSvc.AddExpOncePerDay(ctx, user.ID, growth.ReasonDailyLogin)
+	}
 	accessTTL := time.Duration(s.cfg.JWT.AccessTTLMin) * time.Minute
 	access, err := jwtx.Generate(s.cfg.JWT.Secret, user.ID, accessTTL)
 	if err != nil {
