@@ -122,8 +122,8 @@ async function onLogout() {
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item disabled>
-                  Lv{{ userStore.profile?.level ?? 0 }} · 硬币 {{ userStore.profile?.coin ?? 0 }}
+                <el-dropdown-item @click="$router.push('/growth')">
+                  Lv{{ userStore.profile?.level ?? 0 }} · 硬币 {{ userStore.profile?.coin ?? 0 }} · 成长中心
                 </el-dropdown-item>
                 <el-dropdown-item
                   divided

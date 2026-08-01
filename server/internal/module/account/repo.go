@@ -150,3 +150,15 @@ func (r *Repo) AddCoins(uid int64, delta int, reason string) (ok bool, err error
 	})
 	return ok, err
 }
+
+// ListCoinLogs 硬币流水分页（新→旧）。
+func (r *Repo) ListCoinLogs(uid int64, page, size int) ([]CoinLog, int64, error) {
+	q := r.db.Model(&CoinLog{}).Where("user_id = ?", uid)
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var list []CoinLog
+	err := q.Order("id DESC").Offset((page - 1) * size).Limit(size).Find(&list).Error
+	return list, total, err
+}

@@ -576,6 +576,12 @@ onBeforeUnmount(() => {
           发送
         </el-button>
       </div>
+      <p
+        v-if="userStore.token && (userStore.profile?.level ?? 0) < 3"
+        class="dm-privilege-tip"
+      >
+        <span class="i-mingcute-lock-line" />Lv3 解锁彩色弹幕与顶部/底部弹幕
+      </p>
 
       <!-- 互动栏（播放器下方独立一行，对标 B 站） -->
       <div class="action-bar">
@@ -1026,6 +1032,19 @@ onBeforeUnmount(() => {
   --el-button-border-color: #{v.$primary};
   --el-button-hover-bg-color: #{v.$primary-hover};
   --el-button-hover-border-color: #{v.$primary-hover};
+}
+
+.dm-privilege-tip {
+  margin: -12px 0 12px;
+  font-size: 12px;
+  color: v.$text-2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  span {
+    color: v.$primary;
+  }
 }
 
 /* UP 主卡片 */

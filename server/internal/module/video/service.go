@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dlidli/server/internal/module/account"
+	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/module/upload"
 	"github.com/dlidli/server/internal/pkg/bvid"
 	"github.com/dlidli/server/internal/pkg/config"
@@ -43,6 +44,7 @@ type Service struct {
 	repo       *Repo
 	uploadSvc  *upload.Service
 	accountSvc *account.Service
+	growthSvc  *growth.Service
 	rdb        *redis.Client
 	cfg        *config.Config
 	log        *zap.Logger
@@ -50,8 +52,8 @@ type Service struct {
 	publishHook PublishHook
 }
 
-func NewService(repo *Repo, uploadSvc *upload.Service, accountSvc *account.Service, rdb *redis.Client, cfg *config.Config, log *zap.Logger) *Service {
-	return &Service{repo: repo, uploadSvc: uploadSvc, accountSvc: accountSvc, rdb: rdb, cfg: cfg, log: log}
+func NewService(repo *Repo, uploadSvc *upload.Service, accountSvc *account.Service, growthSvc *growth.Service, rdb *redis.Client, cfg *config.Config, log *zap.Logger) *Service {
+	return &Service{repo: repo, uploadSvc: uploadSvc, accountSvc: accountSvc, growthSvc: growthSvc, rdb: rdb, cfg: cfg, log: log}
 }
 
 // Categories 分区列表。
@@ -345,7 +347,7 @@ func (s *Service) OwnerID(_ context.Context, videoID int64) (int64, error) {
 
 const progressTTL = 90 * 24 * time.Hour
 
-// SaveProgress 保存观看进度（秒）。
+// SaveProgress 保存观看进度（秒）；有效观看（≥5s）触发每日一次观看经验（M2-GRW-01）。
 func (s *Service) SaveProgress(ctx context.Context, uid int64, bv string, position int) error {
 	if position < 0 {
 		return errcode.ErrInvalidParams
@@ -353,6 +355,9 @@ func (s *Service) SaveProgress(ctx context.Context, uid int64, bv string, positi
 	videoID, err := s.PublishedIDByBvid(ctx, bv)
 	if err != nil {
 		return err
+	}
+	if position >= 5 && s.growthSvc != nil {
+		s.growthSvc.AddExpOncePerDay(ctx, uid, growth.ReasonDailyWatch)
 	}
 	key := fmt.Sprintf("wp:u:%d", uid)
 	if err := s.rdb.HSet(ctx, key, fmt.Sprintf("%d", videoID), position).Err(); err != nil {
@@ -417,6 +422,10 @@ func (s *Service) SetPublishHook(h PublishHook) {
 func (s *Service) firePublish(videoID, userID int64) {
 	if s.publishHook != nil {
 		go s.publishHook(videoID, userID)
+	}
+	// 投稿发布 +10 经验（每日上限 2 次，M2-GRW-01）
+	if s.growthSvc != nil {
+		s.growthSvc.AddExpWithLimit(context.Background(), userID, growth.ReasonVideoUpload)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dlidli/server/internal/module/account"
+	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/module/notify"
 	"github.com/dlidli/server/internal/module/video"
 	"github.com/dlidli/server/internal/pkg/errcode"
@@ -22,11 +23,12 @@ type Service struct {
 	videoSvc   *video.Service
 	accountSvc *account.Service
 	notifySvc  *notify.Service
+	growthSvc  *growth.Service
 	log        *zap.Logger
 }
 
-func NewService(repo *Repo, videoSvc *video.Service, accountSvc *account.Service, notifySvc *notify.Service, log *zap.Logger) *Service {
-	return &Service{repo: repo, videoSvc: videoSvc, accountSvc: accountSvc, notifySvc: notifySvc, log: log}
+func NewService(repo *Repo, videoSvc *video.Service, accountSvc *account.Service, notifySvc *notify.Service, growthSvc *growth.Service, log *zap.Logger) *Service {
+	return &Service{repo: repo, videoSvc: videoSvc, accountSvc: accountSvc, notifySvc: notifySvc, growthSvc: growthSvc, log: log}
 }
 
 // ---- 评论 ----
@@ -104,6 +106,10 @@ func (s *Service) AddComment(ctx context.Context, uid int64, bv string, req *Add
 			if err := s.repo.AddReplyCnt(c.RootID, 1); err != nil {
 				s.log.Warn("回复计数回写失败", zap.Error(err))
 			}
+		}
+		// 发表评论 +1 经验（每日上限 20 次，M2-GRW-01；影子屏蔽不奖励）
+		if s.growthSvc != nil {
+			s.growthSvc.AddExpWithLimit(ctx, uid, growth.ReasonCommentSend)
 		}
 
 		// 通知：回复→被回复人；一级评论→稿件 UP 主
