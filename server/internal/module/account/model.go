@@ -31,6 +31,7 @@ type User struct {
 	Status      int8
 	MutedUntil  *time.Time // 禁言到期（status=1 时有效）
 	BannedUntil *time.Time // 封禁到期（status=2 时有效，nil=永久）
+	YouthMode   int8       // 青少年模式 0关 1开（M2-AUD-04）
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

@@ -10,8 +10,8 @@ import (
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/module/video"
+	"github.com/dlidli/server/internal/pkg/contentmod"
 	"github.com/dlidli/server/internal/pkg/errcode"
-	"github.com/dlidli/server/internal/pkg/moderate"
 	"github.com/dlidli/server/internal/pkg/snowflake"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -95,8 +95,8 @@ func (s *Service) Send(ctx context.Context, uid int64, bv string, req *SendReq) 
 		d.FontSize = 25
 	}
 
-	// 命中敏感词 → 影子屏蔽（仅发送者本地可见，不报错）
-	if moderate.Hit(d.Content) {
+	// 机审（M2-AUD-01）：命中敏感词/联系方式规则 → 影子屏蔽（仅发送者可见，不报错）
+	if !contentmod.CheckText(contentmod.SceneDanmaku, d.Content).Pass {
 		d.Status = StatusShadow
 	}
 
@@ -156,4 +156,35 @@ func (s *Service) ListSegment(ctx context.Context, bv string, seg int) ([]Item, 
 		s.rdb.Set(ctx, key, buf, segCacheTTL)
 	}
 	return items, nil
+}
+
+// DanmakuBrief 弹幕摘要（举报队列展示用）：内容 + 发送者。
+func (s *Service) DanmakuBrief(_ context.Context, id int64) (content string, userID int64, err error) {
+	d, err := s.repo.FindByID(id)
+	if err != nil {
+		return "", 0, err
+	}
+	if d == nil || d.Status == StatusDeleted {
+		return "", 0, errcode.ErrNotFound
+	}
+	return d.Content, d.UserID, nil
+}
+
+// AdminDeleteDanmaku 管理员删除弹幕（举报处理用）。
+func (s *Service) AdminDeleteDanmaku(_ context.Context, id int64) error {
+	d, err := s.repo.FindByID(id)
+	if err != nil {
+		return err
+	}
+	if d == nil || d.Status == StatusDeleted {
+		return errcode.ErrNotFound
+	}
+	if err := s.repo.MarkDeleted(id); err != nil {
+		return err
+	}
+	if d.Status == StatusNormal {
+		s.rdb.Del(context.Background(), segKey(d.VideoID, d.TimeMs/SegmentMS))
+		_ = s.videoSvc.AddStat(context.Background(), d.VideoID, "danmaku_cnt", -1)
+	}
+	return nil
 }

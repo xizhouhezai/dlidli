@@ -23,3 +23,23 @@ func Encode(id int64) string {
 	}
 	return "DV" + string(b)
 }
+
+// Decode 解析对外展示 ID 为内部 ID；非法输入返回 0。
+func Decode(s string) int64 {
+	if !strings.HasPrefix(s, "DV") {
+		return 0
+	}
+	s = s[2:]
+	if s == "" {
+		return 0
+	}
+	var n uint64
+	for i := 0; i < len(s); i++ {
+		idx := strings.IndexByte(alphabet, s[i])
+		if idx < 0 {
+			return 0
+		}
+		n = n*62 + uint64(idx)
+	}
+	return int64(n)
+}

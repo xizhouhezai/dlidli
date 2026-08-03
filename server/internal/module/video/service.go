@@ -17,6 +17,7 @@ import (
 	"github.com/dlidli/server/internal/module/upload"
 	"github.com/dlidli/server/internal/pkg/bvid"
 	"github.com/dlidli/server/internal/pkg/config"
+	"github.com/dlidli/server/internal/pkg/contentmod"
 	"github.com/dlidli/server/internal/pkg/errcode"
 	"github.com/dlidli/server/internal/pkg/playsign"
 	"github.com/dlidli/server/internal/pkg/snowflake"
@@ -177,6 +178,17 @@ func (s *Service) Submit(ctx context.Context, uid int64, req *SubmitReq) (*Detai
 		Tags:        string(tagsJSON),
 		Copyright:   req.Copyright,
 	}
+
+	// 机审风险分级（M2-AUD-02）：标题/简介命中 → 高风险全人审；新账号（注册 <7 天）→ 中风险；默认低
+	risk := RiskLow
+	titleRisk := contentmod.CheckText(contentmod.SceneVideo, v.Title)
+	descRisk := contentmod.CheckText(contentmod.SceneVideo, v.Description)
+	if !titleRisk.Pass || !descRisk.Pass {
+		risk = RiskHigh
+	} else if isNew, err := s.accountSvc.IsNewUser(ctx, uid, 7); err == nil && isNew {
+		risk = RiskMedium
+	}
+	v.RiskLevel = int8(risk)
 
 	// 状态机：转码开启→转码中（Worker 完成后推进）；关闭→直接待审/发布
 	// TODO(M2-AUD): 标题/简介/封面接入机审
@@ -341,6 +353,30 @@ func (s *Service) OwnerID(_ context.Context, videoID int64) (int64, error) {
 		return 0, errcode.ErrNotFound
 	}
 	return v.UserID, nil
+}
+
+// VideoBrief 稿件摘要（举报队列展示用）：标题 + 作者。
+func (s *Service) VideoBrief(_ context.Context, videoID int64) (title string, ownerID int64, err error) {
+	v, err := s.repo.FindVideoByID(videoID)
+	if err != nil {
+		return "", 0, err
+	}
+	if v == nil {
+		return "", 0, errcode.ErrNotFound
+	}
+	return v.Title, v.UserID, nil
+}
+
+// AdminDelete 管理员删除稿件（举报处理用；软删除，作者与游客均不可见）。
+func (s *Service) AdminDelete(_ context.Context, bv string) error {
+	v, err := s.repo.FindByBvid(bv)
+	if err != nil {
+		return err
+	}
+	if v == nil || v.Status == StatusDeleted {
+		return errcode.ErrNotFound
+	}
+	return s.repo.SoftDelete(v)
 }
 
 // ---- 观看进度（跨端续播）----

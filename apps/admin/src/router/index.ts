@@ -36,6 +36,12 @@ const router = createRouter({
           meta: { title: '敏感词库', requiresAuth: true },
         },
         {
+          path: 'reports',
+          name: 'reports',
+          component: () => import('@/views/content/ReportsView.vue'),
+          meta: { title: '举报处理', requiresAuth: true },
+        },
+        {
           path: 'users',
           name: 'users',
           component: () => import('@/views/user/UsersView.vue'),

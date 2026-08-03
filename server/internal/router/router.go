@@ -16,6 +16,7 @@ import (
 	"github.com/dlidli/server/internal/module/interaction"
 	"github.com/dlidli/server/internal/module/notify"
 	"github.com/dlidli/server/internal/module/relation"
+	"github.com/dlidli/server/internal/module/report"
 	"github.com/dlidli/server/internal/module/search"
 	"github.com/dlidli/server/internal/module/upload"
 	"github.com/dlidli/server/internal/module/video"
@@ -109,9 +110,6 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 
 		growth.NewHandler(growthSvc).RegisterRoutes(v1, authMW)
 
-		adminSvc := admin.NewService(admin.NewRepo(res.DB), videoSvc, accountSvc, cfg, log)
-		admin.NewHandler(adminSvc).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret))
-
 		relationSvc := relation.NewService(relation.NewRepo(res.DB), accountSvc, notifySvc)
 		relation.NewHandler(relationSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
 
@@ -119,6 +117,15 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		dynamic.NewHandler(dynamicSvc).RegisterRoutes(v1, authMW)
 		// 稿件发布 → 自动生成投稿动态（旁路钩子，失败仅日志）
 		videoSvc.SetPublishHook(dynamicSvc.OnVideoPublished)
+
+		adminSvc := admin.NewService(admin.NewRepo(res.DB), videoSvc, accountSvc, cfg, log)
+		admin.NewHandler(adminSvc).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret))
+
+		// 举报体系（M2-AUD-03）：C 端提交 + 后台队列处理
+		reportSvc := report.NewService(report.NewRepo(res.DB), videoSvc, accountSvc,
+			interactionSvc, danmakuSvc, dynamicSvc, notifySvc, log)
+		report.NewHandler(reportSvc).RegisterRoutes(v1, authMW, middleware.AdminAuth(cfg.JWT.Secret),
+			func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) })
 
 		search.NewHandler(videoSvc, accountSvc).RegisterRoutes(v1)
 	} else {

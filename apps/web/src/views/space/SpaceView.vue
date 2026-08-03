@@ -9,6 +9,7 @@ import { useUserStore } from '@/stores/user'
 import defaultAvatar from '@/assets/default-avatar.png'
 import VideoCard from '@/components/VideoCard.vue'
 import AccountStatusAlert from '@/components/AccountStatusAlert.vue'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,6 +24,16 @@ const following = ref(false)
 const followerCnt = ref(0)
 const followingCnt = ref(0)
 const followPending = ref(false)
+
+// 举报用户
+const reportDialog = ref<InstanceType<typeof ReportDialog> | null>(null)
+function openReport() {
+  if (!userStore.token) {
+    router.push('/login')
+    return
+  }
+  reportDialog.value?.open()
+}
 
 type TabKey = 'videos' | 'followings' | 'followers' | 'favorites'
 const activeTab = ref<TabKey>('videos')
@@ -189,6 +200,14 @@ watch(activeTab, loadTab)
           >
             编辑资料
           </el-button>
+          <el-button
+            v-if="!isSelf"
+            text
+            class="space-head__report"
+            @click="openReport"
+          >
+            举报
+          </el-button>
         </div>
       </div>
 
@@ -284,6 +303,14 @@ watch(activeTab, loadTab)
       </template>
     </template>
   </div>
+
+  <!-- 举报弹层 -->
+  <ReportDialog
+    ref="reportDialog"
+    :target-type="5"
+    :target-id="profile?.id ?? ''"
+    :title="profile ? `用户：${profile.nickname}` : ''"
+  />
 </template>
 
 <style scoped lang="scss">
@@ -380,6 +407,14 @@ watch(activeTab, loadTab)
     --el-button-hover-bg-color: #e9eaeb;
     --el-button-hover-border-color: #{v.$border};
     --el-button-hover-text-color: #{v.$text-2};
+  }
+}
+
+.space-head__report {
+  color: v.$text-2;
+
+  &:hover {
+    color: v.$primary;
   }
 }
 

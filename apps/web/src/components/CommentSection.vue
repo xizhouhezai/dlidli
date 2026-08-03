@@ -8,6 +8,7 @@ import { ApiError, type CommentItem } from '@dlidli/api-client'
 import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import defaultAvatar from '@/assets/default-avatar.png'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const props = defineProps<{ bvid: string }>()
 
@@ -31,6 +32,16 @@ const replyInput = ref('')
 
 // 已点赞集合（会话级乐观状态）
 const likedSet = ref(new Set<string>())
+
+// 举报：待举报评论（一级或楼中楼）
+const reportDialog = ref<InstanceType<typeof ReportDialog> | null>(null)
+const reportComment = ref<CommentItem | null>(null)
+
+function openReport(c: CommentItem) {
+  if (!requireLogin()) return
+  reportComment.value = c
+  reportDialog.value?.open()
+}
 
 async function load(reset = false) {
   if (reset) {
@@ -253,6 +264,10 @@ async function expandReplies(root: CommentItem) {
             class="cmt-item__op"
             @click="remove(c)"
           >删除</span>
+          <span
+            class="cmt-item__op"
+            @click="openReport(c)"
+          >举报</span>
         </p>
 
         <!-- 回复输入 -->
@@ -313,6 +328,10 @@ async function expandReplies(root: CommentItem) {
                 class="cmt-item__op"
                 @click="remove(r, c)"
               >删除</span>
+              <span
+                class="cmt-item__op"
+                @click="openReport(r)"
+              >举报</span>
             </span>
           </div>
           <span
@@ -339,6 +358,14 @@ async function expandReplies(root: CommentItem) {
       </el-button>
     </div>
   </div>
+
+  <!-- 举报弹层 -->
+  <ReportDialog
+    ref="reportDialog"
+    :target-type="2"
+    :target-id="reportComment?.id ?? ''"
+    :title="reportComment ? `评论：${reportComment.content}` : ''"
+  />
 </template>
 
 <style scoped>

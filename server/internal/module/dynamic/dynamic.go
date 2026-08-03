@@ -4,6 +4,7 @@ package dynamic
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -11,8 +12,8 @@ import (
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/module/relation"
 	"github.com/dlidli/server/internal/module/video"
+	"github.com/dlidli/server/internal/pkg/contentmod"
 	"github.com/dlidli/server/internal/pkg/errcode"
-	"github.com/dlidli/server/internal/pkg/moderate"
 	"github.com/dlidli/server/internal/pkg/snowflake"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -74,6 +75,24 @@ func (r *Repo) ListByUsers(userIDs []int64, cursor int64, size int) ([]Dynamic, 
 	return list, err
 }
 
+// FindByID 查动态；不存在返回 (nil, nil)。
+func (r *Repo) FindByID(id int64) (*Dynamic, error) {
+	var d Dynamic
+	err := r.db.First(&d, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+// MarkDeleted 动态置删除状态（举报处理用）。
+func (r *Repo) MarkDeleted(id int64) error {
+	return r.db.Model(&Dynamic{}).Where("id = ?", id).UpdateColumn("status", 2).Error
+}
+
 type Service struct {
 	repo        *Repo
 	accountSvc  *account.Service
@@ -97,8 +116,9 @@ func (s *Service) PostText(ctx context.Context, uid int64, content string) (*Fee
 	if content == "" || len([]rune(content)) > 1000 {
 		return nil, errcode.ErrInvalidParams.WithMsg("动态内容需在 1~1000 字之间")
 	}
-	if moderate.Hit(content) {
-		return nil, errcode.ErrInvalidParams.WithMsg("内容包含敏感词，请修改后再发布")
+	// 机审（M2-AUD-01）：命中敏感词/联系方式规则 → 拒绝发布
+	if !contentmod.CheckText(contentmod.SceneDynamic, content).Pass {
+		return nil, errcode.ErrInvalidParams.WithMsg("内容包含违规信息，请修改后再发布")
 	}
 
 	d := &Dynamic{ID: snowflake.NextID(), UserID: uid, Type: TypeText, Content: content}
@@ -133,8 +153,9 @@ func (s *Service) ShareVideo(ctx context.Context, uid int64, bv, content string)
 	if len([]rune(content)) > 1000 {
 		return nil, errcode.ErrInvalidParams.WithMsg("转发语最多 1000 字")
 	}
-	if content != "" && moderate.Hit(content) {
-		return nil, errcode.ErrInvalidParams.WithMsg("内容包含敏感词，请修改后再发布")
+	// 机审（M2-AUD-01）：转发语命中敏感词/联系方式规则 → 拒绝转发
+	if content != "" && !contentmod.CheckText(contentmod.SceneDynamic, content).Pass {
+		return nil, errcode.ErrInvalidParams.WithMsg("内容包含违规信息，请修改后再转发")
 	}
 
 	d := &Dynamic{ID: snowflake.NextID(), UserID: uid, Type: TypeShareVideo, Content: content, VideoID: videoID}
@@ -150,6 +171,30 @@ func (s *Service) ShareVideo(ctx context.Context, uid int64, bv, content string)
 		return nil, err
 	}
 	return &items[0], nil
+}
+
+// DynamicBrief 动态摘要（举报队列展示用）：内容 + 作者。
+func (s *Service) DynamicBrief(_ context.Context, id int64) (content string, userID int64, err error) {
+	d, err := s.repo.FindByID(id)
+	if err != nil {
+		return "", 0, err
+	}
+	if d == nil || d.Status != 0 {
+		return "", 0, errcode.ErrNotFound
+	}
+	return d.Content, d.UserID, nil
+}
+
+// AdminDeleteDynamic 管理员删除动态（举报处理用）。
+func (s *Service) AdminDeleteDynamic(_ context.Context, id int64) error {
+	d, err := s.repo.FindByID(id)
+	if err != nil {
+		return err
+	}
+	if d == nil || d.Status != 0 {
+		return errcode.ErrNotFound
+	}
+	return s.repo.MarkDeleted(id)
 }
 
 // Feed 关注流（含自己的动态），游标分页。

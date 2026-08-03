@@ -61,5 +61,12 @@ export function createAuthApi(http: HttpClient) {
       form.append('file', file)
       return http.postForm<{ avatar: string }>('/api/v1/users/me/avatar', form)
     },
+
+    /** 青少年模式状态 */
+    youthMode: () => http.get<{ enabled: boolean }>('/api/v1/users/me/youth-mode'),
+
+    /** 开关青少年模式 */
+    setYouthMode: (enabled: boolean) =>
+      http.put<null>('/api/v1/users/me/youth-mode', { enabled }),
   }
 }

@@ -42,6 +42,8 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth gin.HandlerFunc) {
 		users.PATCH("/me", h.updateProfile)
 		users.POST("/me/avatar", h.uploadAvatar)
 		users.GET("/me/coin-logs", h.coinLogs)
+		users.GET("/me/youth-mode", h.youthMode)
+		users.PUT("/me/youth-mode", h.setYouthMode)
 	}
 }
 
@@ -238,6 +240,48 @@ func pagination(c *gin.Context) (page, size int) {
 		}
 	}
 	return page, size
+}
+
+// youthMode 青少年模式状态
+// @Summary  青少年模式状态
+// @Tags     账号-设置
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /users/me/youth-mode [get]
+func (h *Handler) youthMode(c *gin.Context) {
+	uid := c.GetInt64(middleware.CtxUserID)
+	on, err := h.svc.GetYouthMode(c.Request.Context(), uid)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"enabled": on})
+}
+
+// setYouthMode 开关青少年模式
+// @Summary  开关青少年模式
+// @Tags     账号-设置
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body body object true "enabled: 是否开启"
+// @Success  200 {object} response.Body
+// @Router   /users/me/youth-mode [put]
+func (h *Handler) setYouthMode(c *gin.Context) {
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	uid := c.GetInt64(middleware.CtxUserID)
+	if err := h.svc.SetYouthMode(c.Request.Context(), uid, req.Enabled); err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, nil)
 }
 
 // changePassword 修改密码
