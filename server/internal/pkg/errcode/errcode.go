@@ -62,6 +62,7 @@ var (
 	ErrDanmakuTooFrequent = New(40001, "弹幕发送太频繁，歇一会儿再发吧")
 	ErrDanmakuLevelLow    = New(40002, "Lv1 及以上才能发弹幕")
 	ErrDanmakuPrivilege   = New(40003, "Lv3 及以上才能发彩色/顶部/底部弹幕")
+	ErrDanmakuDuplicate   = New(40004, "内容重复，请勿刷屏")
 )
 
 // 互动错误码（5xxxx）

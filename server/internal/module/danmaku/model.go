@@ -16,6 +16,12 @@ const (
 	StatusDeleted = 2
 )
 
+// 屏蔽类型（M2-DM-02）
+const (
+	BlockKeyword = 1 // 关键词屏蔽
+	BlockUser    = 2 // 用户屏蔽（按 UID 哈希）
+)
+
 // Danmaku 对应 danmaku 表。
 type Danmaku struct {
 	ID        int64 `gorm:"primaryKey"`
@@ -32,6 +38,18 @@ type Danmaku struct {
 
 func (Danmaku) TableName() string { return "danmaku" }
 
+// DanmakuBlock 对应 danmaku_block 表（弹幕屏蔽设置，服务端账号级）。
+type DanmakuBlock struct {
+	ID        int64 `gorm:"primaryKey;autoIncrement"`
+	UserID    int64
+	BlockType int8
+	Keyword   string // type=1
+	BlockHash string // type=2（UID 哈希，不暴露真实 ID）
+	CreatedAt time.Time
+}
+
+func (DanmakuBlock) TableName() string { return "danmaku_block" }
+
 // SendReq 发送弹幕请求。
 type SendReq struct {
 	Content  string `json:"content" binding:"required,max=100"`
@@ -42,12 +60,14 @@ type SendReq struct {
 }
 
 // Item 对外弹幕条目（列表与发送响应共用）。
+// SenderHash 发送者 UID 哈希（供前端屏蔽用户，不暴露真实 UID）。
 type Item struct {
-	ID       string `json:"id"`
-	Content  string `json:"content"`
-	TimeMs   int    `json:"time_ms"`
-	Mode     int8   `json:"mode"`
-	Color    uint32 `json:"color"`
-	FontSize int8   `json:"font_size"`
-	IsSelf   bool   `json:"is_self,omitempty"`
+	ID         string `json:"id"`
+	Content    string `json:"content"`
+	TimeMs     int    `json:"time_ms"`
+	Mode       int8   `json:"mode"`
+	Color      uint32 `json:"color"`
+	FontSize   int8   `json:"font_size"`
+	SenderHash string `json:"sender_hash,omitempty"`
+	IsSelf     bool   `json:"is_self,omitempty"`
 }

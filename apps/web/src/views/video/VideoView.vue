@@ -4,12 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { bindKeyboard, PlayerCore, qualityLabel } from '@dlidli/player'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
-import { ApiError, type CollectionItem, type StreamItem, type VideoCard, type VideoDetail } from '@dlidli/api-client'
+import { ApiError, type CollectionItem, type DanmakuItem, type StreamItem, type VideoCard, type VideoDetail } from '@dlidli/api-client'
 import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import DanmakuLayer from '@/components/DanmakuLayer.vue'
 import CommentSection from '@/components/CommentSection.vue'
 import ReportDialog from '@/components/ReportDialog.vue'
+import { useDanmakuSettings, type DanmakuSettings } from '@/composables/useDanmakuSettings'
 import defaultCover from '@/assets/default-cover.svg'
 import defaultAvatar from '@/assets/default-avatar.png'
 
@@ -53,6 +54,85 @@ const dmEnabled = ref(true)
 const dmInput = ref('')
 const dmSending = ref(false)
 const dmLayer = ref<InstanceType<typeof DanmakuLayer>>()
+const dmSettings = useDanmakuSettings().settings
+
+// 发送工具条（M2-DM-01）：模式 + 颜色（非白/顶底需 Lv3）
+const dmMode = ref<1 | 2 | 3>(1)
+const dmColor = ref(0xffffff)
+const DM_COLORS: Array<{ name: string; value: number }> = [
+  { name: '白', value: 0xffffff },
+  { name: '红', value: 0xff0000 },
+  { name: '橙', value: 0xff7f00 },
+  { name: '黄', value: 0xffff00 },
+  { name: '绿', value: 0x00ff00 },
+  { name: '蓝', value: 0x00bfff },
+  { name: '紫', value: 0xff00ff },
+  { name: '粉', value: 0xff69b4 },
+]
+const isDmLevel3 = () => (userStore.profile?.level ?? 0) >= 3
+
+// 弹幕列表面板（独立弹窗）
+const dmListVisible = ref(false)
+const dmList = ref<DanmakuItem[]>([])
+const dmListTotal = ref(0)
+const dmListPage = ref(1)
+const dmListLoading = ref(false)
+
+async function loadDmList(reset = false) {
+  if (reset) {
+    dmListPage.value = 1
+    dmList.value = []
+  }
+  if (!detail.value) return
+  dmListLoading.value = true
+  try {
+    const res = await api.danmaku.listAll(detail.value.bvid, dmListPage.value, 50)
+    dmList.value = reset ? res.list : [...dmList.value, ...res.list]
+    dmListTotal.value = res.total
+  } catch {
+    ElMessage.error('弹幕列表加载失败')
+  } finally {
+    dmListLoading.value = false
+  }
+}
+
+function openDmList() {
+  dmListVisible.value = true
+  loadDmList(true)
+}
+
+function dmSeekTo(timeMs: number) {
+  const video = videoEl.value
+  if (!video) return
+  video.currentTime = timeMs / 1000
+  dmListVisible.value = false
+}
+
+// 弹幕设置面板
+const dmSettingsVisible = ref(false)
+const AREA_OPTIONS: Array<{ label: string; value: DanmakuSettings['area'] }> = [
+  { label: '1/4 屏', value: 'quarter' },
+  { label: '半屏', value: 'half' },
+  { label: '全屏', value: 'full' },
+]
+const SPEED_OPTIONS: Array<{ label: string; value: DanmakuSettings['speed'] }> = [
+  { label: '慢', value: 'slow' },
+  { label: '标准', value: 'normal' },
+  { label: '快', value: 'fast' },
+]
+const DENSITY_OPTIONS: Array<{ label: string; value: DanmakuSettings['density'] }> = [
+  { label: '低', value: 'low' },
+  { label: '标准', value: 'normal' },
+  { label: '高', value: 'high' },
+]
+
+// 弹幕举报（复用 ReportDialog，target_type=3）
+const dmReportDialog = ref<InstanceType<typeof ReportDialog> | null>(null)
+const dmReportItem = ref<DanmakuItem | null>(null)
+function onDmReport(item: DanmakuItem) {
+  dmReportItem.value = item
+  dmReportDialog.value?.open()
+}
 
 // 三连：赞 / 币 / 藏
 const liked = ref(false)
@@ -268,6 +348,8 @@ async function sendDanmaku() {
     const item = await api.danmaku.send(detail.value.bvid, {
       content,
       time_ms: Math.floor((videoEl.value?.currentTime ?? 0) * 1000),
+      mode: dmMode.value,
+      color: dmColor.value,
     })
     dmLayer.value?.inject(item) // 乐观上屏
     dmInput.value = ''
@@ -519,6 +601,8 @@ onBeforeUnmount(() => {
           :bvid="detail.bvid"
           :video="videoEl ?? null"
           :enabled="dmEnabled"
+          :settings="dmSettings"
+          @report="onDmReport"
         />
       </div>
       <!-- 控制行：弹幕开关（图标 toggle）+ 清晰度 -->
@@ -531,6 +615,20 @@ onBeforeUnmount(() => {
         >
           <span :class="dmEnabled ? 'i-mingcute-danmaku-on-line' : 'i-mingcute-danmaku-off-line'" />
           <span class="dm-toggle__text">弹幕</span>
+        </span>
+        <span
+          class="dm-tool"
+          title="弹幕列表"
+          @click="openDmList"
+        >
+          <span class="i-mingcute-list-collapse-line" />
+        </span>
+        <span
+          class="dm-tool"
+          title="弹幕设置"
+          @click="dmSettingsVisible = true"
+        >
+          <span class="i-mingcute-settings-3-line" />
         </span>
         <span class="play-controls__spacer" />
         <!-- 倍速 -->
@@ -586,6 +684,38 @@ onBeforeUnmount(() => {
         >
           发送
         </el-button>
+      </div>
+
+      <!-- 发送工具条（模式 + 色板） -->
+      <div
+        v-if="userStore.token"
+        class="dm-toolbar"
+      >
+        <div class="flex items-center gap-1">
+          <span
+            v-for="m in [{ v: 1, t: '滚动' }, { v: 2, t: '顶部' }, { v: 3, t: '底部' }]"
+            :key="m.v"
+            class="dm-toolbar__mode"
+            :class="{ 'is-active': dmMode === m.v, 'is-locked': m.v !== 1 && !isDmLevel3() }"
+            :title="m.v !== 1 && !isDmLevel3() ? 'Lv3 解锁顶部/底部弹幕' : ''"
+            @click="dmMode = isDmLevel3() || m.v === 1 ? (m.v as 1 | 2 | 3) : dmMode"
+          >{{ m.t }}</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span
+            v-for="c in DM_COLORS"
+            :key="c.value"
+            class="dm-toolbar__color"
+            :class="{ 'is-active': dmColor === c.value, 'is-locked': c.value !== 0xffffff && !isDmLevel3() }"
+            :style="{ background: '#' + c.value.toString(16).padStart(6, '0') }"
+            :title="c.value !== 0xffffff && !isDmLevel3() ? 'Lv3 解锁彩色弹幕' : c.name"
+            @click="dmColor = isDmLevel3() || c.value === 0xffffff ? c.value : dmColor"
+          />
+        </div>
+        <span
+          v-if="!isDmLevel3()"
+          class="dm-toolbar__tip"
+        >Lv3 解锁彩色与顶部/底部弹幕</span>
       </div>
       <p
         v-if="userStore.token && (userStore.profile?.level ?? 0) < 3"
@@ -825,6 +955,121 @@ onBeforeUnmount(() => {
     :target-id="detail?.bvid ?? ''"
     :title="detail ? `视频：${detail.title}` : ''"
   />
+
+  <!-- 弹幕举报弹层（target_type=3） -->
+  <ReportDialog
+    ref="dmReportDialog"
+    :target-type="3"
+    :target-id="dmReportItem?.id ?? ''"
+    :title="dmReportItem ? `弹幕：${dmReportItem.content}` : ''"
+  />
+
+  <!-- 弹幕列表面板（独立弹窗） -->
+  <el-dialog
+    v-model="dmListVisible"
+    title="弹幕列表"
+    width="480px"
+    top="8vh"
+  >
+    <div class="dm-list">
+      <div
+        v-for="d in dmList"
+        :key="d.id"
+        class="dm-list__item"
+        @click="dmSeekTo(d.time_ms)"
+      >
+        <span class="dm-list__time">{{ formatDuration(d.time_ms / 1000) }}</span>
+        <span
+          class="dm-list__content"
+          :style="{ color: '#' + (d.color || 0xffffff).toString(16).padStart(6, '0') }"
+        >{{ d.content }}</span>
+      </div>
+      <el-empty
+        v-if="!dmListLoading && dmList.length === 0"
+        description="暂无弹幕"
+        :image-size="64"
+      />
+      <div
+        v-if="dmList.length < dmListTotal"
+        class="text-center py-2"
+      >
+        <el-button
+          link
+          :loading="dmListLoading"
+          @click="dmListPage++; loadDmList()"
+        >
+          加载更多（{{ dmList.length }}/{{ dmListTotal }}）
+        </el-button>
+      </div>
+    </div>
+  </el-dialog>
+
+  <!-- 弹幕设置面板 -->
+  <el-dialog
+    v-model="dmSettingsVisible"
+    title="弹幕设置"
+    width="420px"
+    top="18vh"
+  >
+    <div class="dm-settings">
+      <div class="dm-settings__row">
+        <span class="dm-settings__label">不透明度</span>
+        <el-slider
+          v-model="dmSettings.opacity"
+          :min="0.2"
+          :max="1"
+          :step="0.05"
+          class="flex-1"
+        />
+      </div>
+      <div class="dm-settings__row">
+        <span class="dm-settings__label">字号</span>
+        <el-slider
+          v-model="dmSettings.fontScale"
+          :min="0.8"
+          :max="1.5"
+          :step="0.05"
+          class="flex-1"
+        />
+      </div>
+      <div class="dm-settings__row">
+        <span class="dm-settings__label">显示区域</span>
+        <el-radio-group v-model="dmSettings.area">
+          <el-radio-button
+            v-for="o in AREA_OPTIONS"
+            :key="o.value"
+            :value="o.value"
+          >
+            {{ o.label }}
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="dm-settings__row">
+        <span class="dm-settings__label">滚动速度</span>
+        <el-radio-group v-model="dmSettings.speed">
+          <el-radio-button
+            v-for="o in SPEED_OPTIONS"
+            :key="o.value"
+            :value="o.value"
+          >
+            {{ o.label }}
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="dm-settings__row">
+        <span class="dm-settings__label">同屏密度</span>
+        <el-radio-group v-model="dmSettings.density">
+          <el-radio-button
+            v-for="o in DENSITY_OPTIONS"
+            :key="o.value"
+            :value="o.value"
+          >
+            {{ o.label }}
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+    </div>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">
@@ -1049,6 +1294,134 @@ onBeforeUnmount(() => {
 .dm-toggle.is-off {
   color: var(--dli-text-3);
   background: #f1f2f3;
+}
+
+/* 弹幕列表/设置入口（开关旁小图标） */
+.dm-tool {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 17px;
+  color: var(--dli-text-2);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+
+  &:hover {
+    color: var(--dli-primary);
+    background: var(--dli-primary-light);
+  }
+}
+
+/* 发送工具条（模式 + 色板） */
+.dm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: -10px 0 12px;
+}
+
+.dm-toolbar__mode {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: v.$text-2;
+  cursor: pointer;
+  border: 1px solid v.$border;
+  user-select: none;
+  transition: all 0.15s;
+
+  &.is-active {
+    background: v.$primary;
+    border-color: v.$primary;
+    color: #fff;
+  }
+
+  &.is-locked {
+    color: v.$text-3;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.dm-toolbar__color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px v.$border;
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: scale(1.2);
+  }
+
+  &.is-active {
+    box-shadow: 0 0 0 2px v.$primary;
+  }
+
+  &.is-locked {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.dm-toolbar__tip {
+  font-size: 12px;
+  color: v.$text-2;
+}
+
+/* 弹幕列表面板 */
+.dm-list {
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.dm-list__item {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border-radius: v.$radius-md;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #fafafa;
+  }
+}
+
+.dm-list__time {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: v.$text-2;
+  font-variant-numeric: tabular-nums;
+}
+
+.dm-list__content {
+  font-size: 13.5px;
+  word-break: break-all;
+}
+
+/* 弹幕设置面板 */
+.dm-settings {
+  display: grid;
+  gap: 16px;
+}
+
+.dm-settings__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dm-settings__label {
+  flex-shrink: 0;
+  width: 64px;
+  font-size: 13.5px;
+  color: v.$text-1;
 }
 
 /* 弹幕输入行（占满宽度） */

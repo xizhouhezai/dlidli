@@ -99,8 +99,9 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 			videoSvc.StartTranscodeWorkers(context.Background(), res.Storage)
 		}
 
-		danmakuSvc := danmaku.NewService(danmaku.NewRepo(res.DB), videoSvc, accountSvc, growthSvc, res.Redis, log)
-		danmaku.NewHandler(danmakuSvc).RegisterRoutes(v1, authMW)
+		danmakuHub := danmaku.NewHub(cfg.App.AllowOrigins, log)
+		danmakuSvc := danmaku.NewService(danmaku.NewRepo(res.DB), videoSvc, accountSvc, growthSvc, res.Redis, danmakuHub, cfg.JWT.Secret, log)
+		danmaku.NewHandler(danmakuSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
 
 		notifySvc := notify.NewService(notify.NewRepo(res.DB), accountSvc, log)
 		notify.NewHandler(notifySvc).RegisterRoutes(v1, authMW)
