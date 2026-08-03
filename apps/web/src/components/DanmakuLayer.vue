@@ -19,6 +19,7 @@ const emit = defineEmits<{ report: [item: DanmakuItem] }>()
 const layerEl = ref<HTMLDivElement>()
 
 const LINE_HEIGHT = 30
+const TRACK_PAD = 4 // 首轨道顶部/底部留白，避免弹幕贴顶/贴底
 const FIXED_DURATION = 4000
 
 const SPEED_MS: Record<DanmakuSettings['speed'], number> = {
@@ -111,12 +112,14 @@ function spawn(item: DanmakuItem) {
   // 字号不内联（会覆盖 CSS 的 font-scale 缩放），改用 CSS 变量参与 calc
   el.style.setProperty('--dm-font-base', item.font_size <= 18 ? '15px' : '20px')
   if (item.is_self) el.classList.add('is-self')
+  // 悬停交互：mouseenter/mouseleave 在弹幕元素上直接绑定（进入子元素操作条不算离开，按钮可点击）
+  attachHover(el)
 
   const kind = item.mode === 2 ? 'top' : item.mode === 3 ? 'bottom' : 'scroll'
   const track = allocTrack(kind)
 
   if (kind === 'scroll') {
-    el.style.top = `${track * LINE_HEIGHT}px`
+    el.style.top = `${TRACK_PAD + track * LINE_HEIGHT}px`
     el.style.left = '0'
     layer.appendChild(el)
     // 挂载后按实际宽度计算滚动轨迹：右边缘外 → 左边缘外（--dm-from/--dm-to）
@@ -128,8 +131,8 @@ function spawn(item: DanmakuItem) {
   } else {
     el.style.left = '50%'
     el.style.transform = 'translateX(-50%)'
-    if (kind === 'top') el.style.top = `${track * LINE_HEIGHT}px`
-    else el.style.bottom = `${track * LINE_HEIGHT}px`
+    if (kind === 'top') el.style.top = `${TRACK_PAD + track * LINE_HEIGHT}px`
+    else el.style.bottom = `${TRACK_PAD + track * LINE_HEIGHT}px`
     layer.appendChild(el)
     el.style.animation = `dli-dm-fade ${FIXED_DURATION}ms linear forwards`
     window.setTimeout(() => el.remove(), FIXED_DURATION + 100)
@@ -250,23 +253,29 @@ function closeWs() {
 
 // ---- 悬停操作（暂停 + 复制/举报/屏蔽）----
 
-function onLayerMouseOver(e: MouseEvent) {
-  const el = (e.target as HTMLElement).closest('.dli-dm') as HTMLElement | null
-  if (!el) return
-  el.style.animationPlayState = 'paused'
-  showActions(el)
-}
-
-function onLayerMouseOut(e: MouseEvent) {
-  const el = (e.target as HTMLElement).closest('.dli-dm') as HTMLElement | null
-  if (el) el.style.animationPlayState = 'running'
-  layerEl.value?.querySelector('.dm-actions')?.remove()
+// attachHover 弹幕元素悬停绑定：mouseenter 暂停并显示操作条，
+// mouseleave 恢复动画并移除。子元素（操作条）悬停不触发 leave，按钮可点击。
+function attachHover(el: HTMLElement) {
+  el.addEventListener('mouseenter', () => {
+    el.style.animationPlayState = 'paused'
+    showActions(el)
+  })
+  el.addEventListener('mouseleave', () => {
+    el.style.animationPlayState = 'running'
+    layerEl.value?.querySelector('.dm-actions')?.remove()
+  })
 }
 
 function showActions(el: HTMLElement) {
   layerEl.value?.querySelector('.dm-actions')?.remove()
   const bar = document.createElement('div')
   bar.className = 'dm-actions'
+  // 弹幕贴近弹幕层顶部时操作条改放下方，避免超出层被 overflow:hidden 裁剪看不到
+  const layerRect = layerEl.value?.getBoundingClientRect()
+  const rect = el.getBoundingClientRect()
+  if (layerRect && rect.top - layerRect.top < 30) {
+    bar.classList.add('is-below')
+  }
   const itemId = el.dataset.dmId ?? ''
   const actions: Array<[string, () => void]> = [
     ['复制', () => copyContent(el)],
@@ -356,8 +365,6 @@ defineExpose({ inject })
       '--dm-opacity': settings.opacity,
       '--dm-font-scale': settings.fontScale,
     }"
-    @mouseover="onLayerMouseOver"
-    @mouseout="onLayerMouseOut"
   />
 </template>
 
@@ -403,6 +410,10 @@ defineExpose({ inject })
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.75);
   z-index: 6;
+}
+
+.dm-layer :deep(.dm-actions.is-below) {
+  top: 100%;
 }
 
 .dm-layer :deep(.dm-actions__btn) {
