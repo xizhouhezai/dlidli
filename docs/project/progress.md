@@ -99,6 +99,7 @@
 - [x] 后台 UI 修复（optimize）：举报处理菜单 icon 补 uno safelist（i-mingcute-flag-3-line，菜单图标由后端动态下发静态扫描不到）；用户管理页无头像用户兜底默认头像（复制 default-avatar.png 至 admin assets + 昵称首字 fallback）；浏览器实测菜单旗帜图标渲染 + 47/49 无头像用户默认头像展示正常
 - [x] 弹幕进阶四件套上线（M2-DM-01~04）：发送工具条（滚动/顶/底模式 + 8 色板，Lv3 解锁置灰）+ 重复 30s 去重（40004）；弹幕列表面板（独立弹窗，时间跳转）+ 悬停操作（暂停/复制/举报/屏蔽）；0014 迁移 danmaku_block 屏蔽表（服务端账号级：关键词 ≤200 + 用户哈希）+ 拉取接口登录态过滤 + 设置页屏蔽管理卡片；弹幕设置面板（不透明度/字号/区域/速度/密度，localStorage 持久化）；WS 实时广播（gorilla/websocket 视频房间 + Origin 白名单 + 连接上限 + 前端断线重连 + Vite 代理 ws:true）；浏览器双连接广播实测通过
 - [x] 弹幕缺陷修复（fix/dm-duplicate-and-scroll，v0.10.1）：发送弹幕变两条（hub.Broadcast 按 excludeUID 排除发送者本人，广播 IsSelf=false 副本）；滚动弹幕停留左侧不消失（Vue scoped CSS 重命名 @keyframes 导致 JS 内联动画名不匹配，keyframes 移入全局样式块；轨迹改 --dm-from/--dm-to 挂载后按实际宽度计算，右边缘外→左边缘外）；浏览器实测动画对象真实创建、transform 644→-174 单调递减、无重复无残留
+- [x] 弹幕缺陷根源修复（fix/dm-dedupe-and-fontscale，v0.10.2）：弹幕重复根源 = WS 连接未带 token 被解析为游客，服务端 excludeUID 排除失效广播回到发送者；middleware 支持 query token（token/access_token）+ 前端 WS URL 拼 ?token=，服务端排除链路真正生效（实测带 token 连接无自广播、游客连接正常收）；前端 inject/WS 双端 shown 去重兜底；字号缩放无效 = JS 内联 font-size 覆盖 CSS calc，改 --dm-font-base 变量参与缩放（实测 1.5→30px、0.8→16px）；Lv3 提示去重（删工具条内重复提示，保留单条并加大间距）
 
 ### 进行中
 
