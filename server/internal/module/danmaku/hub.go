@@ -67,7 +67,8 @@ func NewHub(allowOrigins []string, log *zap.Logger) *Hub {
 }
 
 // Broadcast 向视频房间广播一条弹幕（无在线连接时 no-op）。
-func (h *Hub) Broadcast(videoID int64, item *Item) {
+// excludeUID > 0 时跳过该用户的连接（发送者本人已乐观上屏，避免重复）。
+func (h *Hub) Broadcast(videoID, excludeUID int64, item *Item) {
 	msg, err := json.Marshal(WSMsg{Type: "danmaku", Data: *item})
 	if err != nil {
 		return
@@ -79,6 +80,9 @@ func (h *Hub) Broadcast(videoID int64, item *Item) {
 		return
 	}
 	for c := range r.clients {
+		if excludeUID > 0 && c.uid == excludeUID {
+			continue
+		}
 		select {
 		case c.send <- msg:
 		default: // 慢消费者丢消息，不阻塞广播
