@@ -1,6 +1,8 @@
 package danmaku
 
 import (
+	"errors"
+
 	"gorm.io/gorm"
 )
 
@@ -23,4 +25,22 @@ func (r *Repo) ListSegment(videoID int64, fromMs, toMs int) ([]Danmaku, error) {
 		videoID, fromMs, toMs, StatusNormal).
 		Order("time_ms").Limit(1000).Find(&list).Error
 	return list, err
+}
+
+// FindByID 查弹幕；不存在返回 (nil, nil)。
+func (r *Repo) FindByID(id int64) (*Danmaku, error) {
+	var d Danmaku
+	err := r.db.First(&d, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+// MarkDeleted 弹幕置删除状态（举报处理用）。
+func (r *Repo) MarkDeleted(id int64) error {
+	return r.db.Model(&Danmaku{}).Where("id = ?", id).UpdateColumn("status", StatusDeleted).Error
 }

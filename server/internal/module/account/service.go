@@ -269,6 +269,39 @@ func (s *Service) SearchUsers(_ context.Context, keyword string, page, size int)
 	return profiles, total, nil
 }
 
+// IsNewUser 判断用户注册是否不足 days 天（机审风险分级等风控场景用）。
+func (s *Service) IsNewUser(_ context.Context, uid int64, days int) (bool, error) {
+	user, err := s.repo.FindUserByID(uid)
+	if err != nil {
+		return false, err
+	}
+	if user == nil {
+		return false, errcode.ErrAccountNotExists
+	}
+	return time.Since(user.CreatedAt) < time.Duration(days)*24*time.Hour, nil
+}
+
+// GetYouthMode 青少年模式状态（M2-AUD-04）。
+func (s *Service) GetYouthMode(_ context.Context, uid int64) (bool, error) {
+	user, err := s.repo.FindUserByID(uid)
+	if err != nil {
+		return false, err
+	}
+	if user == nil {
+		return false, errcode.ErrAccountNotExists
+	}
+	return user.YouthMode == 1, nil
+}
+
+// SetYouthMode 开关青少年模式（M2-AUD-04）。
+func (s *Service) SetYouthMode(_ context.Context, uid int64, on bool) error {
+	v := int8(0)
+	if on {
+		v = 1
+	}
+	return s.repo.UpdateUserFields(uid, map[string]any{"youth_mode": v})
+}
+
 // SpendCoins 消耗硬币（投币等场景，余额不足报错）。
 func (s *Service) SpendCoins(_ context.Context, uid int64, count int, reason string) error {
 	if count <= 0 {

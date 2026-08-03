@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ApiError } from '@dlidli/api-client'
 import { api } from '@/api'
@@ -97,6 +97,68 @@ async function onChangePassword() {
     pwdSaving.value = false
   }
 }
+
+// 青少年模式（M2-AUD-04）：开关 + 每日 40 分钟使用提醒（本地计时）
+const YOUTH_LIMIT_MIN = 40
+const youthMode = ref(false)
+const youthSaving = ref(false)
+let youthTimer: ReturnType<typeof setInterval> | null = null
+
+function youthUsageKey() {
+  return `youth_usage_${new Date().toISOString().slice(0, 10)}`
+}
+
+async function loadYouthMode() {
+  try {
+    youthMode.value = (await api.auth.youthMode()).enabled
+    if (youthMode.value) startYouthTimer()
+  } catch {
+    // 静默失败，保持关闭态
+  }
+}
+
+async function toggleYouthMode() {
+  youthSaving.value = true
+  try {
+    await api.auth.setYouthMode(youthMode.value)
+    if (youthMode.value) {
+      localStorage.setItem(youthUsageKey(), '0') // 开启当日重新计时
+      startYouthTimer()
+    } else {
+      stopYouthTimer()
+    }
+    ElMessage.success(youthMode.value ? '已开启青少年模式' : '已关闭青少年模式')
+  } catch (err) {
+    youthMode.value = !youthMode.value
+    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
+  } finally {
+    youthSaving.value = false
+  }
+}
+
+function startYouthTimer() {
+  stopYouthTimer()
+  youthTimer = setInterval(() => {
+    const key = youthUsageKey()
+    const used = Number(localStorage.getItem(key) ?? '0')
+    const next = used + 1
+    localStorage.setItem(key, String(next))
+    if (next >= YOUTH_LIMIT_MIN) {
+      stopYouthTimer()
+      ElMessage.warning('今日青少年模式使用时长已达 40 分钟，请注意休息')
+    }
+  }, 60_000)
+}
+
+function stopYouthTimer() {
+  if (youthTimer) {
+    clearInterval(youthTimer)
+    youthTimer = null
+  }
+}
+
+onMounted(loadYouthMode)
+onUnmounted(stopYouthTimer)
 </script>
 
 <template>
@@ -234,6 +296,25 @@ async function onChangePassword() {
           </el-button>
         </el-form-item>
       </el-form>
+
+      <el-divider />
+
+      <!-- 青少年模式 -->
+      <div class="flex items-center justify-between max-w-480px">
+        <div>
+          <p class="m-0 font-600">
+            青少年模式
+          </p>
+          <p class="mt-1 mb-0 text-3 text-text-2">
+            开启后每日累计使用 40 分钟将收到提醒，请合理安排上网时间
+          </p>
+        </div>
+        <el-switch
+          v-model="youthMode"
+          :loading="youthSaving"
+          @change="toggleYouthMode"
+        />
+      </div>
     </el-card>
   </div>
 </template>

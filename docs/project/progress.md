@@ -10,7 +10,7 @@
 | --- | --- | --- | :-: | --- |
 | M0 基建 | W1-W4 | 🟢 进行中 | 92% | 仅剩 M0-ENG-13 staging 部署 |
 | M1 MVP 内测 | W5-W12 | 🟢 进行中 | 100% | player 内核封装（VID-09），M1 功能全部完成 |
-| M2 V1.0 公测 | W13-W24 | 🟢 进行中 | 68% | 成长体系（GRW-01/02/03）上线，含经验/等级/权益引擎 |
+| M2 V1.0 公测 | W13-W24 | 🟢 进行中 | 78% | 机审合规四件套（AUD-01~04）上线：机审框架/风险分级/举报闭环/青少年模式 |
 | M3 V2.0 增长 | W25-W48 | ⚪ 未开始 | 0% | - |
 | M4 V3.0 商业化 | W49+ | ⚪ 未开始 | 0% | - |
 
@@ -95,6 +95,7 @@
 - [x] 前端公用抽取规范落地（DRY）：新增规范 docs/architecture/frontend.md §4.0（同一逻辑/结构出现第2次就抽公用，分层归属 shared/composables/components/全局样式）；api-client 新增 apiErrorMessage(err,fallback) 错误文案归一化；admin 抽出 PageHead 组件 + useApiAction/usePagedList composable + 全局 .pink-btn，应用到 Review/SensitiveWords/Users/Admins/Roles 5 页（删 4 处 scoped 按钮样式 + 统一 19 处 try/catch 兼底）；web 抽出 useCountdown（修复 LoginView 定时器泄漏，应用 Login/ResetPassword）+ VideoCard 组件（应用 Search/Space）；web/admin lint 0 + build 通过，搜索页 VideoCard 实测渲染正常
 - [x] 成长体系上线（M2-GRW-01~03）：0012 迁移 exp_log 流水表；growth 模块规则引擎（5 类经验来源：每日登录/观看 +5 每日一次、投稿 +10 日 2 次、弹幕/评论 +1 日 20 次，Redis 每日去重/限量；等级表 Lv0-Lv6 阈值自动重算；今日任务状态聚合）；触发点接入：登录/有效观看(≥5s)/投稿发布(转码自动过审与人工过审双触点)/发弹幕/发评论；GET /growth/summary + /growth/exp-logs；硬币明细接口 GET /users/me/coin-logs；Lv3 解锁彩色/顶部/底部弹幕（低等级返 40003）；Web 成长中心页 /growth（等级卡徽章/经验进度条/权益预告 + 今日任务 + 经验/硬币明细 Tab 分页）+ 头部下拉入口 + 弹幕栏 Lv3 解锁提示；E2E 实测：登录+5/弹幕+1/评论+1/观看+5/投稿+10 全累计、每日去重、彩色弹幕拦截 40003、升级 Lv1→Lv2 重算全通
 - [x] 个人中心禁言/封禁状态可视化（optimize/me-status-display）：Profile/登录返回新增 status/muted_until/banned_until 字段（shared User 类型同步）；新增 AccountStatusAlert 组件（禁言/封禁/注销三态提示）；SettingsView 顶部 + 本人 SpaceView 顶部接入（他人空间不展示）；E2E 实测禁言用户登录→设置页/本人空间展示警告条、他人空间无提示、控制台无报错
+- [x] 机审合规四件套上线（M2-AUD-01~04）：contentmod 机审包（敏感词热加载 + 手机号/QQ/微信/外链规则正则）统一接入评论/弹幕/动态/转发/投稿五处；video 风险分级（机审命中→高、新账号→中、默认低，审核队列按风险降序）；0013 迁移 report 表 + 举报体系全闭环（C 端全对象举报（视频/评论/弹幕/动态/用户）防重复 → admin 举报队列页（report:view/handle 权限点）→ 忽略/删除/删除并处罚 → 站内通知反馈举报人）；青少年模式（后端持久化开关 + 设置页卡片 + 每日 40 分钟本地计时提醒）；E2E + 浏览器双端实测全通
 
 ### 进行中
 
@@ -102,7 +103,7 @@
 
 ### 下阶段计划
 
-- [ ] Web 端 M2 功能：机审合规（M2-AUD-01~04）、弹幕进阶（M2-DM-01~04）、审计日志中心（M2-SYS-01）、系统配置（M2-SYS-02）
+- [ ] Web 端 M2 功能：弹幕进阶（M2-DM-01~04：顶底/彩色弹幕 UI、屏蔽设置、WebSocket 实时、弹幕举报）、审计日志中心（M2-SYS-01）、系统配置（M2-SYS-02）
 - [ ] 管理平台：运营位/Banner 配置（M3-OPS-01 提前）
 - [ ] （后置）多端：H5 剩余页、小程序、App
 

@@ -281,7 +281,7 @@ func (r *Repo) ListByStatus(status int8, page, size int) ([]Video, int64, error)
 		return nil, 0, err
 	}
 	var list []Video
-	err := q.Order("created_at").Offset((page - 1) * size).Limit(size).Find(&list).Error
+	err := q.Order("risk_level DESC, created_at").Offset((page - 1) * size).Limit(size).Find(&list).Error
 	return list, total, err
 }
 

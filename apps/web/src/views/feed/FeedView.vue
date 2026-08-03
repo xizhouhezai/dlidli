@@ -8,6 +8,7 @@ import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import defaultCover from '@/assets/default-cover.svg'
 import defaultAvatar from '@/assets/default-avatar.png'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -20,6 +21,18 @@ const loadingMore = ref(false)
 
 const draft = ref('')
 const posting = ref(false)
+
+// 举报动态
+const reportDialog = ref<InstanceType<typeof ReportDialog> | null>(null)
+const reportItem = ref<FeedItem | null>(null)
+function openReport(item: FeedItem) {
+  if (!userStore.token) {
+    router.push('/login')
+    return
+  }
+  reportItem.value = item
+  reportDialog.value?.open()
+}
 
 async function load(reset = true) {
   if (reset) {
@@ -134,6 +147,10 @@ async function post() {
           <span class="text-3 text-text-2">
             {{ formatPubdate(item.created_at) }} · {{ item.type === 1 ? '投稿了视频' : item.type === 3 ? '转发了视频' : '发布了动态' }}
           </span>
+          <span
+            class="feed-card__report ml-auto text-3 text-text-2 cursor-pointer"
+            @click="openReport(item)"
+          >举报</span>
         </p>
         <p
           v-if="item.content"
@@ -186,6 +203,14 @@ async function post() {
       </el-button>
     </div>
   </div>
+
+  <!-- 举报弹层 -->
+  <ReportDialog
+    ref="reportDialog"
+    :target-type="4"
+    :target-id="reportItem?.id ?? ''"
+    :title="reportItem ? `动态：${reportItem.content || '（视频动态）'}` : ''"
+  />
 </template>
 
 <style scoped lang="scss">
@@ -200,6 +225,10 @@ async function post() {
 }
 
 .feed-card__name:hover {
+  color: v.$primary;
+}
+
+.feed-card__report:hover {
   color: v.$primary;
 }
 
