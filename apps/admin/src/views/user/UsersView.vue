@@ -17,6 +17,12 @@ const STATUS_META: Record<number, { label: string, type: '' | 'success' | 'warni
   3: { label: '注销', type: 'info' },
 }
 
+const GENDER_LABEL: Record<number, string> = { 0: '—', 1: '男', 2: '女' }
+
+function fmtDate(s: string | null | undefined): string {
+  return s ? new Date(s).toLocaleDateString() : '—'
+}
+
 const { list: users, total, loading, page, pageSize, load, search, onPageChange } = usePagedList<AdminUserItem>(
   (p, size) => adminApi.admin.users({ keyword: keyword.value.trim(), status: status.value, page: p, page_size: size }),
 )
@@ -122,15 +128,50 @@ async function punish(user: AdminUserItem, action: PunishAction) {
                   {{ row.nickname }}
                 </div>
                 <div class="text-3 text-text-2">
-                  UID {{ row.id }} · Lv{{ row.level }}
+                  UID {{ row.id }} · Lv{{ row.level }} · {{ GENDER_LABEL[row.gender] ?? '—' }}
                 </div>
               </div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
+          label="手机号"
+          min-width="120"
+        >
+          <template #default="{ row }">
+            <span :class="row.phone ? '' : 'text-text-3'">{{ row.phone || '未绑定' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="个性签名"
+          min-width="160"
+        >
+          <template #default="{ row }">
+            <span
+              class="text-3 text-text-2"
+              :title="row.signature"
+            >{{ row.signature || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="经验/硬币"
+          min-width="110"
+        >
+          <template #default="{ row }">
+            <span class="text-3 text-text-2">{{ row.exp }} / {{ row.coin }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="注册时间"
+          min-width="110"
+        >
+          <template #default="{ row }">
+            <span class="text-3 text-text-2">{{ fmtDate(row.created_at) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
           label="状态"
-          width="100"
+          width="90"
         >
           <template #default="{ row }">
             <el-tag :type="STATUS_META[row.status]?.type">
