@@ -142,8 +142,12 @@ func (s *Service) Send(ctx context.Context, uid int64, bv string, req *SendReq) 
 		if s.growthSvc != nil {
 			s.growthSvc.AddExpWithLimit(ctx, uid, growth.ReasonDanmakuSend)
 		}
-		// 实时广播（M2-DM-03）：同视频在线连接即时上屏
-		s.hub.Broadcast(videoID, item)
+		// 实时广播（M2-DM-03）：排除发送者本人（本人已乐观上屏，避免重复），其余在线连接即时上屏
+		if s.hub != nil {
+			broadcast := *item
+			broadcast.IsSelf = false // 接收方视角不标记“自己的弹幕”
+			s.hub.Broadcast(videoID, uid, &broadcast)
+		}
 	}
 
 	return item, nil
