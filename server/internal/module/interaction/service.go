@@ -10,8 +10,8 @@ import (
 	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/module/notify"
 	"github.com/dlidli/server/internal/module/video"
+	"github.com/dlidli/server/internal/pkg/contentmod"
 	"github.com/dlidli/server/internal/pkg/errcode"
-	"github.com/dlidli/server/internal/pkg/moderate"
 	"github.com/dlidli/server/internal/pkg/snowflake"
 	"go.uber.org/zap"
 )
@@ -90,7 +90,8 @@ func (s *Service) AddComment(ctx context.Context, uid int64, bv string, req *Add
 		}
 	}
 
-	if moderate.Hit(content) {
+	// 机审（M2-AUD-01）：命中敏感词/联系方式规则 → 影子屏蔽（仅发送者可见）
+	if !contentmod.CheckText(contentmod.SceneComment, content).Pass {
 		c.Status = CommentShadow
 	}
 
@@ -195,6 +196,39 @@ func (s *Service) DeleteComment(ctx context.Context, uid, commentID int64) error
 		}
 	}
 
+	if err := s.repo.MarkCommentDeleted(commentID); err != nil {
+		return err
+	}
+	if c.Status == CommentNormal {
+		_ = s.videoSvc.AddStat(ctx, c.Oid, "comment_cnt", -1)
+		if c.RootID != 0 {
+			_ = s.repo.AddReplyCnt(c.RootID, -1)
+		}
+	}
+	return nil
+}
+
+// CommentBrief 评论摘要（举报队列展示用）：内容 + 作者。
+func (s *Service) CommentBrief(_ context.Context, commentID int64) (content string, userID int64, err error) {
+	c, err := s.repo.FindComment(commentID)
+	if err != nil {
+		return "", 0, err
+	}
+	if c == nil || c.Status == CommentDeleted {
+		return "", 0, errcode.ErrNotFound
+	}
+	return c.Content, c.UserID, nil
+}
+
+// AdminDeleteComment 管理员删除评论（举报处理用，绕过作者/UP 主校验）。
+func (s *Service) AdminDeleteComment(ctx context.Context, commentID int64) error {
+	c, err := s.repo.FindComment(commentID)
+	if err != nil {
+		return err
+	}
+	if c == nil || c.Status == CommentDeleted {
+		return errcode.ErrNotFound
+	}
 	if err := s.repo.MarkCommentDeleted(commentID); err != nil {
 		return err
 	}

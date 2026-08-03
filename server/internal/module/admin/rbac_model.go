@@ -64,6 +64,9 @@ var builtinPermissions = []Permission{
 	// 用户
 	{Code: "user:view", Name: "用户管理", Type: "menu", Path: "/users", Icon: "i-mingcute-user-3-line", Sort: 4},
 	{Code: "user:punish", Name: "封禁/禁言用户", Type: "button", Parent: "user:view"},
+	// 举报（内容治理）
+	{Code: "report:view", Name: "举报处理", Type: "menu", Path: "/reports", Icon: "i-mingcute-flag-3-line", Sort: 9},
+	{Code: "report:handle", Name: "处理举报", Type: "button", Parent: "report:view"},
 	// 分区（运营）
 	{Code: "category:view", Name: "分区管理", Type: "menu", Path: "/categories", Icon: "i-mingcute-classify-2-line", Sort: 7},
 	{Code: "category:edit", Name: "增删改分区", Type: "button", Parent: "category:view"},
@@ -94,8 +97,8 @@ var builtinRoles = []builtinRole{
 	{Code: "reviewer", Name: "审核员", Remark: "仅稿件审核", Perms: []string{
 		"dashboard:view", "review:view", "review:approve",
 	}},
-	{Code: "moderator", Name: "用户治理", Remark: "用户查询与处罚", Perms: []string{
-		"dashboard:view", "user:view", "user:punish",
+	{Code: "moderator", Name: "用户治理", Remark: "用户查询与处罚、举报处理", Perms: []string{
+		"dashboard:view", "user:view", "user:punish", "report:view", "report:handle",
 	}},
 	{Code: "operator", Name: "运营", Remark: "运营配置（分区等）", Perms: []string{
 		"dashboard:view", "category:view", "category:edit",

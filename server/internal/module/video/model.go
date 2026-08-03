@@ -15,6 +15,13 @@ const (
 	StatusDeleted     = 7
 )
 
+// 机审风险等级（M2-AUD-02：低风险抽检/高风险全人审）
+const (
+	RiskLow    = 0
+	RiskMedium = 1
+	RiskHigh   = 2
+)
+
 // Video 对应 video 表。
 type Video struct {
 	ID           int64 `gorm:"primaryKey"`
@@ -28,6 +35,7 @@ type Video struct {
 	Copyright    int8
 	Duration     int
 	Status       int8
+	RiskLevel    int8 // 0低 1中 2高（机审计算）
 	RejectReason *string
 	PublishedAt  *time.Time
 	CreatedAt    time.Time
@@ -134,6 +142,7 @@ type Card struct {
 	Cover       string     `json:"cover"`
 	Duration    int        `json:"duration"`
 	Status      int8       `json:"status"`
+	RiskLevel   int8       `json:"risk_level"` // 0低 1中 2高
 	PublishedAt *time.Time `json:"published_at"`
 	CreatedAt   time.Time  `json:"created_at"`
 	Owner       OwnerBrief `json:"owner"`

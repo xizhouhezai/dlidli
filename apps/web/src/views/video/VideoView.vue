@@ -9,6 +9,7 @@ import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import DanmakuLayer from '@/components/DanmakuLayer.vue'
 import CommentSection from '@/components/CommentSection.vue'
+import ReportDialog from '@/components/ReportDialog.vue'
 import defaultCover from '@/assets/default-cover.svg'
 import defaultAvatar from '@/assets/default-avatar.png'
 
@@ -21,6 +22,16 @@ const related = ref<VideoCard[]>([])
 const loading = ref(true)
 const notFound = ref(false)
 const descExpanded = ref(false)
+
+// 举报视频
+const reportDialog = ref<InstanceType<typeof ReportDialog> | null>(null)
+function openReport() {
+  if (!userStore.token) {
+    router.push('/login')
+    return
+  }
+  reportDialog.value?.open()
+}
 
 // 播放器与清晰度
 const videoEl = ref<HTMLVideoElement>()
@@ -753,6 +764,10 @@ onBeforeUnmount(() => {
           {{ t }}
         </el-tag>
       </div>
+      <span
+        class="play-report"
+        @click="openReport"
+      >举报</span>
 
       <el-divider />
       <CommentSection
@@ -802,6 +817,14 @@ onBeforeUnmount(() => {
       </div>
     </aside>
   </div>
+
+  <!-- 举报弹层 -->
+  <ReportDialog
+    ref="reportDialog"
+    :target-type="1"
+    :target-id="detail?.bvid ?? ''"
+    :title="detail ? `视频：${detail.title}` : ''"
+  />
 </template>
 
 <style scoped lang="scss">
@@ -816,6 +839,19 @@ onBeforeUnmount(() => {
 @media (max-width: 1000px) {
   .play-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+.play-report {
+  display: inline-block;
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: v.$text-2;
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: v.$primary;
   }
 }
 

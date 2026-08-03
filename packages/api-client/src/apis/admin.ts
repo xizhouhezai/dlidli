@@ -36,6 +36,28 @@ export interface AdminUserItem {
 
 export type PunishAction = 'mute' | 'unmute' | 'ban' | 'unban'
 
+/** 举报队列项 */
+export interface ReportItem {
+  id: string
+  target_type: number
+  target_name: string
+  target_desc: string
+  target_id: string
+  reporter_name: string
+  reason_type: number
+  reason_name: string
+  reason: string
+  status: number
+  created_at: string
+}
+
+export interface HandleReportPayload {
+  action: 'ignore' | 'delete' | 'punish'
+  note?: string
+  punish?: 'mute' | 'ban'
+  days?: number
+}
+
 export interface AdminPermission {
   id: string
   code: string
@@ -218,5 +240,14 @@ export function createAdminApi(http: HttpClient) {
 
     deleteCategory: (id: number) =>
       http.delete<null>(`/api/v1/admin/categories/${id}`),
+
+    // ---- 举报处理 ----
+    /** 举报队列（status -1 全部，默认待处理） */
+    reports: (params: { status?: number, page?: number, page_size?: number }) =>
+      http.get<{ list: ReportItem[], total: number }>('/api/v1/admin/reports', params),
+
+    /** 处理举报（ignore/delete/punish） */
+    handleReport: (id: string, payload: HandleReportPayload) =>
+      http.post<null>(`/api/v1/admin/reports/${id}/handle`, payload),
   }
 }
