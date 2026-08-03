@@ -712,10 +712,6 @@ onBeforeUnmount(() => {
             @click="dmColor = isDmLevel3() || c.value === 0xffffff ? c.value : dmColor"
           />
         </div>
-        <span
-          v-if="!isDmLevel3()"
-          class="dm-toolbar__tip"
-        >Lv3 解锁彩色与顶部/底部弹幕</span>
       </div>
       <p
         v-if="userStore.token && (userStore.profile?.level ?? 0) < 3"
@@ -1368,11 +1364,6 @@ onBeforeUnmount(() => {
   }
 }
 
-.dm-toolbar__tip {
-  font-size: 12px;
-  color: v.$text-2;
-}
-
 /* 弹幕列表面板 */
 .dm-list {
   max-height: 55vh;
@@ -1444,7 +1435,7 @@ onBeforeUnmount(() => {
 }
 
 .dm-privilege-tip {
-  margin: -12px 0 12px;
+  margin: 8px 0 12px;
   font-size: 12px;
   color: v.$text-2;
   display: flex;
