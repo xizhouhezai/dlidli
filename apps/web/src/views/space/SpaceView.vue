@@ -8,6 +8,7 @@ import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import defaultAvatar from '@/assets/default-avatar.png'
 import VideoCard from '@/components/VideoCard.vue'
+import AccountStatusAlert from '@/components/AccountStatusAlert.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -130,6 +131,12 @@ watch(activeTab, loadTab)
     </el-result>
 
     <template v-else-if="profile">
+      <!-- 本人空间才展示账号状态（禁言/封禁），不对外公开 -->
+      <AccountStatusAlert
+        v-if="isSelf"
+        :user="userStore.profile"
+      />
+
       <!-- 空间头部 -->
       <div class="space-head">
         <div class="space-head__banner" />
