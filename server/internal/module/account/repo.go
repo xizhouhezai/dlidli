@@ -132,6 +132,22 @@ func (r *Repo) AdminSearchUsers(keyword string, status int, page, size int) ([]U
 	return list, total, err
 }
 
+// PhoneByUsers 批量取用户手机号（identity_type=1），返回 uid→手机号 映射（未绑定不出现）。
+func (r *Repo) PhoneByUsers(ids []int64) map[int64]string {
+	out := make(map[int64]string, len(ids))
+	if len(ids) == 0 {
+		return out
+	}
+	var auths []UserAuth
+	if err := r.db.Where("identity_type = ? AND user_id IN ?", IdentityPhone, ids).Find(&auths).Error; err != nil {
+		return out
+	}
+	for _, a := range auths {
+		out[a.UserID] = a.Identifier
+	}
+	return out
+}
+
 // AddCoins 硬币增减（事务：余额不可为负 + 流水留痕）；余额不足返回 (false, nil)。
 func (r *Repo) AddCoins(uid int64, delta int, reason string) (ok bool, err error) {
 	err = r.db.Transaction(func(tx *gorm.DB) error {

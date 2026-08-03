@@ -14,7 +14,12 @@ type AdminUserItem struct {
 	ID          int64      `json:"id,string"`
 	Nickname    string     `json:"nickname"`
 	Avatar      string     `json:"avatar"`
+	Phone       string     `json:"phone"` // 绑定手机号（未绑定为空）
+	Signature   string     `json:"signature"`
+	Gender      int8       `json:"gender"` // 0 未知 1 男 2 女
 	Level       int8       `json:"level"`
+	Exp         int        `json:"exp"`
+	Coin        int        `json:"coin"`
 	Status      int8       `json:"status"`
 	MutedUntil  *time.Time `json:"muted_until"`
 	BannedUntil *time.Time `json:"banned_until"`
@@ -27,10 +32,16 @@ func (s *Service) AdminListUsers(_ context.Context, keyword string, status, page
 	if err != nil {
 		return nil, 0, err
 	}
+	ids := make([]int64, 0, len(users))
+	for _, u := range users {
+		ids = append(ids, u.ID)
+	}
+	phones := s.repo.PhoneByUsers(ids)
 	items := make([]AdminUserItem, 0, len(users))
 	for _, u := range users {
 		items = append(items, AdminUserItem{
-			ID: u.ID, Nickname: u.Nickname, Avatar: u.Avatar, Level: u.Level,
+			ID: u.ID, Nickname: u.Nickname, Avatar: u.Avatar, Phone: phones[u.ID],
+			Signature: u.Signature, Gender: u.Gender, Level: u.Level, Exp: u.Exp, Coin: u.Coin,
 			Status: u.Status, MutedUntil: u.MutedUntil, BannedUntil: u.BannedUntil,
 			CreatedAt: u.CreatedAt,
 		})
