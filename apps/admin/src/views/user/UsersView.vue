@@ -6,6 +6,7 @@ import { adminApi } from '@/api'
 import { usePagedList } from '@/composables/usePagedList'
 import { useApiAction } from '@/composables/useApiAction'
 import PageHead from '@/components/PageHead.vue'
+import defaultAvatar from '@/assets/default-avatar.png'
 
 const keyword = ref('')
 const status = ref(-1)
@@ -121,8 +122,10 @@ async function punish(user: AdminUserItem, action: PunishAction) {
             <div class="flex items-center gap-2">
               <el-avatar
                 :size="32"
-                :src="row.avatar"
-              />
+                :src="row.avatar || defaultAvatar"
+              >
+                {{ row.nickname?.slice(0, 1) ?? 'U' }}
+              </el-avatar>
               <div>
                 <div class="text-3.5 font-600">
                   {{ row.nickname }}

@@ -29,6 +29,7 @@ export default defineConfig({
     'i-mingcute-group-line',
     'i-mingcute-classify-2-line',
     'i-mingcute-key-2-line',
+    'i-mingcute-flag-3-line',
   ],
   theme: {
     colors: {
