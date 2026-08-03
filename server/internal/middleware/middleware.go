@@ -98,10 +98,22 @@ func CORS(allowOrigins []string) gin.HandlerFunc {
 	}
 }
 
+// bearerToken 提取访问令牌：优先 Authorization 头，其次 query（token/access_token）。
+// WebSocket 无法自定义请求头，前端以 query 携带 token（弹幕实时连接等场景）。
+func bearerToken(c *gin.Context) string {
+	if t := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer "); t != "" {
+		return t
+	}
+	if t := c.Query("token"); t != "" {
+		return t
+	}
+	return c.Query("access_token")
+}
+
 // Auth 校验 Bearer token，写入 user_id；用于需要登录的路由组。
 func Auth(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+		token := bearerToken(c)
 		if token == "" {
 			response.Fail(c, errcode.ErrUnauthorized)
 			c.Abort()
@@ -121,7 +133,7 @@ func Auth(secret string) gin.HandlerFunc {
 // OptionalAuth 尝试解析 token，成功则注入 user_id，失败不拦截（游客可访问的接口用）。
 func OptionalAuth(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer "); token != "" {
+		if token := bearerToken(c); token != "" {
 			if uid, err := jwtx.Parse(secret, token); err == nil {
 				c.Set(CtxUserID, uid)
 			}

@@ -4,6 +4,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ApiError, type DanmakuItem } from '@dlidli/api-client'
 import { api } from '@/api'
+import { readToken } from '@/utils/token'
 import type { DanmakuSettings } from '@/composables/useDanmakuSettings'
 
 const props = defineProps<{
@@ -107,7 +108,8 @@ function spawn(item: DanmakuItem) {
   el.className = 'dli-dm'
   el.dataset.dmId = item.id
   el.style.color = colorHex(item.color)
-  el.style.fontSize = `${item.font_size <= 18 ? 15 : 20}px`
+  // 字号不内联（会覆盖 CSS 的 font-scale 缩放），改用 CSS 变量参与 calc
+  el.style.setProperty('--dm-font-base', item.font_size <= 18 ? '15px' : '20px')
   if (item.is_self) el.classList.add('is-self')
 
   const kind = item.mode === 2 ? 'top' : item.mode === 3 ? 'bottom' : 'scroll'
@@ -140,6 +142,8 @@ function removeById(id: string) {
 
 /** 乐观上屏（发送成功后由父组件调用） */
 function inject(item: DanmakuItem) {
+  // WS 广播可能先于 HTTP 响应到达（游客连接时服务端排除失效），已上屏则跳过，避免重复
+  if (shown.has(item.id)) return
   shown.add(item.id)
   const seg = Math.floor(item.time_ms / segmentMs)
   pool.get(seg)?.push(item)
@@ -201,7 +205,9 @@ let wsTimer: ReturnType<typeof setTimeout> | null = null
 
 function connectWs() {
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  const url = `${proto}://${window.location.host}${api.danmaku.wsUrl(props.bvid)}`
+  // 携带 token（query）：服务端据此识别连接身份，广播时排除发送者本人（WS 无法自定义 header）
+  const token = readToken()
+  const url = `${proto}://${window.location.host}${api.danmaku.wsUrl(props.bvid)}${token ? `?token=${encodeURIComponent(token)}` : ''}`
   ws = new WebSocket(url)
   ws.onopen = () => {
     wsRetry = 0
@@ -210,7 +216,13 @@ function connectWs() {
     try {
       const msg = JSON.parse(e.data as string)
       if (msg.type === 'danmaku' && props.enabled) {
-        spawn(msg.data as DanmakuItem)
+        const item = msg.data as DanmakuItem
+        // 已上屏去重（乐观上屏已登记 id；服务端排除失效时广播回到本人也不重复）
+        if (shown.has(item.id)) return
+        shown.add(item.id)
+        const seg = Math.floor(item.time_ms / segmentMs)
+        pool.get(seg)?.push(item) // 登记进池，悬停操作（举报/屏蔽）可命中
+        spawn(item)
       }
     } catch {
       // 非法帧忽略
@@ -370,7 +382,8 @@ defineExpose({ inject })
   border-radius: 4px;
   line-height: 28px;
   opacity: var(--dm-opacity);
-  font-size: calc(20px * var(--dm-font-scale));
+  /* 字号 = 基础档（小/标准） × 设置面板缩放 */
+  font-size: calc(var(--dm-font-base) * var(--dm-font-scale));
   /* 悬停操作交互（仅弹幕本体响应，层其余区域不拦截播放器） */
   pointer-events: auto;
   cursor: default;
