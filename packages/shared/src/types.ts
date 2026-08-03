@@ -20,6 +20,10 @@ export interface User {
   gender: 0 | 1 | 2
   level: number
   coin: number
+  /** 0 正常 1 禁言 2 封禁 3 注销 */
+  status?: number
+  muted_until?: string
+  banned_until?: string
 }
 
 export interface Category {

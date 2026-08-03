@@ -373,13 +373,16 @@ func (s *Service) issueTokens(ctx context.Context, user *User) (*TokenPair, erro
 
 func toProfile(u *User) Profile {
 	return Profile{
-		ID:        fmt.Sprintf("%d", u.ID),
-		Nickname:  u.Nickname,
-		Avatar:    u.Avatar,
-		Signature: u.Signature,
-		Gender:    u.Gender,
-		Level:     u.Level,
-		Coin:      u.Coin,
+		ID:          fmt.Sprintf("%d", u.ID),
+		Nickname:    u.Nickname,
+		Avatar:      u.Avatar,
+		Signature:   u.Signature,
+		Gender:      u.Gender,
+		Level:       u.Level,
+		Coin:        u.Coin,
+		Status:      u.Status,
+		MutedUntil:  u.MutedUntil,
+		BannedUntil: u.BannedUntil,
 	}
 }
 

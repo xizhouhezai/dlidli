@@ -62,13 +62,16 @@ func (CoinLog) TableName() string { return "coin_log" }
 
 // Profile 对外用户信息（ID 用字符串避免 JS 精度丢失）。
 type Profile struct {
-	ID        string `json:"id"`
-	Nickname  string `json:"nickname"`
-	Avatar    string `json:"avatar"`
-	Signature string `json:"signature"`
-	Gender    int8   `json:"gender"`
-	Level     int8   `json:"level"`
-	Coin      int    `json:"coin"`
+	ID          string     `json:"id"`
+	Nickname    string     `json:"nickname"`
+	Avatar      string     `json:"avatar"`
+	Signature   string     `json:"signature"`
+	Gender      int8       `json:"gender"`
+	Level       int8       `json:"level"`
+	Coin        int        `json:"coin"`
+	Status      int8       `json:"status"`                 // 0 正常 1 禁言 2 封禁 3 注销
+	MutedUntil  *time.Time `json:"muted_until,omitempty"`  // 禁言到期
+	BannedUntil *time.Time `json:"banned_until,omitempty"` // 封禁到期（nil=永久）
 }
 
 // TokenPair 登录/刷新返回的令牌对。
