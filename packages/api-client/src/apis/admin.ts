@@ -22,7 +22,12 @@ export interface AdminUserItem {
   id: string
   nickname: string
   avatar: string
+  phone: string
+  signature: string
+  gender: number
   level: number
+  exp: number
+  coin: number
   status: number
   muted_until: string | null
   banned_until: string | null
