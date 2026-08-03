@@ -15,8 +15,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // 本地开发直连 Go 后端（dlidli-api :8000）
-      '/api': 'http://localhost:8000',
+      // 本地开发直连 Go 后端（dlidli-api :8000）；ws:true 转发弹幕实时 WS（M2-DM-03）
+      '/api': { target: 'http://localhost:8000', ws: true },
       '/health': 'http://localhost:8000',
     },
   },

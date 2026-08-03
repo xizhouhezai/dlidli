@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repo struct {
@@ -43,4 +44,42 @@ func (r *Repo) FindByID(id int64) (*Danmaku, error) {
 // MarkDeleted 弹幕置删除状态（举报处理用）。
 func (r *Repo) MarkDeleted(id int64) error {
 	return r.db.Model(&Danmaku{}).Where("id = ?", id).UpdateColumn("status", StatusDeleted).Error
+}
+
+// ListAll 全量弹幕分页（弹幕列表面板用；含已删除过滤），新→旧。
+func (r *Repo) ListAll(videoID int64, page, size int) ([]Danmaku, int64, error) {
+	q := r.db.Model(&Danmaku{}).Where("video_id = ? AND status = ?", videoID, StatusNormal)
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var list []Danmaku
+	err := q.Order("id DESC").Offset((page - 1) * size).Limit(size).Find(&list).Error
+	return list, total, err
+}
+
+// ---- 弹幕屏蔽（M2-DM-02） ----
+
+// CreateBlock 新增屏蔽（幂等：重复插入忽略）。
+func (r *Repo) CreateBlock(b *DanmakuBlock) error {
+	return r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(b).Error
+}
+
+// ListBlocks 某用户全部屏蔽项（新→旧）。
+func (r *Repo) ListBlocks(uid int64) ([]DanmakuBlock, error) {
+	var list []DanmakuBlock
+	err := r.db.Where("user_id = ?", uid).Order("id DESC").Find(&list).Error
+	return list, err
+}
+
+// CountBlocks 某用户某类型屏蔽项数量。
+func (r *Repo) CountBlocks(uid int64, blockType int8) (int64, error) {
+	var n int64
+	err := r.db.Model(&DanmakuBlock{}).Where("user_id = ? AND block_type = ?", uid, blockType).Count(&n).Error
+	return n, err
+}
+
+// DeleteBlock 删除屏蔽项（仅本人）。
+func (r *Repo) DeleteBlock(uid, id int64) error {
+	return r.db.Where("id = ? AND user_id = ?", id, uid).Delete(&DanmakuBlock{}).Error
 }

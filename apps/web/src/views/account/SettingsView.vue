@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { ApiError } from '@dlidli/api-client'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ApiError, type DanmakuBlockItem } from '@dlidli/api-client'
 import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import AccountStatusAlert from '@/components/AccountStatusAlert.vue'
@@ -157,8 +157,60 @@ function stopYouthTimer() {
   }
 }
 
-onMounted(loadYouthMode)
+onMounted(() => {
+  loadYouthMode()
+  loadDmBlocks()
+})
 onUnmounted(stopYouthTimer)
+
+// 弹幕屏蔽管理（M2-DM-02）：关键词 + 屏蔽用户
+const dmBlocks = ref<DanmakuBlockItem[]>([])
+const dmBlockLoading = ref(false)
+const dmBlockInput = ref('')
+const dmBlockAdding = ref(false)
+
+async function loadDmBlocks() {
+  dmBlockLoading.value = true
+  try {
+    dmBlocks.value = (await api.danmaku.blocks()).list
+  } catch {
+    // 静默失败
+  } finally {
+    dmBlockLoading.value = false
+  }
+}
+
+async function addDmBlock() {
+  const kw = dmBlockInput.value.trim()
+  if (!kw) return
+  dmBlockAdding.value = true
+  try {
+    await api.danmaku.addBlock({ block_type: 1, keyword: kw })
+    dmBlockInput.value = ''
+    ElMessage.success('已添加屏蔽词')
+    await loadDmBlocks()
+  } catch (err) {
+    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
+  } finally {
+    dmBlockAdding.value = false
+  }
+}
+
+async function removeDmBlock(b: DanmakuBlockItem) {
+  try {
+    await api.danmaku.deleteBlock(b.id)
+    dmBlocks.value = dmBlocks.value.filter((x) => x.id !== b.id)
+    ElMessage.success('已删除')
+  } catch (err) {
+    ElMessage.error(err instanceof ApiError ? err.message : '删除失败')
+  }
+}
+
+async function clearDmBlockHash(hash: string) {
+  await ElMessageBox.confirm('确定解除对该用户的弹幕屏蔽吗？', '解除屏蔽', { type: 'warning' })
+  const b = dmBlocks.value.find((x) => x.block_type === 2 && x.block_hash === hash)
+  if (b) await removeDmBlock(b)
+}
 </script>
 
 <template>
@@ -314,6 +366,71 @@ onUnmounted(stopYouthTimer)
           :loading="youthSaving"
           @change="toggleYouthMode"
         />
+      </div>
+
+      <el-divider />
+
+      <!-- 弹幕屏蔽 -->
+      <div class="max-w-480px">
+        <p class="m-0 font-600">
+          弹幕屏蔽
+        </p>
+        <p class="mt-1 mb-2 text-3 text-text-2">
+          屏蔽词与屏蔽用户的弹幕将不再显示（跨设备生效）
+        </p>
+        <div class="flex gap-2 mb-3">
+          <el-input
+            v-model="dmBlockInput"
+            class="max-w-280px"
+            placeholder="输入要屏蔽的关键词"
+            maxlength="64"
+            @keyup.enter="addDmBlock"
+          />
+          <el-button
+            type="primary"
+            class="save-btn"
+            :loading="dmBlockAdding"
+            :disabled="!dmBlockInput.trim()"
+            @click="addDmBlock"
+          >
+            添加
+          </el-button>
+        </div>
+        <div
+          v-loading="dmBlockLoading"
+          class="flex flex-wrap gap-1.5 min-h-8"
+        >
+          <el-tag
+            v-for="b in dmBlocks.filter((x) => x.block_type === 1)"
+            :key="b.id"
+            closable
+            effect="plain"
+            @close="removeDmBlock(b)"
+          >
+            {{ b.keyword }}
+          </el-tag>
+          <span
+            v-if="!dmBlockLoading && dmBlocks.filter((x) => x.block_type === 1).length === 0"
+            class="text-3 text-text-3 self-center"
+          >暂无屏蔽词</span>
+        </div>
+        <template v-if="dmBlocks.some((x) => x.block_type === 2)">
+          <p class="mt-3 mb-1.5 text-3 text-text-2">
+            已屏蔽用户
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <el-tag
+              v-for="b in dmBlocks.filter((x) => x.block_type === 2)"
+              :key="b.id"
+              closable
+              type="info"
+              effect="plain"
+              @close="clearDmBlockHash(b.block_hash ?? '')"
+            >
+              {{ b.block_hash?.slice(0, 8) }}…
+            </el-tag>
+          </div>
+        </template>
       </div>
     </el-card>
   </div>
