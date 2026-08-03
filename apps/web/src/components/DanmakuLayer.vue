@@ -116,10 +116,11 @@ function spawn(item: DanmakuItem) {
   if (kind === 'scroll') {
     el.style.top = `${track * LINE_HEIGHT}px`
     el.style.left = '0'
-    el.style.setProperty('--dm-dist', `${layer.clientWidth + el.offsetWidth}px`)
     layer.appendChild(el)
-    // 强制回流后启动动画
+    // 挂载后按实际宽度计算滚动轨迹：右边缘外 → 左边缘外（--dm-from/--dm-to）
     void el.offsetWidth
+    el.style.setProperty('--dm-from', `${layer.clientWidth}px`)
+    el.style.setProperty('--dm-to', `${-el.offsetWidth}px`)
     el.style.animation = `dli-dm-scroll ${SPEED_MS[props.settings.speed]}ms linear forwards`
     window.setTimeout(() => el.remove(), SPEED_MS[props.settings.speed] + 200)
   } else {
@@ -379,30 +380,6 @@ defineExpose({ inject })
   border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-@keyframes dli-dm-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(calc(-1 * var(--dm-dist)));
-  }
-}
-
-@keyframes dli-dm-fade {
-  0% {
-    opacity: 0;
-  }
-  10% {
-    opacity: var(--dm-opacity);
-  }
-  90% {
-    opacity: var(--dm-opacity);
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
 .dm-layer :deep(.dm-actions) {
   position: absolute;
   top: -24px;
@@ -426,5 +403,34 @@ defineExpose({ inject })
 
 .dm-layer :deep(.dm-actions__btn:hover) {
   background: rgba(255, 255, 255, 0.2);
+}
+</style>
+
+<style lang="scss">
+/* 弹幕动画 keyframes：动态创建元素的 animation 名由 JS 内联指定，
+ * 若放 scoped 样式会被 Vue 编译重命名（加哈希后缀）导致匹配不上、动画不执行，
+ * 因此必须定义为全局样式。 */
+@keyframes dli-dm-scroll {
+  from {
+    transform: translateX(var(--dm-from));
+  }
+  to {
+    transform: translateX(var(--dm-to));
+  }
+}
+
+@keyframes dli-dm-fade {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--dm-opacity);
+  }
+  90% {
+    opacity: var(--dm-opacity);
+  }
+  100% {
+    opacity: 0;
+  }
 }
 </style>
