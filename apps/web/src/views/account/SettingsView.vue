@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import { ApiError } from '@dlidli/api-client'
 import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
+import AccountStatusAlert from '@/components/AccountStatusAlert.vue'
 import defaultAvatar from '@/assets/default-avatar.png'
 
 const userStore = useUserStore()
@@ -100,6 +101,9 @@ async function onChangePassword() {
 
 <template>
   <div class="mx-auto max-w-160">
+    <!-- 账号状态（禁言/封禁）提示 -->
+    <AccountStatusAlert :user="userStore.profile" />
+
     <el-card shadow="never">
       <template #header>
         <span>账号设置</span>
