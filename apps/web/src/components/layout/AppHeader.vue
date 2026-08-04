@@ -137,6 +137,11 @@ async function onLogout() {
                   稿件管理
                 </el-dropdown-item>
                 <el-dropdown-item
+                  @click="$router.push('/creator')"
+                >
+                  创作者中心
+                </el-dropdown-item>
+                <el-dropdown-item
                   @click="$router.push('/settings')"
                 >
                   账号设置

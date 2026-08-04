@@ -10,6 +10,7 @@ import (
 	"github.com/dlidli/server/internal/middleware"
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/module/admin"
+	"github.com/dlidli/server/internal/module/creator"
 	"github.com/dlidli/server/internal/module/danmaku"
 	"github.com/dlidli/server/internal/module/dynamic"
 	"github.com/dlidli/server/internal/module/growth"
@@ -132,6 +133,10 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// 推荐系统（M3-REC）：热度榜 + 混合召回 + 行为采集 + 负反馈 + 推荐开关
 		recommendSvc := recommend.NewService(recommend.NewRepo(res.DB), videoSvc, res.Redis, log)
 		recommend.NewHandler(recommendSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
+
+		// 创作者中心（M3-CRT）：数据看板 + 激励结算
+		creatorSvc := creator.NewService(creator.NewRepo(res.DB), log)
+		creator.NewHandler(creatorSvc).RegisterRoutes(v1, authMW)
 
 		search.NewHandler(videoSvc, accountSvc).RegisterRoutes(v1)
 	} else {
