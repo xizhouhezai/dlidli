@@ -58,6 +58,42 @@ export interface HandleReportPayload {
   days?: number
 }
 
+/** 审计日志项 */
+export interface AuditLogItem {
+  id: string
+  admin_id: string
+  admin_name: string
+  action: string
+  action_name: string
+  obj_type: string
+  obj_name: string
+  oid: string
+  detail: string
+  created_at: string
+}
+
+/** 系统配置项 */
+export interface SystemConfigItem {
+  id: string
+  config_key: string
+  name: string
+  value: string
+  remark: string
+  created_at: string
+  updated_at: string
+}
+
+/** 数据字典项 */
+export interface DataDictItem {
+  id: string
+  dict_type: string
+  label: string
+  value: string
+  sort: number
+  remark: string
+  created_at: string
+}
+
 export interface AdminPermission {
   id: string
   code: string
@@ -249,5 +285,34 @@ export function createAdminApi(http: HttpClient) {
     /** 处理举报（ignore/delete/punish） */
     handleReport: (id: string, payload: HandleReportPayload) =>
       http.post<null>(`/api/v1/admin/reports/${id}/handle`, payload),
+
+    // ---- 审计日志（M2-SYS-01） ----
+    /** 审计日志分页查询（action/obj_type 可为空；from/to 为 YYYY-MM-DD） */
+    auditLogs: (params: { admin_id?: string, action?: string, obj_type?: string, from?: string, to?: string, page?: number, page_size?: number }) =>
+      http.get<{ list: AuditLogItem[]; total: number }>('/api/v1/admin/audit-logs', params),
+
+    // ---- 系统配置（M2-SYS-02） ----
+    configs: () => http.get<{ list: SystemConfigItem[] }>('/api/v1/admin/configs'),
+
+    createConfig: (payload: { config_key: string, name?: string, value?: string, remark?: string }) =>
+      http.post<null>('/api/v1/admin/configs', payload),
+
+    updateConfig: (id: string, payload: { config_key?: string, name?: string, value?: string, remark?: string }) =>
+      http.put<null>(`/api/v1/admin/configs/${id}`, payload),
+
+    deleteConfig: (id: string) =>
+      http.delete<null>(`/api/v1/admin/configs/${id}`),
+
+    // ---- 数据字典（M2-SYS-02） ----
+    dicts: () => http.get<{ groups: Record<string, DataDictItem[]> }>('/api/v1/admin/dicts'),
+
+    createDict: (payload: { dict_type: string, label: string, value: string, sort?: number, remark?: string }) =>
+      http.post<null>('/api/v1/admin/dicts', payload),
+
+    updateDict: (id: string, payload: { dict_type?: string, label: string, value: string, sort?: number, remark?: string }) =>
+      http.put<null>(`/api/v1/admin/dicts/${id}`, payload),
+
+    deleteDict: (id: string) =>
+      http.delete<null>(`/api/v1/admin/dicts/${id}`),
   }
 }

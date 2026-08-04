@@ -79,6 +79,15 @@ var builtinPermissions = []Permission{
 	// 系统 - 权限点
 	{Code: "permission:view", Name: "权限管理", Type: "menu", Path: "/permissions", Icon: "i-mingcute-key-2-line", Sort: 8},
 	{Code: "permission:edit", Name: "增删改权限点", Type: "button", Parent: "permission:view"},
+	// 系统 - 审计日志
+	{Code: "audit:view", Name: "审计日志", Type: "menu", Path: "/audit-logs", Icon: "i-mingcute-document-2-line", Sort: 10},
+	{Code: "audit:export", Name: "导出审计日志", Type: "button", Parent: "audit:view"},
+	// 系统 - 系统配置
+	{Code: "config:view", Name: "系统配置", Type: "menu", Path: "/configs", Icon: "i-mingcute-settings-4-line", Sort: 11},
+	{Code: "config:edit", Name: "增删改配置", Type: "button", Parent: "config:view"},
+	// 系统 - 数据字典
+	{Code: "dict:view", Name: "数据字典", Type: "menu", Path: "/data-dicts", Icon: "i-mingcute-book-4-line", Sort: 12},
+	{Code: "dict:edit", Name: "增删改字典项", Type: "button", Parent: "dict:view"},
 }
 
 // 内置角色定义（code → 权限码集合；super 特殊，拥有全部）。

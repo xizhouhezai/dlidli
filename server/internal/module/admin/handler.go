@@ -62,6 +62,19 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, adminAuth gin.HandlerFunc)
 			authed.POST("/categories", perm("category:edit"), h.createCategory)
 			authed.PUT("/categories/:id", perm("category:edit"), h.updateCategory)
 			authed.DELETE("/categories/:id", perm("category:edit"), h.deleteCategory)
+			// 审计日志（M2-SYS-01）
+			authed.GET("/audit-logs", perm("audit:view"), h.listAuditLogs)
+			authed.GET("/audit-logs/export", perm("audit:export"), h.exportAuditLogs)
+			// 系统配置（M2-SYS-02）
+			authed.GET("/configs", perm("config:view"), h.listConfigs)
+			authed.POST("/configs", perm("config:edit"), h.createConfig)
+			authed.PUT("/configs/:id", perm("config:edit"), h.updateConfig)
+			authed.DELETE("/configs/:id", perm("config:edit"), h.deleteConfig)
+			// 数据字典（M2-SYS-02）
+			authed.GET("/dicts", perm("dict:view"), h.listDicts)
+			authed.POST("/dicts", perm("dict:edit"), h.createDict)
+			authed.PUT("/dicts/:id", perm("dict:edit"), h.updateDict)
+			authed.DELETE("/dicts/:id", perm("dict:edit"), h.deleteDict)
 		}
 	}
 }
