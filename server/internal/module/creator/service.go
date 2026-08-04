@@ -30,6 +30,7 @@ func (s *Service) settle(ctx context.Context, uid int64) {
 }
 
 // Overview 创作者总览（触发结算后聚合）。
+// 卡片累计值与趋势图同源：总有效播放=行为日志 action=3、赞/币/藏=user_action、粉丝=relation、收益=日结算。
 func (s *Service) Overview(ctx context.Context, uid int64) (*Overview, error) {
 	s.settle(ctx, uid)
 
@@ -37,7 +38,19 @@ func (s *Service) Overview(ctx context.Context, uid int64) (*Overview, error) {
 	if err != nil {
 		return nil, err
 	}
-	stats, err := s.repo.StatsByVideos(uid)
+	totalView, err := s.repo.BehaviorCnt(uid, 3)
+	if err != nil {
+		return nil, err
+	}
+	totalLike, err := s.repo.ActionCnt(uid, 1)
+	if err != nil {
+		return nil, err
+	}
+	totalCoin, err := s.repo.ActionCnt(uid, 2)
+	if err != nil {
+		return nil, err
+	}
+	totalFav, err := s.repo.ActionCnt(uid, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -54,12 +67,9 @@ func (s *Service) Overview(ctx context.Context, uid int64) (*Overview, error) {
 		return nil, err
 	}
 
-	ov := &Overview{VideoCnt: videoCnt, Fans: fans, Earnings: earnings}
-	for _, st := range stats {
-		ov.TotalView += st.ViewCnt
-		ov.TotalLike += st.LikeCnt
-		ov.TotalCoin += st.CoinCnt
-		ov.TotalFav += st.FavCnt
+	ov := &Overview{
+		VideoCnt: videoCnt, TotalView: totalView, TotalLike: totalLike,
+		TotalCoin: totalCoin, TotalFav: totalFav, Fans: fans, Earnings: earnings,
 	}
 	for _, t := range trend {
 		ov.WeekView += t.Views
@@ -119,24 +129,45 @@ func (s *Service) VideoStats(ctx context.Context, uid int64, page, size int) ([]
 	return items, total, nil
 }
 
-// TrendMetric 趋势指标映射：play 有效播放 / interact 互动 / click 点击 / expose 曝光。
+// TrendMetric 趋势指标映射：
+// play 有效播放 / like 点赞 / coin 投币 / fav 收藏 / interact 互动 / fans 新增粉丝 / earning 收益 / click 点击 / expose 曝光。
 var TrendMetric = map[string]int8{
 	"play":     3,
+	"like":     1,
+	"coin":     2,
+	"fav":      3,
 	"interact": 4,
 	"click":    2,
 	"expose":   1,
 }
 
-// Trend 近 N 天行为趋势（指标切换 + 天数切换，补零对齐）。
-func (s *Service) Trend(_ context.Context, uid int64, days int, metric string) ([]TrendPoint, error) {
+// Trend 近 N 天数据趋势（指标切换 + 天数切换，补零对齐）。
+// play/click/expose 基于行为日志 action；like/coin/fav 基于 user_action；fans 基于新增关注；earning 基于日结算。
+func (s *Service) Trend(ctx context.Context, uid int64, days int, metric string) ([]TrendPoint, error) {
 	if days <= 0 || days > 30 {
 		days = 7
 	}
-	action, ok := TrendMetric[metric]
-	if !ok {
-		action = TrendMetric["play"]
+	var (
+		list []TrendPoint
+		err  error
+	)
+	switch metric {
+	case "like", "coin":
+		list, err = s.repo.ActionTrend(uid, days, TrendMetric[metric])
+	case "fav":
+		list, err = s.repo.ActionTrend(uid, days, 3)
+	case "fans":
+		list, err = s.repo.FanTrend(uid, days)
+	case "earning":
+		s.settle(ctx, uid) // 收益趋势前先结算
+		list, err = s.repo.EarningTrend(uid, days)
+	case "interact":
+		list, err = s.repo.PlayTrend(uid, days, 4)
+	case "click", "expose", "play":
+		list, err = s.repo.PlayTrend(uid, days, TrendMetric[metric])
+	default:
+		list, err = s.repo.PlayTrend(uid, days, 3)
 	}
-	list, err := s.repo.PlayTrend(uid, days, action)
 	if err != nil {
 		return nil, err
 	}

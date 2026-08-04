@@ -45,6 +45,9 @@ export interface SettlementItem {
   amount: number
 }
 
+/** 趋势指标：play 有效播放 / like 点赞 / coin 投币 / fav 收藏 / fans 涨粉 / earning 收益 / interact 互动 / click 点击 / expose 曝光 */
+export type TrendMetric = 'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'
+
 /** 创作者中心接口（对应后端 creator 模块）。 */
 export function createCreatorApi(http: HttpClient) {
   return {
@@ -58,8 +61,8 @@ export function createCreatorApi(http: HttpClient) {
         page_size: pageSize,
       }),
 
-    /** 近 N 天数据趋势（metric：play 播放 / interact 互动 / click 点击 / expose 曝光） */
-    trend: (days = 7, metric: 'play' | 'interact' | 'click' | 'expose' = 'play') =>
+    /** 近 N 天数据趋势（指标切换） */
+    trend: (days = 7, metric: TrendMetric = 'play') =>
       http.get<{ list: TrendPoint[]; metric: string }>('/api/v1/creator/trend', { days, metric }),
 
     /** 收益明细分页 */
