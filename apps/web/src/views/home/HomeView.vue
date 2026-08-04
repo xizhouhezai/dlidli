@@ -623,7 +623,8 @@ function onCardClick(v: VideoCard) {
 }
 
 .video-card__title {
-  height: 2.8em;
+  /* 不锁高度：行高由 leading 决定，避免固定高度裁行导致省略号不出现 */
+  word-break: break-all;
   @include v.ellipsis(2);
 }
 
