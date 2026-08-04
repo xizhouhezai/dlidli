@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import * as echarts from 'echarts'
 import { formatCount } from '@dlidli/shared'
 import type { CreatorOverview, CreatorVideoStat, SettlementItem, TrendPoint } from '@dlidli/api-client'
 import { api } from '@/api'
@@ -16,12 +17,85 @@ const videos = ref<CreatorVideoStat[]>([])
 const videosTotal = ref(0)
 const videosPage = ref(1)
 const videosLoading = ref(false)
+const videosLoaded = ref(false)
 
 // 收益明细
 const settles = ref<SettlementItem[]>([])
 const settlesTotal = ref(0)
 const settlesPage = ref(1)
 const settlesLoading = ref(false)
+const settlesLoaded = ref(false)
+
+// 趋势图（echarts）：指标 + 天数切换
+const trendChartEl = ref<HTMLDivElement>()
+let trendChart: echarts.ECharts | null = null
+const trendMetric = ref<'play' | 'interact' | 'click' | 'expose'>('play')
+const trendDays = ref<7 | 30>(7)
+const METRIC_OPTIONS: Array<{ value: 'play' | 'interact' | 'click' | 'expose'; label: string }> = [
+  { value: 'play', label: '有效播放' },
+  { value: 'interact', label: '互动' },
+  { value: 'click', label: '点击' },
+  { value: 'expose', label: '曝光' },
+]
+const metricLabel = computed(
+  () => METRIC_OPTIONS.find((m) => m.value === trendMetric.value)?.label ?? '',
+)
+
+async function loadTrend() {
+  const tr = await api.creator.trend(trendDays.value, trendMetric.value)
+  trend.value = tr.list
+  await nextTick()
+  renderTrend()
+}
+
+function renderTrend() {
+  const el = trendChartEl.value
+  if (!el) return
+  if (!trendChart) trendChart = echarts.init(el)
+  trendChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: unknown) => {
+        const p = (params as Array<{ name?: string; value?: number }>)[0]
+        return `${p?.name ?? ''}<br/>${metricLabel.value}：${p?.value ?? 0}`
+      },
+    },
+    grid: { left: 40, right: 16, top: 28, bottom: 28 },
+    xAxis: {
+      type: 'category',
+      data: trend.value.map((t) => t.date),
+      axisLine: { lineStyle: { color: '#e3e5e7' } },
+      axisTick: { show: false },
+      axisLabel: { color: '#9499a0', fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      splitLine: { lineStyle: { color: '#f1f2f3' } },
+      axisLabel: { color: '#9499a0', fontSize: 11 },
+    },
+    series: [
+      {
+        name: metricLabel.value,
+        type: 'bar',
+        data: trend.value.map((t) => t.views),
+        barMaxWidth: 32,
+        itemStyle: {
+          borderRadius: [4, 4, 0, 0],
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#fb7299' },
+            { offset: 1, color: '#ffb3c9' },
+          ]),
+        },
+        emphasis: { itemStyle: { color: '#fb7299' } },
+      },
+    ],
+  })
+}
+
+function onResize() {
+  trendChart?.resize()
+}
 
 const STATUS_MAP: Record<number, { text: string; type: 'info' | 'warning' | 'success' | 'danger' }> = {
   0: { text: '草稿', type: 'info' },
@@ -35,15 +109,11 @@ const STATUS_MAP: Record<number, { text: string; type: 'info' | 'warning' | 'suc
 // 收益展示：分 → 元
 const earningsYuan = computed(() => ((overview.value?.earnings ?? 0) / 100).toFixed(2))
 
-// 趋势柱状图（纯 CSS 柱）
-const maxTrend = computed(() => Math.max(...trend.value.map((t) => t.views), 1))
-
 async function load() {
   loading.value = true
   try {
-    const [ov, tr] = await Promise.all([api.creator.overview(), api.creator.trend(7)])
+    const [ov] = await Promise.all([api.creator.overview()])
     overview.value = ov
-    trend.value = tr.list
   } finally {
     loading.value = false
   }
@@ -57,10 +127,11 @@ async function loadVideos(reset = false) {
   videosLoading.value = true
   try {
     const res = await api.creator.videos(videosPage.value, 10)
-    videos.value = reset ? res.list : [...videos.value, ...res.list]
+    videos.value = reset ? (res.list ?? []) : [...videos.value, ...(res.list ?? [])]
     videosTotal.value = res.total
   } finally {
     videosLoading.value = false
+    if (reset) videosLoaded.value = true
   }
 }
 
@@ -72,10 +143,11 @@ async function loadSettles(reset = false) {
   settlesLoading.value = true
   try {
     const res = await api.creator.settlements(settlesPage.value, 10)
-    settles.value = reset ? res.list : [...settles.value, ...res.list]
+    settles.value = reset ? (res.list ?? []) : [...settles.value, ...(res.list ?? [])]
     settlesTotal.value = res.total
   } finally {
     settlesLoading.value = false
+    if (reset) settlesLoaded.value = true
   }
 }
 
@@ -84,13 +156,24 @@ const activeTab = ref<TabKey>('videos')
 
 function switchTab(t: TabKey) {
   activeTab.value = t
-  if (t === 'videos' && videos.value.length === 0) loadVideos(true)
-  if (t === 'settlements' && settles.value.length === 0) loadSettles(true)
+  if (t === 'videos' && !videosLoaded.value) loadVideos(true)
+  if (t === 'settlements' && !settlesLoaded.value) loadSettles(true)
 }
 
-onMounted(() => {
-  load()
+// 趋势图：指标/天数切换时重新加载
+watch([trendMetric, trendDays], loadTrend)
+
+onMounted(async () => {
+  await load()
+  loadTrend() // overview 就绪后图表容器已挂载，避免初始渲染竞态
   loadVideos(true)
+  window.addEventListener('resize', onResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize)
+  trendChart?.dispose()
+  trendChart = null
 })
 </script>
 
@@ -148,29 +231,38 @@ onMounted(() => {
       </div>
 
       <div class="cr-main">
-        <!-- 近 7 日播放趋势 -->
+        <!-- 数据趋势（echarts，指标/天数可切换） -->
         <div class="cr-panel">
-          <h3 class="cr-panel__title">
-            近 7 日有效播放
-            <span class="cr-panel__sub">共 {{ overview.week_view }} 次</span>
-          </h3>
-          <div class="cr-trend">
-            <div
-              v-for="t in trend"
-              :key="t.date"
-              class="cr-trend__col"
-            >
-              <div class="cr-trend__bar-wrap">
-                <div
-                  class="cr-trend__bar"
-                  :style="{ height: `${(t.views / maxTrend) * 100}%` }"
-                  :class="{ 'is-zero': t.views === 0 }"
-                />
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <h3 class="cr-panel__title m-0">
+              数据趋势
+              <span class="cr-panel__sub">基于行为日志</span>
+            </h3>
+            <div class="flex items-center gap-2">
+              <div class="flex gap-1">
+                <span
+                  v-for="m in METRIC_OPTIONS"
+                  :key="m.value"
+                  class="cr-chip"
+                  :class="{ 'is-active': trendMetric === m.value }"
+                  @click="trendMetric = m.value"
+                >{{ m.label }}</span>
               </div>
-              <span class="cr-trend__val">{{ t.views }}</span>
-              <span class="cr-trend__date">{{ t.date }}</span>
+              <div class="flex gap-1">
+                <span
+                  v-for="d in [7, 30]"
+                  :key="d"
+                  class="cr-chip"
+                  :class="{ 'is-active': trendDays === d }"
+                  @click="trendDays = d as 7 | 30"
+                >近{{ d }}日</span>
+              </div>
             </div>
           </div>
+          <div
+            ref="trendChartEl"
+            class="cr-trend-chart"
+          />
         </div>
 
         <!-- 数据明细 -->
@@ -403,51 +495,33 @@ onMounted(() => {
   color: v.$text-2;
 }
 
-/* 趋势柱状 */
-.cr-trend {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  height: 160px;
-}
-
-.cr-trend__col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  height: 100%;
-}
-
-.cr-trend__bar-wrap {
-  flex: 1;
+/* 趋势图 */
+.cr-trend-chart {
+  height: 240px;
   width: 100%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
 }
 
-.cr-trend__bar {
-  width: 60%;
-  min-height: 4px;
-  border-radius: 4px 4px 0 0;
-  background: linear-gradient(180deg, v.$primary, #ffb3c9);
-  transition: height 0.3s;
-
-  &.is-zero {
-    background: v.$border;
-  }
-}
-
-.cr-trend__val {
-  font-size: 11px;
+/* 指标/天数切换 chip */
+.cr-chip {
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 12px;
   color: v.$text-2;
-}
+  border: 1px solid v.$border;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
 
-.cr-trend__date {
-  font-size: 11px;
-  color: v.$text-3;
+  &:hover {
+    color: v.$primary;
+    border-color: v.$primary;
+  }
+
+  &.is-active {
+    background: v.$primary;
+    border-color: v.$primary;
+    color: #fff;
+  }
 }
 
 /* Tab */

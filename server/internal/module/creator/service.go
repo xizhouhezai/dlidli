@@ -41,7 +41,7 @@ func (s *Service) Overview(ctx context.Context, uid int64) (*Overview, error) {
 	if err != nil {
 		return nil, err
 	}
-	trend, err := s.repo.PlayTrend(uid, 7)
+	trend, err := s.repo.PlayTrend(uid, 7, TrendMetric["play"])
 	if err != nil {
 		return nil, err
 	}
@@ -119,12 +119,24 @@ func (s *Service) VideoStats(ctx context.Context, uid int64, page, size int) ([]
 	return items, total, nil
 }
 
-// PlayTrend 近 N 天播放趋势（补零对齐日期）。
-func (s *Service) PlayTrend(_ context.Context, uid int64, days int) ([]TrendPoint, error) {
+// TrendMetric 趋势指标映射：play 有效播放 / interact 互动 / click 点击 / expose 曝光。
+var TrendMetric = map[string]int8{
+	"play":     3,
+	"interact": 4,
+	"click":    2,
+	"expose":   1,
+}
+
+// Trend 近 N 天行为趋势（指标切换 + 天数切换，补零对齐）。
+func (s *Service) Trend(_ context.Context, uid int64, days int, metric string) ([]TrendPoint, error) {
 	if days <= 0 || days > 30 {
 		days = 7
 	}
-	list, err := s.repo.PlayTrend(uid, days)
+	action, ok := TrendMetric[metric]
+	if !ok {
+		action = TrendMetric["play"]
+	}
+	list, err := s.repo.PlayTrend(uid, days, action)
 	if err != nil {
 		return nil, err
 	}
