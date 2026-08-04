@@ -31,6 +31,46 @@ type AuditLog struct {
 
 func (AuditLog) TableName() string { return "audit_log" }
 
+// AuditItem 审计日志列表项（带操作者昵称）。
+type AuditItem struct {
+	ID         int64     `json:"id,string"`
+	AdminID    int64     `json:"admin_id,string"`
+	AdminName  string    `json:"admin_name"`
+	Action     string    `json:"action"`
+	ActionName string    `json:"action_name"`
+	ObjType    string    `json:"obj_type"`
+	ObjName    string    `json:"obj_name"`
+	Oid        string    `json:"oid,string"`
+	Detail     string    `json:"detail"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// SystemConfig 对应 system_config 表（M2-SYS-02）。
+type SystemConfig struct {
+	ID        int64     `gorm:"primaryKey;autoIncrement"`
+	ConfigKey string    `gorm:"column:config_key"`
+	Name      string    `json:"name"`
+	Value     string    `json:"value"`
+	Remark    string    `json:"remark"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (SystemConfig) TableName() string { return "system_config" }
+
+// DataDict 对应 data_dict 表（M2-SYS-02 数据字典）。
+type DataDict struct {
+	ID        int64     `gorm:"primaryKey;autoIncrement"`
+	DictType  string    `gorm:"column:dict_type"`
+	Label     string    `json:"label"`
+	Value     string    `json:"value"`
+	Sort      int       `json:"sort"`
+	Remark    string    `json:"remark"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (DataDict) TableName() string { return "data_dict" }
+
 // SensitiveWord 对应 sensitive_word 表。
 type SensitiveWord struct {
 	ID        int64     `gorm:"primaryKey" json:"id,string"` // 字符串化防 JS 精度丢失

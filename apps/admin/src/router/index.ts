@@ -66,6 +66,24 @@ const router = createRouter({
           meta: { title: '权限管理', requiresAuth: true },
         },
         {
+          path: 'audit-logs',
+          name: 'audit-logs',
+          component: () => import('@/views/system/AuditLogsView.vue'),
+          meta: { title: '审计日志', requiresAuth: true },
+        },
+        {
+          path: 'configs',
+          name: 'configs',
+          component: () => import('@/views/system/ConfigsView.vue'),
+          meta: { title: '系统配置', requiresAuth: true },
+        },
+        {
+          path: 'data-dicts',
+          name: 'data-dicts',
+          component: () => import('@/views/system/DataDictsView.vue'),
+          meta: { title: '数据字典', requiresAuth: true },
+        },
+        {
           path: 'categories',
           name: 'categories',
           component: () => import('@/views/operation/CategoriesView.vue'),
