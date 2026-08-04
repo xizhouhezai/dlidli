@@ -5,6 +5,7 @@ import * as echarts from 'echarts'
 import { formatCount } from '@dlidli/shared'
 import type { CreatorOverview, CreatorVideoStat, SettlementItem, TrendPoint } from '@dlidli/api-client'
 import { api } from '@/api'
+import defaultCover from '@/assets/default-cover.png'
 
 const router = useRouter()
 
@@ -330,7 +331,7 @@ onBeforeUnmount(() => {
                 <template #default="{ row }">
                   <div class="flex items-center gap-2">
                     <img
-                      :src="row.cover"
+                      :src="row.cover || defaultCover"
                       alt=""
                       class="w-16 aspect-video object-cover rounded-4px bg-#f1f2f3"
                     >
