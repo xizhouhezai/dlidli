@@ -58,8 +58,9 @@ export function createCreatorApi(http: HttpClient) {
         page_size: pageSize,
       }),
 
-    /** 近 N 天播放趋势 */
-    trend: (days = 7) => http.get<{ list: TrendPoint[] }>('/api/v1/creator/trend', { days }),
+    /** 近 N 天数据趋势（metric：play 播放 / interact 互动 / click 点击 / expose 曝光） */
+    trend: (days = 7, metric: 'play' | 'interact' | 'click' | 'expose' = 'play') =>
+      http.get<{ list: TrendPoint[]; metric: string }>('/api/v1/creator/trend', { days, metric }),
 
     /** 收益明细分页 */
     settlements: (page = 1, pageSize = 10) =>

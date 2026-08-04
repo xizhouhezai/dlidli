@@ -32,7 +32,7 @@ func (r *Repo) ListMineVideos(uid int64, page, size int) ([]VideoBase, int64, er
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	var list []VideoBase
+	list := make([]VideoBase, 0)
 	err := q.Order("id DESC").Offset((page - 1) * size).Limit(size).Find(&list).Error
 	return list, total, err
 }
@@ -89,14 +89,14 @@ func (r *Repo) ValidViewStats(uid int64) ([]struct {
 	return list, err
 }
 
-// PlayTrend 近 N 天有效播放趋势（含当天）。
-func (r *Repo) PlayTrend(uid int64, days int) ([]TrendPoint, error) {
+// PlayTrend 近 N 天行为趋势（按 action 指标过滤，含当天）。
+func (r *Repo) PlayTrend(uid int64, days int, action int8) ([]TrendPoint, error) {
 	from := time.Now().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
 	var list []TrendPoint
 	err := r.db.Table("user_behavior").
 		Select("DATE_FORMAT(user_behavior.created_at, '%Y-%m-%d') AS date, COUNT(*) AS views").
 		Joins("JOIN video ON video.id = user_behavior.video_id").
-		Where("user_behavior.action = 3 AND video.user_id = ? AND user_behavior.created_at >= ?", uid, from).
+		Where("user_behavior.action = ? AND video.user_id = ? AND user_behavior.created_at >= ?", action, uid, from).
 		Group("date").
 		Order("date").
 		Scan(&list).Error
@@ -128,7 +128,7 @@ func (r *Repo) ListSettlements(uid int64, page, size int) ([]SettlementItem, int
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	var list []SettlementItem
+	list := make([]SettlementItem, 0)
 	err := q.Order("cs.settle_date DESC, cs.id DESC").Offset((page - 1) * size).Limit(size).Scan(&list).Error
 	return list, total, err
 }

@@ -62,22 +62,24 @@ func (h *Handler) videoStats(c *gin.Context) {
 	response.OK(c, gin.H{"list": items, "total": total})
 }
 
-// @Summary  近 N 天播放趋势
+// @Summary  近 N 天数据趋势（指标可切换：play/interact/click/expose）
 // @Tags     创作者中心
 // @Produce  json
 // @Security BearerAuth
 // @Param    days query int false "天数（默认7，最大30）"
+// @Param    metric query string false "指标：play 播放 / interact 互动 / click 点击 / expose 曝光（默认 play）"
 // @Success  200 {object} response.Body
 // @Router   /creator/trend [get]
 func (h *Handler) trend(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
+	metric := c.DefaultQuery("metric", "play")
 	uid := c.GetInt64(middleware.CtxUserID)
-	list, err := h.svc.PlayTrend(c.Request.Context(), uid, days)
+	list, err := h.svc.Trend(c.Request.Context(), uid, days, metric)
 	if err != nil {
 		response.Fail(c, err)
 		return
 	}
-	response.OK(c, gin.H{"list": list})
+	response.OK(c, gin.H{"list": list, "metric": metric})
 }
 
 // @Summary  收益明细分页

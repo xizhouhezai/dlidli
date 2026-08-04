@@ -14,6 +14,7 @@
     "@dlidli/api-client": "workspace:*",
     "@dlidli/player": "workspace:*",
     "@dlidli/shared": "workspace:*",
+    "echarts": "^6.1.0",
     "element-plus": "^2.10.0",
     "hash-wasm": "^4.12.0",
     "hls.js": "^1.6.0",
