@@ -103,6 +103,66 @@ func (r *Repo) PlayTrend(uid int64, days int, action int8) ([]TrendPoint, error)
 	return list, err
 }
 
+// ActionTrend 近 N 天互动行为趋势（user_action：1赞 2币 3藏，按日 COUNT）。
+func (r *Repo) ActionTrend(uid int64, days int, action int8) ([]TrendPoint, error) {
+	from := time.Now().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
+	var list []TrendPoint
+	err := r.db.Table("user_action ua").
+		Select("DATE_FORMAT(ua.created_at, '%Y-%m-%d') AS date, COUNT(*) AS views").
+		Joins("JOIN video v ON v.id = ua.oid AND ua.obj_type = 1").
+		Where("ua.action = ? AND v.user_id = ? AND ua.created_at >= ?", action, uid, from).
+		Group("date").
+		Order("date").
+		Scan(&list).Error
+	return list, err
+}
+
+// FanTrend 近 N 天新增粉丝趋势（relation 关注按日 COUNT）。
+func (r *Repo) FanTrend(uid int64, days int) ([]TrendPoint, error) {
+	from := time.Now().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
+	var list []TrendPoint
+	err := r.db.Table("relation").
+		Select("DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(*) AS views").
+		Where("target_id = ? AND type = 1 AND created_at >= ?", uid, from).
+		Group("date").
+		Order("date").
+		Scan(&list).Error
+	return list, err
+}
+
+// EarningTrend 近 N 天收益趋势（日结算按日 SUM）。
+func (r *Repo) EarningTrend(uid int64, days int) ([]TrendPoint, error) {
+	from := time.Now().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
+	var list []TrendPoint
+	err := r.db.Table("creator_settlement").
+		Select("DATE_FORMAT(settle_date, '%Y-%m-%d') AS date, SUM(amount) AS views").
+		Where("user_id = ? AND settle_date >= ?", uid, from).
+		Group("date").
+		Order("date").
+		Scan(&list).Error
+	return list, err
+}
+
+// BehaviorCnt 本人稿件的有效播放累计（行为日志 action=3，与趋势同源）。
+func (r *Repo) BehaviorCnt(uid int64, action int8) (int64, error) {
+	var n int64
+	err := r.db.Table("user_behavior").
+		Joins("JOIN video ON video.id = user_behavior.video_id").
+		Where("user_behavior.action = ? AND video.user_id = ?", action, uid).
+		Count(&n).Error
+	return n, err
+}
+
+// ActionCnt 本人稿件的互动行为累计（user_action：1赞 2币 3藏，与趋势同源）。
+func (r *Repo) ActionCnt(uid int64, action int8) (int64, error) {
+	var n int64
+	err := r.db.Table("user_action ua").
+		Joins("JOIN video v ON v.id = ua.oid AND ua.obj_type = 1").
+		Where("ua.action = ? AND v.user_id = ?", action, uid).
+		Count(&n).Error
+	return n, err
+}
+
 // FanCount 粉丝数（relation target 计数）。
 func (r *Repo) FanCount(uid int64) (int64, error) {
 	var n int64

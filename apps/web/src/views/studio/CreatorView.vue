@@ -29,10 +29,15 @@ const settlesLoaded = ref(false)
 // 趋势图（echarts）：指标 + 天数切换
 const trendChartEl = ref<HTMLDivElement>()
 let trendChart: echarts.ECharts | null = null
-const trendMetric = ref<'play' | 'interact' | 'click' | 'expose'>('play')
+const trendMetric = ref<'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'>('play')
 const trendDays = ref<7 | 30>(7)
-const METRIC_OPTIONS: Array<{ value: 'play' | 'interact' | 'click' | 'expose'; label: string }> = [
+const METRIC_OPTIONS: Array<{ value: 'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'; label: string }> = [
   { value: 'play', label: '有效播放' },
+  { value: 'like', label: '点赞' },
+  { value: 'coin', label: '投币' },
+  { value: 'fav', label: '收藏' },
+  { value: 'fans', label: '涨粉' },
+  { value: 'earning', label: '收益' },
   { value: 'interact', label: '互动' },
   { value: 'click', label: '点击' },
   { value: 'expose', label: '曝光' },
@@ -40,6 +45,12 @@ const METRIC_OPTIONS: Array<{ value: 'play' | 'interact' | 'click' | 'expose'; l
 const metricLabel = computed(
   () => METRIC_OPTIONS.find((m) => m.value === trendMetric.value)?.label ?? '',
 )
+
+// 统计卡点击联动趋势指标：总播放→有效播放（近似）、总点赞→点赞、总投币→投币、粉丝→涨粉、累计收益→收益
+function onStatCardClick(metric: 'play' | 'like' | 'coin' | 'fans' | 'earning') {
+  trendMetric.value = metric
+  trendDays.value = 7
+}
 
 async function loadTrend() {
   const tr = await api.creator.trend(trendDays.value, trendMetric.value)
@@ -186,17 +197,27 @@ onBeforeUnmount(() => {
     />
 
     <template v-else-if="overview">
-      <!-- 概览统计卡 -->
+      <!-- 概览统计卡（点击联动下方趋势图指标） -->
       <div class="cr-grid">
-        <div class="cr-card cr-card--primary">
+        <div
+          class="cr-card"
+          :class="{ 'is-active': trendMetric === 'play' }"
+          title="查看有效播放趋势"
+          @click="onStatCardClick('play')"
+        >
           <p class="cr-card__num">
             {{ formatCount(overview.total_view) }}
           </p>
           <p class="cr-card__label">
-            总播放
+            总有效播放
           </p>
         </div>
-        <div class="cr-card">
+        <div
+          class="cr-card"
+          :class="{ 'is-active': trendMetric === 'like' }"
+          title="查看点赞趋势"
+          @click="onStatCardClick('like')"
+        >
           <p class="cr-card__num">
             {{ formatCount(overview.total_like) }}
           </p>
@@ -204,7 +225,12 @@ onBeforeUnmount(() => {
             总点赞
           </p>
         </div>
-        <div class="cr-card">
+        <div
+          class="cr-card"
+          :class="{ 'is-active': trendMetric === 'coin' }"
+          title="查看投币趋势"
+          @click="onStatCardClick('coin')"
+        >
           <p class="cr-card__num">
             {{ formatCount(overview.total_coin) }}
           </p>
@@ -212,7 +238,12 @@ onBeforeUnmount(() => {
             总投币
           </p>
         </div>
-        <div class="cr-card">
+        <div
+          class="cr-card"
+          :class="{ 'is-active': trendMetric === 'fans' }"
+          title="查看涨粉趋势"
+          @click="onStatCardClick('fans')"
+        >
           <p class="cr-card__num">
             {{ formatCount(overview.fans) }}
           </p>
@@ -220,7 +251,12 @@ onBeforeUnmount(() => {
             粉丝
           </p>
         </div>
-        <div class="cr-card">
+        <div
+          class="cr-card"
+          :class="{ 'is-active': trendMetric === 'earning' }"
+          title="查看收益趋势"
+          @click="onStatCardClick('earning')"
+        >
           <p class="cr-card__num cr-card__num--money">
             ¥{{ earningsYuan }}
           </p>
@@ -442,13 +478,28 @@ onBeforeUnmount(() => {
   border-radius: v.$radius-lg;
   padding: 18px 16px;
   text-align: center;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
 
-  &--primary {
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: v.$shadow-card;
+  }
+
+  /* 激活态统一：品牌粉渐变背景 + 白字 + 光晕（5 卡一致） */
+  &.is-active {
     background: linear-gradient(135deg, v.$primary, #ff9eb8);
     color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(251, 114, 153, 0.28);
 
     .cr-card__label {
       color: rgba(255, 255, 255, 0.85);
+    }
+
+    .cr-card__num--money {
+      color: #fff;
     }
   }
 }
