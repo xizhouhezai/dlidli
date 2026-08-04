@@ -13,6 +13,7 @@ import { createNotifyApi } from './apis/notify'
 import { createGrowthApi } from './apis/growth'
 import { createReportApi } from './apis/report'
 import { createRecommendApi } from './apis/recommend'
+import { createCreatorApi } from './apis/creator'
 
 export * from './http'
 export * from './error'
@@ -27,6 +28,7 @@ export type { FeedItem } from './apis/dynamic'
 export type { NotifyItem } from './apis/notify'
 export type { GrowthSummary, GrowthTask, AssetLogItem } from './apis/growth'
 export type { SubmitReportReq, ReportTargetType, ReportReasonType } from './apis/report'
+export type { CreatorOverview, CreatorVideoStat, TrendPoint, SettlementItem } from './apis/creator'
 
 /**
  * 创建 API 客户端。业务模块接口（account/video/...）随 M1 后端接口逐步补充，
@@ -50,6 +52,7 @@ export function createApiClient(cfg: ClientConfig = {}) {
     growth: createGrowthApi(http),
     report: createReportApi(http),
     recommend: createRecommendApi(http),
+    creator: createCreatorApi(http),
   }
 }
 

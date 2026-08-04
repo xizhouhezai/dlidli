@@ -72,6 +72,12 @@ const router = createRouter({
           meta: { title: '稿件管理', requiresAuth: true },
         },
         {
+          path: 'creator',
+          name: 'creator',
+          component: () => import('@/views/studio/CreatorView.vue'),
+          meta: { title: '创作者中心', requiresAuth: true },
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/account/SettingsView.vue'),
