@@ -87,8 +87,12 @@ function switchSort(s: 'recommend' | 'new' | 'hot') {
   loadList()
 }
 
-// 不感兴趣（仅推荐 Tab 卡片 hover 操作）
+// 不感兴趣（推荐 Tab 卡片更多菜单）
 const dislikePending = ref(false)
+function onCardMenu(cmd: string, v: VideoCard) {
+  if (cmd === 'dislike') void onDislike(v)
+}
+
 async function onDislike(v: VideoCard) {
   if (!userStore.token) {
     router.push('/login')
@@ -291,21 +295,39 @@ function onCardClick(v: VideoCard) {
             v-if="v.duration > 0"
             class="absolute right-1.5 bottom-1.5 px-1.5 py-0.25 rounded-4px bg-black/60 text-white text-3"
           >{{ formatDuration(v.duration) }}</span>
-          <!-- 不感兴趣（仅推荐 Tab） -->
-          <span
-            v-if="sort === 'recommend' && userStore.token"
-            class="video-card__dislike absolute right-1.5 top-1.5 px-2 py-0.5 rounded-4px bg-black/60 text-white text-3"
-            title="不感兴趣"
-            @click.stop="onDislike(v)"
-          >不感兴趣</span>
         </div>
         <div class="pt-2 px-0.5">
-          <p
-            class="video-card__title m-0 text-3.5 leading-[1.4]"
-            :title="v.title"
-          >
-            {{ v.title }}
-          </p>
+          <div class="flex items-start gap-1">
+            <p
+              class="video-card__title m-0 text-3.5 leading-[1.4] flex-1 min-w-0"
+              :title="v.title"
+            >
+              {{ v.title }}
+            </p>
+            <!-- 更多操作（仅推荐 Tab）：不感兴趣等 -->
+            <el-dropdown
+              v-if="sort === 'recommend' && userStore.token"
+              trigger="click"
+              placement="bottom-end"
+              popper-class="card-menu-popper"
+              @command="(cmd: string) => onCardMenu(cmd, v)"
+            >
+              <span
+                class="video-card__menu shrink-0"
+                title="更多"
+                @click.stop
+              >
+                <span class="i-mingcute-more-2-line" />
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="dislike">
+                    <span class="i-mingcute-close-line mr-1" />不感兴趣
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
           <p class="flex items-center gap-1.5 min-w-0 mt-1 mb-0 text-3 text-text-2">
             <el-avatar
               :size="20"
@@ -605,6 +627,24 @@ function onCardClick(v: VideoCard) {
   @include v.ellipsis(2);
 }
 
+/* 更多操作入口（标题行右侧 icon，常显） */
+.video-card__menu {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 4px;
+  margin-top: 2px;
+  border-radius: 4px;
+  font-size: 15px;
+  color: v.$text-3;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    color: v.$primary;
+    background: v.$primary-light;
+  }
+}
+
 // hover 联动
 .video-card:hover {
   .video-card__cover {
@@ -618,5 +658,40 @@ function onCardClick(v: VideoCard) {
 
 .video-card__up:hover {
   color: v.$primary;
+}
+</style>
+
+<style lang="scss">
+/* 卡片更多操作下拉菜单（popper 挂载于 body，需全局样式） */
+.card-menu-popper {
+  border-radius: 8px;
+  border: 1px solid #eef0f2;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.04);
+  /* 无内边距：菜单项 hover 背景填满弹框（圆角与弹框一致） */
+  padding: 0;
+  overflow: hidden;
+
+  .el-dropdown-menu {
+    padding: 0;
+  }
+
+  .el-dropdown-menu__item {
+    border-radius: 0;
+    padding: 9px 14px;
+    font-size: 13px;
+    color: #61666d;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+
+    &:hover,
+    &:focus {
+      background: #fff0f4;
+      color: #fb7299;
+    }
+  }
 }
 </style>
