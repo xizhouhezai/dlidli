@@ -12,6 +12,7 @@ import { createSearchApi } from './apis/search'
 import { createNotifyApi } from './apis/notify'
 import { createGrowthApi } from './apis/growth'
 import { createReportApi } from './apis/report'
+import { createRecommendApi } from './apis/recommend'
 
 export * from './http'
 export * from './error'
@@ -48,6 +49,7 @@ export function createApiClient(cfg: ClientConfig = {}) {
     notify: createNotifyApi(http),
     growth: createGrowthApi(http),
     report: createReportApi(http),
+    recommend: createRecommendApi(http),
   }
 }
 

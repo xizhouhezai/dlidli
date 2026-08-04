@@ -15,6 +15,7 @@ import (
 	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/module/interaction"
 	"github.com/dlidli/server/internal/module/notify"
+	"github.com/dlidli/server/internal/module/recommend"
 	"github.com/dlidli/server/internal/module/relation"
 	"github.com/dlidli/server/internal/module/report"
 	"github.com/dlidli/server/internal/module/search"
@@ -127,6 +128,10 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 			interactionSvc, danmakuSvc, dynamicSvc, notifySvc, log)
 		report.NewHandler(reportSvc).RegisterRoutes(v1, authMW, middleware.AdminAuth(cfg.JWT.Secret),
 			func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) })
+
+		// 推荐系统（M3-REC）：热度榜 + 混合召回 + 行为采集 + 负反馈 + 推荐开关
+		recommendSvc := recommend.NewService(recommend.NewRepo(res.DB), videoSvc, res.Redis, log)
+		recommend.NewHandler(recommendSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
 
 		search.NewHandler(videoSvc, accountSvc).RegisterRoutes(v1)
 	} else {

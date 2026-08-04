@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
 import type { CategoryItem, VideoCard } from '@dlidli/api-client'
 import { api } from '@/api'
+import { useUserStore } from '@/stores/user'
 import defaultCover from '@/assets/default-cover.svg'
 import defaultAvatar from '@/assets/default-avatar.png'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 const PAGE_SIZE = 24
 
 const categories = ref<CategoryItem[]>([])
 const activeCategory = ref(0) // 0 = 全部
-const sort = ref<'new' | 'hot'>('new')
+const sort = ref<'recommend' | 'new' | 'hot'>('recommend')
 const videos = ref<VideoCard[]>([])
 const banners = ref<VideoCard[]>([]) // 首页推荐轮播（左侧大图）
 const sideRecos = ref<VideoCard[]>([]) // 右侧 2×2 推荐网格
@@ -38,20 +41,37 @@ async function loadList(reset = true) {
     loadingMore.value = true
   }
   try {
-    const res = await api.video.list({
-      category_id: activeCategory.value || undefined,
-      sort: sort.value,
-      page: page.value,
-      page_size: PAGE_SIZE,
-    })
-    videos.value = reset ? res.list : [...videos.value, ...res.list]
-    hasMore.value = res.list.length === PAGE_SIZE
+    let list: VideoCard[]
+    if (sort.value === 'recommend') {
+      const res = await api.recommend.recommend(page.value, PAGE_SIZE)
+      list = res.list
+    } else {
+      const res = await api.video.list({
+        category_id: activeCategory.value || undefined,
+        sort: sort.value,
+        page: page.value,
+        page_size: PAGE_SIZE,
+      })
+      list = res.list
+    }
+    videos.value = reset ? list : [...videos.value, ...list]
+    hasMore.value = list.length === PAGE_SIZE
+    // 推荐 Tab：曝光上报（登录用户，节流到每次加载）
+    if (sort.value === 'recommend' && reset) reportExpose(list)
   } catch {
     backendDown.value = true
   } finally {
     loading.value = false
     loadingMore.value = false
   }
+}
+
+// 曝光上报（旁路，失败静默）
+function reportExpose(list: VideoCard[]) {
+  if (!userStore.token || list.length === 0) return
+  api.recommend
+    .reportBehavior(list.map((v) => ({ video_id: v.id, action: 1 as const })))
+    .catch(() => {})
 }
 
 // 触底自动加载下一页（防并发：加载中/无更多时不触发）
@@ -61,10 +81,30 @@ function loadMore() {
   loadList(false)
 }
 
-function switchSort(s: 'new' | 'hot') {
+function switchSort(s: 'recommend' | 'new' | 'hot') {
   if (sort.value === s) return
   sort.value = s
   loadList()
+}
+
+// 不感兴趣（仅推荐 Tab 卡片 hover 操作）
+const dislikePending = ref(false)
+async function onDislike(v: VideoCard) {
+  if (!userStore.token) {
+    router.push('/login')
+    return
+  }
+  if (dislikePending.value) return
+  dislikePending.value = true
+  try {
+    await api.recommend.addDislike(1, v.id)
+    videos.value = videos.value.filter((x) => x.bvid !== v.bvid)
+    ElMessage.success('已减少此类推荐')
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : '操作失败')
+  } finally {
+    dislikePending.value = false
+  }
 }
 
 onMounted(async () => {
@@ -136,6 +176,12 @@ function onCardClick(v: VideoCard) {
       </span>
 
       <span class="ml-auto flex items-center gap-2 text-3.25">
+        <span
+          class="sort-tab"
+          :class="{ 'is-active': sort === 'recommend' }"
+          @click="switchSort('recommend')"
+        >推荐</span>
+        <span class="text-border">|</span>
         <span
           class="sort-tab"
           :class="{ 'is-active': sort === 'new' }"
@@ -245,6 +291,13 @@ function onCardClick(v: VideoCard) {
             v-if="v.duration > 0"
             class="absolute right-1.5 bottom-1.5 px-1.5 py-0.25 rounded-4px bg-black/60 text-white text-3"
           >{{ formatDuration(v.duration) }}</span>
+          <!-- 不感兴趣（仅推荐 Tab） -->
+          <span
+            v-if="sort === 'recommend' && userStore.token"
+            class="video-card__dislike absolute right-1.5 top-1.5 px-2 py-0.5 rounded-4px bg-black/60 text-white text-3"
+            title="不感兴趣"
+            @click.stop="onDislike(v)"
+          >不感兴趣</span>
         </div>
         <div class="pt-2 px-0.5">
           <p

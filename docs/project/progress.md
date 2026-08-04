@@ -11,7 +11,7 @@
 | M0 基建 | W1-W4 | 🟢 进行中 | 92% | 仅剩 M0-ENG-13 staging 部署 |
 | M1 MVP 内测 | W5-W12 | 🟢 进行中 | 100% | player 内核封装（VID-09），M1 功能全部完成 |
 | M2 V1.0 公测 | W13-W24 | ✅ 已完成 | 100% | SYS-01/02 收口，M2 全部 40 项完成 |
-| M3 V2.0 增长 | W25-W48 | ⚪ 未开始 | 0% | - |
+| M3 V2.0 增长 | W25-W48 | 🟢 进行中 | 25% | 推荐系统起步（REC-01/02/04~07）：行为采集/热度榜/混合召回/负反馈/开关 |
 | M4 V3.0 商业化 | W49+ | ⚪ 未开始 | 0% | - |
 
 > 状态图例：⚪ 未开始 ｜ 🟢 进行中 ｜ 🟡 有风险 ｜ 🔴 阻塞 ｜ ✅ 已完成
@@ -102,6 +102,7 @@
 - [x] 弹幕缺陷根源修复（fix/dm-dedupe-and-fontscale，v0.10.2）：弹幕重复根源 = WS 连接未带 token 被解析为游客，服务端 excludeUID 排除失效广播回到发送者；middleware 支持 query token（token/access_token）+ 前端 WS URL 拼 ?token=，服务端排除链路真正生效（实测带 token 连接无自广播、游客连接正常收）；前端 inject/WS 双端 shown 去重兜底；字号缩放无效 = JS 内联 font-size 覆盖 CSS calc，改 --dm-font-base 变量参与缩放（实测 1.5→30px、0.8→16px）；Lv3 提示去重（删工具条内重复提示，保留单条并加大间距）
 - [x] 弹幕操作条修复（fix/dm-actions-hover，v0.10.3）：贴顶弹幕操作条固定在弹幕上方 -24px 超出弹幕层被 overflow:hidden 裁剪 → 按弹幕位置自适应（距顶 <30px 时 is-below 放下方）；首轨道 TRACK_PAD 4px 留白防贴顶/贴底；操作条是弹幕子元素，鼠标移向按钮触发弹幕 mouseout 导致操作条被移除 → 改弹幕元素直接绑定 mouseenter/mouseleave（进入子元素不算离开），实测移向按钮操作条保持、点击生效
 - [x] 系统管理收口（M2-SYS-01/02，M2 全部完成）：0015 迁移 system_config + data_dict 表（3 组 12 项种子）；审计日志中心（查询筛选：操作者/动作/对象/日期 + 中文映射 + CSV 导出 UTF-8 BOM 1 万条上限；audit:view/audit:export 权限点 + admin 审计日志页）；系统配置 CRUD（键唯一、业务侧 GetConfig 热读取）+ 数据字典 CRUD（类型+值唯一；config:view/edit、dict:view/edit 权限点 + admin 系统配置页/数据字典页）；E2E 实测审计 110 条筛选导出、配置增改删、字典三组全通
+- [x] 推荐系统起步（M3-REC-01/02/04~07，6 项）：0016 迁移 user_behavior（行为日志，ClickHouse 预留）+ user_dislike（负反馈）+ user.recommend_on（合规开关）；热度榜（加权分：播1赞3币5藏4评4弹幕2转3，全站/分区，Redis 5min 缓存）；推荐服务（混合召回：兴趣分区热度+全站热度+新稿池（48h 播放<100 保底）→ 已看/负反馈过滤 → 打散（同UP≤1、同分区连≤3））；首页「推荐」Tab（默认）+ 卡片「不感兴趣」+ 曝光上报；设置页个性化推荐开关（关闭退化为热度榜）；E2E 实测：榜单/推荐/行为/负反馈后列表移除/开关全通；ItemCF（REC-03）以降级方案替代待规模化
 
 ### 进行中
 
@@ -109,7 +110,7 @@
 
 ### 下阶段计划
 
-- [ ] M3 增长：推荐系统（M3-REC）、创作者中心（M3-CRT）、运营位/Banner（M3-OPS-01 提前）、审计日志导出增强（SYS-06）
+- [ ] M3 增长：创作者中心（M3-CRT）、运营位/Banner（M3-OPS-01 提前）、ItemCF 离线计算（M3-REC-03）、审计日志导出增强（SYS-06）
 - [ ] M1/M2 遗留：staging 部署（M0-ENG-13）、k6 压测（REL-01）、邀请码（REL-04）
 - [ ] （后置）多端：H5 剩余页、小程序、App
 

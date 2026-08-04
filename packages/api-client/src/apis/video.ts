@@ -23,6 +23,8 @@ export interface VideoStatBrief {
 }
 
 export interface VideoCard {
+  /** 内部 ID（字符串化防精度丢失；负反馈等场景用） */
+  id: string
   bvid: string
   title: string
   cover: string
