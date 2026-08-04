@@ -160,6 +160,7 @@ function stopYouthTimer() {
 onMounted(() => {
   loadYouthMode()
   loadDmBlocks()
+  loadRecommendSetting()
 })
 onUnmounted(stopYouthTimer)
 
@@ -210,6 +211,31 @@ async function clearDmBlockHash(hash: string) {
   await ElMessageBox.confirm('确定解除对该用户的弹幕屏蔽吗？', '解除屏蔽', { type: 'warning' })
   const b = dmBlocks.value.find((x) => x.block_type === 2 && x.block_hash === hash)
   if (b) await removeDmBlock(b)
+}
+
+// 个性化推荐开关（M3-REC-07 合规）
+const recEnabled = ref(true)
+const recSaving = ref(false)
+
+async function loadRecommendSetting() {
+  try {
+    recEnabled.value = (await api.recommend.recommendSetting()).enabled
+  } catch {
+    // 静默失败
+  }
+}
+
+async function toggleRecommend() {
+  recSaving.value = true
+  try {
+    await api.recommend.setRecommendSetting(recEnabled.value)
+    ElMessage.success(recEnabled.value ? '已开启个性化推荐' : '已关闭个性化推荐（首页推荐将展示热门内容）')
+  } catch (err) {
+    recEnabled.value = !recEnabled.value
+    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
+  } finally {
+    recSaving.value = false
+  }
 }
 </script>
 
@@ -431,6 +457,25 @@ async function clearDmBlockHash(hash: string) {
             </el-tag>
           </div>
         </template>
+      </div>
+
+      <el-divider />
+
+      <!-- 个性化推荐 -->
+      <div class="flex items-center justify-between max-w-480px">
+        <div>
+          <p class="m-0 font-600">
+            个性化推荐
+          </p>
+          <p class="mt-1 mb-0 text-3 text-text-2">
+            关闭后首页推荐将仅展示热门内容，不再根据你的观看行为个性化
+          </p>
+        </div>
+        <el-switch
+          v-model="recEnabled"
+          :loading="recSaving"
+          @change="toggleRecommend"
+        />
       </div>
     </el-card>
   </div>

@@ -367,6 +367,15 @@ func (s *Service) VideoBrief(_ context.Context, videoID int64) (title string, ow
 	return v.Title, v.UserID, nil
 }
 
+// CategoryOf 稿件分区（推荐召回打散用）。
+func (s *Service) CategoryOf(_ context.Context, videoID int64) int {
+	v, err := s.repo.FindVideoByID(videoID)
+	if err != nil || v == nil {
+		return 0
+	}
+	return v.CategoryID
+}
+
 // AdminDelete 管理员删除稿件（举报处理用；软删除，作者与游客均不可见）。
 func (s *Service) AdminDelete(_ context.Context, bv string) error {
 	v, err := s.repo.FindByBvid(bv)
@@ -584,6 +593,7 @@ func (s *Service) cards(ctx context.Context, list []Video) ([]Card, error) {
 
 func (s *Service) card(v *Video, st Stat, owner account.Profile) Card {
 	return Card{
+		ID:          fmt.Sprintf("%d", v.ID),
 		Bvid:        v.Bvid,
 		Title:       v.Title,
 		Cover:       v.Cover,

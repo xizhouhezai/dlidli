@@ -137,6 +137,7 @@ type StatBrief struct {
 
 // Card 列表卡片。
 type Card struct {
+	ID          string     `json:"id"` // 内部 ID（字符串化防 JS 精度丢失；负反馈等场景用）
 	Bvid        string     `json:"bvid"`
 	Title       string     `json:"title"`
 	Cover       string     `json:"cover"`
