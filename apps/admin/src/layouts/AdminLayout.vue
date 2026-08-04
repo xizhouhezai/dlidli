@@ -31,7 +31,7 @@ function groupOf(code: string): string {
   if (code.startsWith('dashboard')) return '概览'
   if (code.startsWith('review') || code.startsWith('sensitive')) return '内容审核'
   if (code.startsWith('user')) return '用户治理'
-  if (code.startsWith('category')) return '运营管理'
+  if (code.startsWith('category') || code.startsWith('banner')) return '运营管理'
   if (code.startsWith('admin') || code.startsWith('role')) return '系统管理'
   if (code.startsWith('permission')) return '系统管理'
   return '其他'
@@ -45,9 +45,14 @@ const pathToName: Record<string, string> = {
   '/sensitive-words': 'sensitive-words',
   '/users': 'users',
   '/categories': 'categories',
+  '/banners': 'banners',
   '/admins': 'admins',
   '/roles': 'roles',
   '/permissions': 'permissions',
+  '/audit-logs': 'audit-logs',
+  '/configs': 'configs',
+  '/data-dicts': 'data-dicts',
+  '/reports': 'reports',
 }
 
 const menuGroups = computed<MenuGroup[]>(() => {

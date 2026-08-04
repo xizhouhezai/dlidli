@@ -33,6 +33,7 @@ export default defineConfig({
     'i-mingcute-document-2-line',
     'i-mingcute-settings-4-line',
     'i-mingcute-book-4-line',
+    'i-mingcute-photo-album-line',
   ],
   theme: {
     colors: {

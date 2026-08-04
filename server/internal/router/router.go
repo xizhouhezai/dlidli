@@ -10,6 +10,7 @@ import (
 	"github.com/dlidli/server/internal/middleware"
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/module/admin"
+	"github.com/dlidli/server/internal/module/banner"
 	"github.com/dlidli/server/internal/module/creator"
 	"github.com/dlidli/server/internal/module/danmaku"
 	"github.com/dlidli/server/internal/module/dynamic"
@@ -137,6 +138,11 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// 创作者中心（M3-CRT）：数据看板 + 激励结算
 		creatorSvc := creator.NewService(creator.NewRepo(res.DB), log)
 		creator.NewHandler(creatorSvc).RegisterRoutes(v1, authMW)
+
+		// 运营位（M3-OPS-01）：首页轮播 Banner
+		bannerSvc := banner.NewService(banner.NewRepo(res.DB), videoSvc)
+		banner.NewHandler(bannerSvc).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret),
+			func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) })
 
 		search.NewHandler(videoSvc, accountSvc).RegisterRoutes(v1)
 	} else {
