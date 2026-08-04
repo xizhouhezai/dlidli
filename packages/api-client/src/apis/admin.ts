@@ -94,6 +94,18 @@ export interface DataDictItem {
   created_at: string
 }
 
+/** Banner 运营位 */
+export interface BannerItem {
+  id: string
+  title: string
+  image: string
+  bvid: string
+  sort: number
+  status: number
+  created_at: string
+  updated_at: string
+}
+
 export interface AdminPermission {
   id: string
   code: string
@@ -314,5 +326,17 @@ export function createAdminApi(http: HttpClient) {
 
     deleteDict: (id: string) =>
       http.delete<null>(`/api/v1/admin/dicts/${id}`),
+
+    // ---- Banner 运营位（M3-OPS-01） ----
+    banners: () => http.get<{ list: BannerItem[] }>('/api/v1/admin/banners'),
+
+    createBanner: (payload: { title?: string, image?: string, bvid?: string, sort?: number, status?: number }) =>
+      http.post<null>('/api/v1/admin/banners', payload),
+
+    updateBanner: (id: string, payload: { title?: string, image?: string, bvid?: string, sort?: number, status?: number }) =>
+      http.put<null>(`/api/v1/admin/banners/${id}`, payload),
+
+    deleteBanner: (id: string) =>
+      http.delete<null>(`/api/v1/admin/banners/${id}`),
   }
 }

@@ -89,6 +89,12 @@ const router = createRouter({
           component: () => import('@/views/operation/CategoriesView.vue'),
           meta: { title: '分区管理', requiresAuth: true },
         },
+        {
+          path: 'banners',
+          name: 'banners',
+          component: () => import('@/views/operation/BannersView.vue'),
+          meta: { title: 'Banner 配置', requiresAuth: true },
+        },
       ],
     },
     // 后续：审计日志（M2-SYS-01）

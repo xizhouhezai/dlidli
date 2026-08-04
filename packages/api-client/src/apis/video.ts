@@ -61,6 +61,14 @@ export interface SubmitVideoReq {
   cover?: string
 }
 
+/** 首页轮播 Banner（公开运营位） */
+export interface BannerItem {
+  id: string
+  title: string
+  image: string
+  bvid: string
+}
+
 /** 稿件接口（对应后端 /api/v1/videos）。 */
 export function createVideoApi(http: HttpClient) {
   return {
@@ -101,5 +109,8 @@ export function createVideoApi(http: HttpClient) {
       }),
 
     remove: (bvid: string) => http.delete<null>(`/api/v1/videos/${bvid}`),
+
+    /** 首页轮播 Banner（运营位配置，空列表时前端回退最热） */
+    banners: () => http.get<{ list: BannerItem[] }>('/api/v1/banners'),
   }
 }
