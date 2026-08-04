@@ -1,0 +1,11 @@
+-- 0018_ops: 运营位（M3-OPS-01 首页轮播 Banner）
+CREATE TABLE banner (
+  id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title      VARCHAR(64)  NOT NULL DEFAULT '' COMMENT 'Banner 标题',
+  image      VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片URL（空则用稿件封面）',
+  bvid       VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '跳转稿件（空则不跳）',
+  sort       INT          NOT NULL DEFAULT 0 COMMENT '排序（小在前）',
+  status     TINYINT      NOT NULL DEFAULT 0 COMMENT '0启用 1停用',
+  created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='首页轮播 Banner 运营位';
