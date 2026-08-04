@@ -30,6 +30,9 @@ export default defineConfig({
     'i-mingcute-classify-2-line',
     'i-mingcute-key-2-line',
     'i-mingcute-flag-3-line',
+    'i-mingcute-document-2-line',
+    'i-mingcute-settings-4-line',
+    'i-mingcute-book-4-line',
   ],
   theme: {
     colors: {
