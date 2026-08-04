@@ -11,7 +11,7 @@
 | M0 基建 | W1-W4 | 🟢 进行中 | 92% | 仅剩 M0-ENG-13 staging 部署 |
 | M1 MVP 内测 | W5-W12 | 🟢 进行中 | 100% | player 内核封装（VID-09），M1 功能全部完成 |
 | M2 V1.0 公测 | W13-W24 | ✅ 已完成 | 100% | SYS-01/02 收口，M2 全部 40 项完成 |
-| M3 V2.0 增长 | W25-W48 | 🟢 进行中 | 42% | 创作者中心（CRT-01~04）：数据看板/单稿分析/创作激励结算 |
+| M3 V2.0 增长 | W25-W48 | 🟢 进行中 | 46% | 运营位 Banner（OPS-01）+ 创作者中心 + 推荐系统 |
 | M4 V3.0 商业化 | W49+ | ⚪ 未开始 | 0% | - |
 
 > 状态图例：⚪ 未开始 ｜ 🟢 进行中 ｜ 🟡 有风险 ｜ 🔴 阻塞 ｜ ✅ 已完成
@@ -104,6 +104,7 @@
 - [x] 系统管理收口（M2-SYS-01/02，M2 全部完成）：0015 迁移 system_config + data_dict 表（3 组 12 项种子）；审计日志中心（查询筛选：操作者/动作/对象/日期 + 中文映射 + CSV 导出 UTF-8 BOM 1 万条上限；audit:view/audit:export 权限点 + admin 审计日志页）；系统配置 CRUD（键唯一、业务侧 GetConfig 热读取）+ 数据字典 CRUD（类型+值唯一；config:view/edit、dict:view/edit 权限点 + admin 系统配置页/数据字典页）；E2E 实测审计 110 条筛选导出、配置增改删、字典三组全通
 - [x] 推荐系统起步（M3-REC-01/02/04~07，6 项）：0016 迁移 user_behavior（行为日志，ClickHouse 预留）+ user_dislike（负反馈）+ user.recommend_on（合规开关）；热度榜（加权分：播1赞3币5藏4评4弹幕2转3，全站/分区，Redis 5min 缓存）；推荐服务（混合召回：兴趣分区热度+全站热度+新稿池（48h 播放<100 保底）→ 已看/负反馈过滤 → 打散（同UP≤1、同分区连≤3））；首页「推荐」Tab（默认）+ 卡片「不感兴趣」+ 曝光上报；设置页个性化推荐开关（关闭退化为热度榜）；E2E 实测：榜单/推荐/行为/负反馈后列表移除/开关全通；ItemCF（REC-03）以降级方案替代待规模化
 - [x] 创作者中心（M3-CRT-01~04，4 项）：0017 迁移 creator_settlement 日结算表；实时聚合看板（video_stat + 行为日志，替代 T+1 数仓）：/creator/overview（稿件数/总播放/赞/币/藏/粉丝/近7日播放/累计收益）+ /creator/videos（单稿统计+有效播放+收益）+ /creator/trend（7 天补零对齐）+ /creator/settlements；创作激励（有效播放×1分/次，请求时全量结算 INSERT SELECT 幂等 upsert）；Web /creator 页（5 统计卡 + CSS 柱状趋势 + 稿件数据/收益明细 Tab）+ 头部入口；E2E 实测 4 天 17 播放=17 分结算/趋势/明细全通；多P投稿合集（CRT-05）延后
+- [x] 运营位 Banner（M3-OPS-01 Banner 部分）：0018 迁移 banner 表；banner 模块（公开 GET /banners image 空回退稿件封面 + admin CRUD bvid 校验）；权限点 banner:view/banner:edit（operator 角色）+ admin Banner 配置页（预览/标题/跳转/排序/启停/CRUD 弹窗）；首页轮播接入（配置优先，右侧 2×2 网格最热填充不空白，无配置回退最热前 8）；AdminLayout 菜单分组/路由映射补 banner；E2E 实测封面兜底/CRUD/启停/轮播展示跳转/菜单 icon 全通
 
 ### 进行中
 
@@ -111,7 +112,7 @@
 
 ### 下阶段计划
 
-- [ ] M3 增长：运营位/Banner（M3-OPS-01 提前）、ItemCF 离线计算（M3-REC-03）、多P投稿与合集（M3-CRT-05）、审计日志导出增强（SYS-06）
+- [ ] M3 增长：数据大盘（M3-OPS-02）、A/B 实验（M3-OPS-03）、ItemCF 离线计算（M3-REC-03）、多P投稿与合集（M3-CRT-05）、审计日志导出增强（SYS-06）
 - [ ] M1/M2 遗留：staging 部署（M0-ENG-13）、k6 压测（REL-01）、邀请码（REL-04）
 - [ ] （后置）多端：H5 剩余页、小程序、App
 
