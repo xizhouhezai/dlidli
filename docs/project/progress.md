@@ -11,7 +11,7 @@
 | M0 基建 | W1-W4 | 🟢 进行中 | 92% | 仅剩 M0-ENG-13 staging 部署 |
 | M1 MVP 内测 | W5-W12 | 🟢 进行中 | 100% | player 内核封装（VID-09），M1 功能全部完成 |
 | M2 V1.0 公测 | W13-W24 | ✅ 已完成 | 100% | SYS-01/02 收口，M2 全部 40 项完成 |
-| M3 V2.0 增长 | W25-W48 | 🟢 进行中 | 67% | 多P/合集 + A/B 实验 + 稿件管理 + 数据大盘 + 推荐系统 + 创作者中心 |
+| M3 V2.0 增长 | W25-W48 | 🟢 进行中 | 79% | 私信 IM + 多P/合集 + A/B 实验 + 稿件管理 + 数据大盘 + 推荐系统 + 创作者中心 |
 | M4 V3.0 商业化 | W49+ | ⚪ 未开始 | 0% | - |
 
 > 状态图例：⚪ 未开始 ｜ 🟢 进行中 ｜ 🟡 有风险 ｜ 🔴 阻塞 ｜ ✅ 已完成
@@ -109,6 +109,7 @@
 - [x] 稿件管理页（PRD admin.md 2.4 新增 VMG-01~04）：GET /admin/videos（全状态 + 状态/分区/关键词筛选，Card 补 category_id）+ PUT /admin/videos/:bvid/status（下架/恢复 已发布↔已锁定）+ DELETE /admin/videos/:bvid（软删除，均审计留痕）；权限点 video:view/video:manage（审核主管/审核员分配）；admin 稿件管理页（筛选/表格/下架恢复删除/分页）；E2E 实测筛选/下架恢复持久化/权限按钮/分页/分区列/下拉全通
 - [x] A/B 实验分流框架（M3-OPS-03）：0020 迁移 experiment；abtest 模块按 uid 哈希稳定分流（FNV-1a(target:uid) % 100 < ratio）；admin CRUD + 实验管理页（experiment:view/edit 权限）；真实场景接入：推荐策略变体（B 组 hot_only 纯热度榜 / A 组 hybrid 混合召回）；E2E 实测分流稳定/组差异/停用回退/CRUD 全通
 - [x] 多P投稿 + 合集（M3-CRT-05）：0021~0025 迁移（video_part、video_stream/transcode_job.part_index、唯一键含分P、video_collection 改名避收藏夹冲突）；Submit 扩展 parts 逐P建流与转码任务；转码 worker 分P隔离；GET /videos/:bvid/parts；投稿页分P管理（最多10P）+ 播放页分P切换；collection 模块（创建/列表/详情/归集，仅本人）+ 空间页合集 Tab + 合集详情页；E2E 实测双P投稿→各3档流、切P播放、合集 CRUD 全通
+- [x] 私信 IM（M3-IM-01~03，PRD MSG-10~13）：0026 迁移 conversation/private_message；im 模块（发送：禁言+机审+未互关每日1条/互关不限+会话 upsert；会话列表含未读；消息分页读取即已读；总未读）；im hub 按 uid 分房间 WS 实时推送（query token）；/messages 页（会话列表+聊天窗气泡/图片/500字）+ 头部私信图标未读红点 + 空间页发私信；E2E 实测限制/互关放行/未读已读/敏感词/WS 实时/双向气泡全通
 
 ### 进行中
 
@@ -116,7 +117,7 @@
 
 ### 下阶段计划
 
-- [ ] M3 增长：私信 IM（M3-IM-01~03）、审计日志导出增强（SYS-06）
+- [ ] M3 增长：审计日志导出增强（SYS-06）、拉黑/举报会话（MSG-12 补）
 - [ ] M3 架构演进：微服务拆分（M3-ENG-01~04，本地降级：单服务按模块内聚，分表/链路追踪待规模化）
 - [ ] M1/M2 遗留：staging 部署（M0-ENG-13）、k6 压测（REL-01）、邀请码（REL-04）
 - [ ] （后置）多端：小程序（M3-MP）、H5 剩余页、App
