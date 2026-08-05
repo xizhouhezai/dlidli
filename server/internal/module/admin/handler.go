@@ -32,6 +32,9 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, adminAuth gin.HandlerFunc)
 			// 当前登录者权限/菜单（无需特定权限）
 			authed.GET("/me/permissions", h.myPermissions)
 
+			// 数据大盘（M3-OPS-02）：全站活跃/新增/投稿/播放 + 审核时效
+			authed.GET("/dashboard/stats", perm("dashboard:view"), h.dashboardStats)
+
 			authed.GET("/videos/review", perm("review:view"), h.reviewList)
 			authed.POST("/videos/:bvid/review", perm("review:approve"), h.review)
 			authed.GET("/sensitive-words", perm("sensitive:view"), h.listWords)
@@ -98,6 +101,21 @@ func (h *Handler) login(c *gin.Context) {
 		return
 	}
 	response.OK(c, resp)
+}
+
+// @Summary  数据大盘（今日实时 + 近 7 日趋势 + 审核时效）
+// @Tags     管理后台-概览
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /admin/dashboard/stats [get]
+func (h *Handler) dashboardStats(c *gin.Context) {
+	stats, err := h.svc.DashboardStats(c.Request.Context())
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, stats)
 }
 
 // @Summary  待审稿件队列
