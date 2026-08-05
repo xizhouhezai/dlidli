@@ -92,6 +92,59 @@ func (r *Repo) CreateWithStat(v *Video, stream *Stream, jobQualities []int16) er
 	})
 }
 
+// CreateWithParts 多P投稿事务：稿件 + 统计 + 各分P原画流 + 转码任务 + video_part 记录。
+func (r *Repo) CreateWithParts(v *Video, parts []VideoPart, streams []Stream, jobQualities []int16) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(v).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&Stat{VideoID: v.ID}).Error; err != nil {
+			return err
+		}
+		for i := range streams {
+			streams[i].VideoID = v.ID
+			if err := tx.Create(&streams[i]).Error; err != nil {
+			return err
+		}
+		}
+		for i := range parts {
+			parts[i].VideoID = v.ID
+			if err := tx.Create(&parts[i]).Error; err != nil {
+			return err
+		}
+		}
+		for _, q := range jobQualities {
+			for _, p := range parts {
+				if err := tx.Create(&TranscodeJob{VideoID: v.ID, PartIndex: p.PartIndex, Quality: q}).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+}
+
+// PartsByVideo 稿件分P列表（按 part_index）。
+func (r *Repo) PartsByVideo(videoID int64) ([]VideoPart, error) {
+	list := make([]VideoPart, 0)
+	err := r.db.Where("video_id = ?", videoID).Order("part_index").Find(&list).Error
+	return list, err
+}
+
+// StreamsByVideoPart 指定分P的流（按质量升序）。
+func (r *Repo) StreamsByVideoPart(videoID int64, partIndex int8) ([]Stream, error) {
+	list := make([]Stream, 0)
+	err := r.db.Where("video_id = ? AND part_index = ?", videoID, partIndex).Order("quality").Find(&list).Error
+	return list, err
+}
+
+// UpdatePartDuration 更新分P时长（转码探帧后）。
+func (r *Repo) UpdatePartDuration(videoID int64, partIndex int8, duration int) error {
+	return r.db.Model(&VideoPart{}).
+		Where("video_id = ? AND part_index = ?", videoID, partIndex).
+		Update("duration", duration).Error
+}
+
 // FindByBvid 按 bvid 查稿件；不存在返回 (nil, nil)。
 func (r *Repo) FindByBvid(bv string) (*Video, error) {
 	var v Video

@@ -127,8 +127,8 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 		return fmt.Errorf("稿件不存在或已删除")
 	}
 
-	// 源文件 = 原画流（quality 0）
-	streams, err := s.repo.StreamsByVideo(v.ID)
+	// 源文件 = 原画流（quality 0，按分P）
+	streams, err := s.repo.StreamsByVideoPart(v.ID, job.PartIndex)
 	if err != nil {
 		return err
 	}
@@ -144,8 +144,8 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 	}
 	src := resolver.LocalPath(srcKey)
 
-	// 首个任务顺带补齐时长与封面
-	if v.Duration == 0 {
+	// 时长与封面：单P写 video.duration，多P写 video_part.duration；封面仅单P抽帧
+	if v.Duration == 0 && job.PartIndex == 0 {
 		if dur, err := s.probeDuration(ctx, src); err == nil && dur > 0 {
 			_ = s.repo.UpdateVideoFields(v.ID, map[string]any{"duration": dur})
 			v.Duration = dur
@@ -153,7 +153,12 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 			s.log.Warn("ffprobe 取时长失败", zap.Error(err))
 		}
 	}
-	if v.Cover == "" {
+	if job.PartIndex > 0 {
+		if dur, err := s.probeDuration(ctx, src); err == nil && dur > 0 {
+			_ = s.repo.UpdatePartDuration(v.ID, job.PartIndex, dur)
+		}
+	}
+	if v.Cover == "" && job.PartIndex == 0 {
 		if coverURL, err := s.extractCover(ctx, resolver, src, v); err == nil && coverURL != "" {
 			_ = s.repo.UpdateVideoFields(v.ID, map[string]any{"cover": coverURL})
 		} else if err != nil {
@@ -161,8 +166,8 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 		}
 	}
 
-	// HLS 输出目录
-	outKey := fmt.Sprintf("videos/hls/%d/%d", v.ID, job.Quality)
+	// HLS 输出目录（分P隔离防覆盖）
+	outKey := fmt.Sprintf("videos/hls/%d/%d/%d", v.ID, job.PartIndex, job.Quality)
 	outDir := resolver.LocalPath(outKey)
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
@@ -170,7 +175,7 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 
 	args := []string{
 		"-y", "-i", src,
-		"-c:v", "libx264", "-profile:v", "main",
+		"-c:v", "libx264", // 不指定 profile：兼容低码率/低分辨率测试源（指定 main 时部分源报 -22）
 		"-b:v", preset.vBits, "-maxrate", preset.maxRate, "-bufsize", preset.bufSize,
 		"-vf", fmt.Sprintf("scale=-2:%d", preset.height),
 		"-r", "30", "-g", "60",
@@ -185,11 +190,12 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 	}
 
 	return s.repo.AddStream(&Stream{
-		VideoID:  v.ID,
-		Quality:  job.Quality,
-		Format:   "hls",
-		PlayPath: outKey + "/index.m3u8",
-		FileSize: dirSize(outDir),
+		VideoID:   v.ID,
+		PartIndex: job.PartIndex,
+		Quality:   job.Quality,
+		Format:    "hls",
+		PlayPath:  outKey + "/index.m3u8",
+		FileSize:  dirSize(outDir),
 	})
 }
 

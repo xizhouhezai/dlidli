@@ -17,6 +17,48 @@ const uploading = ref(false)
 const dragOver = ref(false)
 const fileInput = ref<HTMLInputElement>()
 
+// 多P投稿（PRD VID-05）：分P列表（标题 + 已上传 fileId）
+interface PartDraft {
+  title: string
+  fileId: string
+  uploading: boolean
+  progress: UploadProgress | null
+}
+const parts = ref<PartDraft[]>([])
+
+function addPart() {
+  if (parts.value.length >= 10) {
+    ElMessage.warning('最多 10 个分P')
+    return
+  }
+  parts.value.push({ title: '', fileId: '', uploading: false, progress: null })
+}
+
+function removePart(i: number) {
+  parts.value.splice(i, 1)
+}
+
+async function uploadPart(i: number, f: File) {
+  const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
+  if (!ACCEPT_EXTS.includes(ext)) {
+    ElMessage.warning(`仅支持 ${ACCEPT_EXTS.join(' / ')} 格式`)
+    return
+  }
+  const p = parts.value[i]
+  p.uploading = true
+  p.progress = null
+  try {
+    const res = await uploadVideoFile(f, (pr) => (p.progress = pr))
+    p.fileId = res.fileId
+    if (!p.title) p.title = f.name.slice(0, f.name.lastIndexOf('.')).slice(0, 80)
+    ElMessage.success(`分P${i + 1} 上传完成`)
+  } catch (err) {
+    ElMessage.error(err instanceof ApiError ? err.message : '上传失败，请重试')
+  } finally {
+    p.uploading = false
+  }
+}
+
 // 封面：优先视频首帧 poster → 用户上传 → 默认封面（展示时兜底）
 const posterBlob = ref<Blob | null>(null)
 const posterUrl = ref('')
@@ -131,6 +173,7 @@ function resetAll() {
   file.value = null
   fileId.value = ''
   progress.value = null
+  parts.value = []
   posterBlob.value = null
   posterUrl.value = ''
   coverFile.value = null
@@ -154,7 +197,8 @@ function addTag() {
 }
 
 async function onSubmit() {
-  if (!fileId.value) {
+  const validParts = parts.value.filter((p) => p.fileId)
+  if (!fileId.value && validParts.length === 0) {
     ElMessage.warning('请先上传视频文件')
     return
   }
@@ -173,6 +217,8 @@ async function onSubmit() {
       tags: form.tags,
       copyright: form.copyright,
       cover,
+      // 多P：有已上传分P时提交 parts（后端按分P建 video_part + 各自流）
+      parts: validParts.map((p) => ({ file_id: p.fileId, title: p.title })),
     })
   } catch (err) {
     ElMessage.error(err instanceof ApiError ? err.message : '投稿失败，请重试')
@@ -265,6 +311,63 @@ const stageText: Record<UploadProgress['stage'], string> = {
           />
           <span class="file-status__stage">{{ stageText[progress.stage] }}</span>
         </template>
+      </div>
+
+      <el-divider />
+
+      <!-- 分P管理（多P投稿 PRD VID-05） -->
+      <div class="parts-block">
+        <div class="parts-block__head">
+          <span class="parts-block__title">分P管理</span>
+          <span class="parts-block__tip">可选：添加多个视频组成合集式稿件（最多 10 P）</span>
+          <el-button
+            link
+            type="primary"
+            class="ml-auto"
+            @click="addPart"
+          >
+            + 添加分P
+          </el-button>
+        </div>
+        <div
+          v-for="(p, i) in parts"
+          :key="i"
+          class="part-row"
+        >
+          <el-input
+            v-model="p.title"
+            :placeholder="`分P${i + 1} 标题（默认取文件名）`"
+            maxlength="80"
+            class="part-row__title"
+          />
+          <span
+            v-if="p.fileId"
+            class="part-row__done"
+          >已上传 ✓</span>
+          <span
+            v-else-if="p.progress"
+            class="part-row__progress"
+          >{{ p.progress.percent }}% {{ stageText[p.progress.stage] }}</span>
+          <label
+            v-else
+            class="part-row__pick"
+          >
+            选择视频
+            <input
+              type="file"
+              :accept="ACCEPT_EXTS.join(',')"
+              hidden
+              @change="(e) => uploadPart(i, (e.target as HTMLInputElement).files?.[0] as File)"
+            >
+          </label>
+          <el-button
+            link
+            type="danger"
+            @click="removePart(i)"
+          >
+            删除
+          </el-button>
+        </div>
       </div>
 
       <el-divider />
@@ -418,9 +521,63 @@ const stageText: Record<UploadProgress['stage'], string> = {
 </template>
 
 <style scoped>
+@use '@/styles/variables' as v;
+
 .upload-wrap {
   max-width: 860px;
   margin: 0 auto;
+}
+
+/* 分P管理（多P投稿） */
+.parts-block {
+  margin-bottom: 4px;
+}
+
+.parts-block__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.parts-block__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.parts-block__tip {
+  font-size: 12px;
+  color: v.$text-3;
+}
+
+.part-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.part-row__title {
+  flex: 1;
+}
+
+.part-row__done {
+  color: #10b981;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.part-row__progress {
+  color: v.$text-2;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.part-row__pick {
+  color: v.$primary;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .drop-zone {
