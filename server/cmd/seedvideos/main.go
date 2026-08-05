@@ -20,8 +20,7 @@ import (
 
 const base = "http://127.0.0.1:8000/api/v1"
 
-// Source 视频源（test-videos.co.uk 公开测试视频 + w3schools 示例）。
-// 均验证可达（2026-08-05）；下载失败自动跳过不影响其余。
+// Source 视频源。
 type Source struct {
 	URL    string
 	Title  string
@@ -31,22 +30,84 @@ type Source struct {
 	Target string // 目标文件名
 }
 
-var sources = []Source{
-	{"https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4",
-		"Big Buck Bunny 动画片段", "开源动画电影 Big Buck Bunny 720p 片段（种子数据）", []string{"动画", "开源电影"}, 1, "bigbuckbunny_720_5mb.mp4"},
-	{"https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_5MB.mp4",
-		"Sintel 奇幻短片", "Blender 开源电影 Sintel 720p 片段（种子数据）", []string{"动画", "奇幻"}, 1, "sintel_720_5mb.mp4"},
-	{"https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_5MB.mp4",
-		"水母 4K 演示", "水母生态 720p 片段（种子数据）", []string{"自然", "演示"}, 9, "jellyfish_720_5mb.mp4"},
-	{"https://www.w3schools.com/html/mov_bbb.mp4",
-		"Big Buck Bunny 示例短片", "HTML5 播放示例 BBB 片段（种子数据）", []string{"动画"}, 1, "mov_bbb.mp4"},
+// buildSources 程序化生成 50 个测试视频源（test-videos.co.uk 组合 + filesamples 多格式 + 其他）。
+// 所有 URL 均已验证可达（2026-08-05）；下载失败自动跳过不影响其余。
+func buildSources() []Source {
+	var list []Source
+	// test-videos.co.uk：Big Buck Bunny / Sintel / Jellyfish × 360/720/1080 × 多档体积
+	movies := []struct {
+		Name  string // 目录名
+		Title string
+		Tags  []string
+		Cat   int
+	}{
+		{"bigbuckbunny", "Big Buck Bunny 动画片段", []string{"动画", "开源电影"}, 1},
+		{"sintel", "Sintel 奇幻短片", []string{"动画", "奇幻"}, 1},
+		{"jellyfish", "水母生态演示", []string{"自然", "演示"}, 9},
+	}
+	resSizes := map[string][]string{
+		"360":  {"1MB", "5MB", "10MB"},
+		"720":  {"1MB", "5MB", "10MB", "30MB"},
+		"1080": {"1MB", "5MB", "10MB"},
+	}
+	title := map[string]string{
+		"bigbuckbunny": "Big_Buck_Bunny", "sintel": "Sintel", "jellyfish": "Jellyfish",
+	}
+	for _, m := range movies {
+		for res, sizes := range resSizes {
+			for _, s := range sizes {
+				// 30MB 仅 720 存在（已探测），跳过其余 30MB 组合
+				if s == "30MB" && res != "720" {
+					continue
+				}
+				file := fmt.Sprintf("%s_%s_10s_%s.mp4", title[m.Name], res, s)
+				list = append(list, Source{
+					URL:   fmt.Sprintf("https://test-videos.co.uk/vids/%s/mp4/h264/%s/%s", m.Name, res, file),
+					Title: fmt.Sprintf("%s（%sp）", m.Title, res),
+					Desc:  "开源测试视频（种子数据）",
+					Tags:  m.Tags, CatID: m.Cat, Target: file,
+				})
+			}
+		}
+	}
+	// filesamples.com：多格式样本
+	fs := []struct {
+		File string
+		Ext  string
+	}{
+		{"sample_640x360.mp4", "mp4"}, {"sample_960x540.mp4", "mp4"},
+		{"sample_1280x720.mp4", "mp4"}, {"sample_1920x1080.mp4", "mp4"},
+		{"sample_640x360.mkv", "mkv"}, {"sample_960x540.mkv", "mkv"}, {"sample_1280x720.mkv", "mkv"}, {"sample_1920x1080.mkv", "mkv"},
+		{"sample_640x360.mov", "mov"}, {"sample_960x540.mov", "mov"}, {"sample_1280x720.mov", "mov"},
+		{"sample_640x360.avi", "avi"}, {"sample_1280x720.avi", "avi"}, {"sample_1920x1080.avi", "avi"},
+		{"sample_640x360.flv", "flv"}, {"sample_1280x720.flv", "flv"}, {"sample_1920x1080.flv", "flv"},
+		{"sample_1920x1080.mov", "mov"},
+	}
+	for _, f := range fs {
+		list = append(list, Source{
+			URL:   "https://filesamples.com/samples/video/" + f.Ext + "/" + f.File,
+			Title: "格式样本 " + f.File,
+			Desc:  "多格式测试视频样本（种子数据）",
+			Tags:  []string{"样本", strings.ToUpper(f.Ext)}, CatID: 11, Target: f.File,
+		})
+	}
+	// 其他固定源
+	list = append(list,
+		Source{"https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4",
+			"通用视频样本", "learningcontainer 示例（种子数据）", []string{"样本"}, 11, "sample-mp4-file.mp4"},
+		Source{"https://www.w3schools.com/html/mov_bbb.mp4",
+			"Big Buck Bunny 示例短片", "HTML5 播放示例 BBB 片段（种子数据）", []string{"动画"}, 1, "mov_bbb.mp4"},
+	)
+	return list
 }
 
 func main() {
-	n := flag.Int("n", 4, "爬取视频数量（默认全部）")
+	n := flag.Int("n", 0, "爬取视频数量（默认全部 50）")
 	phone := flag.String("phone", "13900000116", "种子用户手机号（自动注册）")
 	flag.Parse()
 
+	sources := buildSources()
+	fmt.Printf("源列表共 %d 个视频\n", len(sources))
 	token, uid := login(*phone)
 	fmt.Printf("种子用户 uid=%s 登录成功\n", uid)
 	adminToken := adminLogin()
@@ -167,7 +228,9 @@ func upload(path, token string) (string, error) {
 	}
 	var comp struct {
 		Code int `json:"code"`
-		Data struct{ FileID string `json:"file_id"` }
+		Data struct {
+			FileID string `json:"file_id"`
+		}
 	}
 	if err := doJSON("POST", "/upload/"+initResp.Data.UploadID+"/complete", token, nil, &comp); err != nil {
 		return "", err
@@ -234,7 +297,9 @@ func login(phone string) (token, uid string) {
 	sms, _ := json.Marshal(map[string]string{"phone": phone})
 	var smsResp struct {
 		Code int `json:"code"`
-		Data struct{ DebugCode string `json:"debug_code"` }
+		Data struct {
+			DebugCode string `json:"debug_code"`
+		}
 	}
 	if err := doJSON("POST", "/auth/sms-code", "", sms, &smsResp); err != nil {
 		log.Fatal("sms-code 失败: ", err)
@@ -265,7 +330,9 @@ func adminLogin() string {
 	body, _ := json.Marshal(map[string]string{"username": "admin", "password": "admin123"})
 	var lr struct {
 		Code int `json:"code"`
-		Data struct{ Token string `json:"token"` }
+		Data struct {
+			Token string `json:"token"`
+		}
 	}
 	if err := doJSON("POST", "/admin/login", "", body, &lr); err != nil {
 		log.Fatal("admin 登录失败: ", err)
