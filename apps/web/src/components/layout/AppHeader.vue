@@ -45,9 +45,12 @@ onUnmounted(() => {
 })
 
 watch(
-  () => route.name,
-  (name) => {
-    if (name === 'notifications' || name === 'messages') setTimeout(pollUnread, 1000)
+  () => route.fullPath,
+  () => {
+    // 进入通知/私信页或私信会话切换后，未读已随读取清零，延时刷新头部红点
+    if (route.name === 'notifications' || route.name === 'messages') {
+      setTimeout(pollUnread, 800)
+    }
   },
 )
 

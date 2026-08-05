@@ -68,9 +68,30 @@ async function loadConvs() {
 
 async function openPeer(peer: string) {
   if (activePeer.value === peer) return
+  // 同步 URL（query.peer），触发 AppHeader watch 延时刷新头部未读红点
+  if (route.query.peer !== peer) {
+    await router.replace({ path: '/messages', query: { peer } })
+  }
   activePeer.value = peer
   messages.value = []
-  const conv = convs.value.find((c) => c.peer_id === peer)
+  // 列表无此对象时（新会话/仅对方发过未读），用对方资料拼临时会话项
+  let conv = convs.value.find((c) => c.peer_id === peer)
+  if (!conv) {
+    try {
+      const p = await api.relation.profile(peer)
+      conv = {
+        peer_id: peer,
+        nickname: p.nickname,
+        avatar: p.avatar,
+        last_content: '',
+        last_at: new Date().toISOString(),
+        unread: 0,
+      }
+      convs.value.unshift(conv)
+    } catch {
+      // 资料获取失败不阻塞消息加载
+    }
+  }
   if (conv && conv.unread > 0) {
     conv.unread = 0
   }
