@@ -3,10 +3,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { formatCount } from '@dlidli/shared'
-import { ApiError, type UserBrief, type VideoCard as VideoCardData } from '@dlidli/api-client'
+import { ApiError, type CollectionCard, type UserBrief, type VideoCard as VideoCardData } from '@dlidli/api-client'
 import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import defaultAvatar from '@/assets/default-avatar.png'
+import defaultCover from '@/assets/default-cover.png'
 import VideoCard from '@/components/VideoCard.vue'
 import AccountStatusAlert from '@/components/AccountStatusAlert.vue'
 import ReportDialog from '@/components/ReportDialog.vue'
@@ -35,13 +36,51 @@ function openReport() {
   reportDialog.value?.open()
 }
 
-type TabKey = 'videos' | 'followings' | 'followers' | 'favorites'
+type TabKey = 'videos' | 'collections' | 'followings' | 'followers' | 'favorites'
 const activeTab = ref<TabKey>('videos')
 
 const videos = ref<VideoCardData[]>([])
 const users = ref<UserBrief[]>([])
 const usersTotal = ref(0)
 const tabLoading = ref(false)
+
+// 合集（M3-CRT-05）：本人可创建，展示合集卡片
+const collections = ref<CollectionCard[]>([])
+const collectionsLoaded = ref(false)
+const createColVisible = ref(false)
+const createColForm = ref({ title: '', description: '' })
+const createColSaving = ref(false)
+
+async function loadCollections() {
+  try {
+    collections.value = (await api.collection.list(uid.value)).list ?? []
+    collectionsLoaded.value = true
+  } catch {
+    collections.value = []
+  }
+}
+
+async function createCollection() {
+  if (!createColForm.value.title.trim()) {
+    ElMessage.warning('请填写合集标题')
+    return
+  }
+  createColSaving.value = true
+  try {
+    await api.collection.create({
+      title: createColForm.value.title.trim(),
+      description: createColForm.value.description.trim(),
+    })
+    createColVisible.value = false
+    createColForm.value = { title: '', description: '' }
+    ElMessage.success('合集已创建')
+    loadCollections()
+  } catch (err) {
+    ElMessage.error(err instanceof ApiError ? err.message : '创建失败')
+  } finally {
+    createColSaving.value = false
+  }
+}
 
 async function loadHead() {
   notFound.value = false
@@ -73,6 +112,10 @@ async function loadTab() {
       case 'videos': {
         const res = await api.video.list({ uid: uid.value, sort: 'new', page_size: 24 })
         videos.value = res.list
+        break
+      }
+      case 'collections': {
+        await loadCollections()
         break
       }
       case 'followings': {
@@ -220,6 +263,11 @@ watch(activeTab, loadTab)
         >投稿</span>
         <span
           class="space-tab"
+          :class="{ 'is-active': activeTab === 'collections' }"
+          @click="activeTab = 'collections'"
+        >合集</span>
+        <span
+          class="space-tab"
           :class="{ 'is-active': activeTab === 'followings' }"
           @click="activeTab = 'followings'"
         >关注</span>
@@ -241,6 +289,50 @@ watch(activeTab, loadTab)
         :rows="4"
         animated
       />
+
+      <!-- 合集（M3-CRT-05） -->
+      <template v-else-if="activeTab === 'collections'">
+        <div
+          v-if="isSelf"
+          class="flex justify-end mb-2"
+        >
+          <el-button
+            size="small"
+            type="primary"
+            round
+            @click="createColVisible = true"
+          >
+            + 新建合集
+          </el-button>
+        </div>
+        <el-empty
+          v-if="collections.length === 0"
+          description="还没有合集"
+        />
+        <div
+          v-else
+          class="grid grid-cols-2 sm:grid-cols-3 gap-3"
+        >
+          <div
+            v-for="c in collections"
+            :key="c.id"
+            class="col-card"
+            @click="router.push(`/collections/${c.id}`)"
+          >
+            <img
+              :src="c.cover || defaultCover"
+              alt=""
+              class="col-card__cover"
+            >
+            <p class="col-card__title">
+              {{ c.title }}
+            </p>
+            <p class="col-card__meta">
+              {{ c.video_count }} 个视频
+            </p>
+          </div>
+        </div>
+      </template>
 
       <!-- 视频网格（投稿 / 收藏） -->
       <template v-else-if="activeTab === 'videos' || activeTab === 'favorites'">
@@ -311,10 +403,88 @@ watch(activeTab, loadTab)
     :target-id="profile?.id ?? ''"
     :title="profile ? `用户：${profile.nickname}` : ''"
   />
+
+  <!-- 新建合集 -->
+  <el-dialog
+    v-model="createColVisible"
+    title="新建合集"
+    width="420px"
+  >
+    <el-form
+      label-width="60px"
+      class="max-w-380px"
+    >
+      <el-form-item label="标题">
+        <el-input
+          v-model="createColForm.title"
+          placeholder="合集标题（必填）"
+          maxlength="64"
+        />
+      </el-form-item>
+      <el-form-item label="简介">
+        <el-input
+          v-model="createColForm.description"
+          type="textarea"
+          :rows="2"
+          placeholder="合集简介（选填）"
+          maxlength="200"
+        />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="createColVisible = false">
+        取消
+      </el-button>
+      <el-button
+        type="primary"
+        :loading="createColSaving"
+        @click="createCollection"
+      >
+        创建
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">
 @use '@/styles/variables' as v;
+
+/* 合集卡片 */
+.col-card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.col-card__cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #f1f2f3;
+}
+
+.col-card__title {
+  margin: 8px 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-card__meta {
+  margin: 2px 10px 10px;
+  font-size: 12px;
+  color: #9499a0;
+}
 
 /* 头部 */
 .space-head {

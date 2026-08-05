@@ -47,15 +47,27 @@ func (Video) TableName() string { return "video" }
 
 // Stream 对应 video_stream 表；quality=0 表示原画（未转码源文件）。
 type Stream struct {
-	ID       int64 `gorm:"primaryKey"`
-	VideoID  int64
-	Quality  int16
-	Format   string
-	PlayPath string
-	FileSize int64
+	ID        int64 `gorm:"primaryKey"`
+	VideoID   int64
+	PartIndex int8  // 分P（0=单P默认，>0 对应 video_part.part_index）
+	Quality   int16
+	Format    string
+	PlayPath  string
+	FileSize  int64
 }
 
 func (Stream) TableName() string { return "video_stream" }
+
+// VideoPart 多P分P（对应 video_part 表）。
+type VideoPart struct {
+	ID        int64 `gorm:"primaryKey;autoIncrement"`
+	VideoID   int64
+	PartIndex int8
+	Title     string
+	Duration  int
+}
+
+func (VideoPart) TableName() string { return "video_part" }
 
 // Stat 对应 video_stat 表。
 type Stat struct {
@@ -83,6 +95,7 @@ const (
 type TranscodeJob struct {
 	ID        int64 `gorm:"primaryKey"`
 	VideoID   int64
+	PartIndex int8 // 分P（0=单P）
 	Quality   int16
 	Status    int8
 	RetryCnt  int8
@@ -115,6 +128,22 @@ type SubmitReq struct {
 	Tags        []string `json:"tags" binding:"required,min=1,max=10"`
 	Copyright   int8     `json:"copyright" binding:"required,oneof=1 2"` // 1自制 2转载
 	Cover       string   `json:"cover"`                                  // 可选，封面 URL
+	// 多P投稿（PRD VID-05）：每项对应一个分P（file_id + 分P标题）；空则单P兼容现状
+	Parts []PartSubmit `json:"parts"`
+}
+
+// PartSubmit 分P提交项。
+type PartSubmit struct {
+	FileID string `json:"file_id" binding:"required"`
+	Title  string `json:"title" binding:"max=80"`
+}
+
+// PartItem 播放页分P（含各档位流）。
+type PartItem struct {
+	Index    int          `json:"index"`
+	Title    string       `json:"title"`
+	Duration int          `json:"duration"`
+	Streams  []StreamItem `json:"streams"`
 }
 
 // OwnerBrief 卡片中的 UP 主信息。

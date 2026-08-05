@@ -211,10 +211,65 @@ func (s *Service) Submit(ctx context.Context, uid int64, req *SubmitReq) (*Detai
 		PlayPath: file.StoreKey,
 		FileSize: file.FileSize,
 	}
+	// 多P投稿（PRD VID-05）：parts 非空时逐 P 建 video_part + 原画流 + 转码任务；空则单P兼容
+	if len(req.Parts) > 0 {
+		parts := make([]VideoPart, 0, len(req.Parts))
+		streams := make([]Stream, 0, len(req.Parts))
+		for i, p := range req.Parts {
+			pfID, err := strconv.ParseInt(p.FileID, 10, 64)
+			if err != nil {
+				return nil, errcode.ErrInvalidParams
+			}
+			pf, err := s.uploadSvc.GetUserFile(ctx, pfID)
+			if err != nil {
+				return nil, err
+			}
+			parts = append(parts, VideoPart{PartIndex: int8(i + 1), Title: strings.TrimSpace(p.Title)})
+			streams = append(streams, Stream{
+				PartIndex: int8(i + 1), Quality: 0, Format: "mp4",
+				PlayPath: pf.StoreKey, FileSize: pf.FileSize,
+			})
+		}
+		if err := s.repo.CreateWithParts(v, parts, streams, jobs); err != nil {
+			return nil, err
+		}
+		return s.detail(ctx, v, true)
+	}
 	if err := s.repo.CreateWithStat(v, stream, jobs); err != nil {
 		return nil, err
 	}
 	return s.detail(ctx, v, true)
+}
+
+// Parts 稿件分P列表（公开）：含每 P 各档位签名流。单P稿件返回空列表（前端走详情 streams）。
+func (s *Service) Parts(ctx context.Context, bv string) ([]PartItem, error) {
+	v, err := s.repo.FindByBvid(bv)
+	if err != nil {
+		return nil, err
+	}
+	if v == nil || v.Status == StatusDeleted {
+		return nil, errcode.ErrNotFound
+	}
+	parts, err := s.repo.PartsByVideo(v.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(parts) == 0 {
+		return []PartItem{}, nil
+	}
+	items := make([]PartItem, 0, len(parts))
+	for _, p := range parts {
+		streams, err := s.repo.StreamsByVideoPart(v.ID, p.PartIndex)
+		if err != nil {
+			return nil, err
+		}
+		sis := make([]StreamItem, 0, len(streams))
+		for _, st := range streams {
+			sis = append(sis, StreamItem{Quality: st.Quality, Format: st.Format, URL: s.signedPlayURL(st.PlayPath)})
+		}
+		items = append(items, PartItem{Index: int(p.PartIndex), Title: p.Title, Duration: p.Duration, Streams: sis})
+	}
+	return items, nil
 }
 
 // UploadCover 上传稿件封面（投稿前调用，返回 URL 填入 SubmitReq.Cover）。
