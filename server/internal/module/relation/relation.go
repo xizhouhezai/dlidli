@@ -39,7 +39,6 @@ func NewRepo(db *gorm.DB) *Repo {
 	return &Repo{db: db}
 }
 
-// Toggle 关注开关；返回操作后是否处于关注状态。
 func (r *Repo) Toggle(uid, target int64) (following bool, err error) {
 	err = r.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Where("user_id = ? AND target_id = ?", uid, target).Delete(&Relation{})
@@ -120,6 +119,18 @@ func NewService(repo *Repo, accountSvc *account.Service, notifySvc *notify.Servi
 }
 
 // Toggle 关注/取关。
+// IsMutual 是否互关（私信发送限制用，PRD MSG-11）。
+func (s *Service) IsMutual(ctx context.Context, a, b int64) (bool, error) {
+	ab, err := s.repo.IsFollowing(a, b)
+	if err != nil {
+		return false, err
+	}
+	if !ab {
+		return false, nil
+	}
+	return s.repo.IsFollowing(b, a)
+}
+
 func (s *Service) Toggle(ctx context.Context, uid, target int64) (bool, error) {
 	if uid == target {
 		return false, errcode.ErrFollowSelf

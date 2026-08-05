@@ -48,6 +48,12 @@ const router = createRouter({
           meta: { title: '合集' },
         },
         {
+          path: 'messages',
+          name: 'messages',
+          component: () => import('@/views/message/MessagesView.vue'),
+          meta: { title: '私信', requiresAuth: true },
+        },
+        {
           path: 'space/:uid',
           name: 'space',
           component: () => import('@/views/space/SpaceView.vue'),
