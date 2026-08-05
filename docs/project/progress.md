@@ -11,7 +11,7 @@
 | M0 基建 | W1-W4 | 🟢 进行中 | 92% | 仅剩 M0-ENG-13 staging 部署 |
 | M1 MVP 内测 | W5-W12 | 🟢 进行中 | 100% | player 内核封装（VID-09），M1 功能全部完成 |
 | M2 V1.0 公测 | W13-W24 | ✅ 已完成 | 100% | SYS-01/02 收口，M2 全部 40 项完成 |
-| M3 V2.0 增长 | W25-W48 | 🟢 进行中 | 50% | 数据大盘（OPS-02）+ Banner + 创作者中心 + 推荐系统 |
+| M3 V2.0 增长 | W25-W48 | 🟢 进行中 | 54% | 稿件管理 + 数据大盘 + Banner + 创作者中心 + 推荐系统 |
 | M4 V3.0 商业化 | W49+ | ⚪ 未开始 | 0% | - |
 
 > 状态图例：⚪ 未开始 ｜ 🟢 进行中 ｜ 🟡 有风险 ｜ 🔴 阻塞 ｜ ✅ 已完成
@@ -106,6 +106,7 @@
 - [x] 创作者中心（M3-CRT-01~04，4 项）：0017 迁移 creator_settlement 日结算表；实时聚合看板（video_stat + 行为日志，替代 T+1 数仓）：/creator/overview（稿件数/总播放/赞/币/藏/粉丝/近7日播放/累计收益）+ /creator/videos（单稿统计+有效播放+收益）+ /creator/trend（7 天补零对齐）+ /creator/settlements；创作激励（有效播放×1分/次，请求时全量结算 INSERT SELECT 幂等 upsert）；Web /creator 页（5 统计卡 + CSS 柱状趋势 + 稿件数据/收益明细 Tab）+ 头部入口；E2E 实测 4 天 17 播放=17 分结算/趋势/明细全通；多P投稿合集（CRT-05）延后
 - [x] 运营位 Banner（M3-OPS-01 Banner 部分）：0018 迁移 banner 表；banner 模块（公开 GET /banners image 空回退稿件封面 + admin CRUD bvid 校验）；权限点 banner:view/banner:edit（operator 角色）+ admin Banner 配置页（预览/标题/跳转/排序/启停/CRUD 弹窗）；首页轮播接入（配置优先，右侧 2×2 网格最热填充不空白，无配置回退最热前 8）；AdminLayout 菜单分组/路由映射补 banner；E2E 实测封面兜底/CRUD/启停/轮播展示跳转/菜单 icon 全通
 - [x] 数据大盘（M3-OPS-02）：GET /admin/dashboard/stats（今日实时：活跃/新增/投稿/有效播放 + 近 7 日四线趋势补零对齐 + 平均审核时长 + 待审数，实时聚合不做 T+1 数仓）；admin 工作台数据大盘区块（4 渐变卡 + echarts 四线图 legend/tooltip/smooth + 审核时效条，5 分钟自动轮询）；E2E 实测 4 卡/图表渲染/tooltip/审核时效全通
+- [x] 稿件管理页（PRD admin.md 2.4 新增 VMG-01~04）：GET /admin/videos（全状态 + 状态/分区/关键词筛选，Card 补 category_id）+ PUT /admin/videos/:bvid/status（下架/恢复 已发布↔已锁定）+ DELETE /admin/videos/:bvid（软删除，均审计留痕）；权限点 video:view/video:manage（审核主管/审核员分配）；admin 稿件管理页（筛选/表格/下架恢复删除/分页）；E2E 实测筛选/下架恢复持久化/权限按钮/分页/分区列/下拉全通
 
 ### 进行中
 
