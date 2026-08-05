@@ -34,6 +34,7 @@ export default defineConfig({
     'i-mingcute-settings-4-line',
     'i-mingcute-book-4-line',
     'i-mingcute-photo-album-line',
+    'i-mingcute-play-circle-line',
   ],
   theme: {
     colors: {
