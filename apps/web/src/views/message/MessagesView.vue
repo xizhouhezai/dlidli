@@ -39,9 +39,12 @@ function connectWs() {
       if (msg.sender_id === activePeer.value) {
         messages.value.push(msg)
         scrollBottom()
+        // 停留在当前会话收到新消息：立即已读并刷新角标（头部红点 + 会话列表未读）
+        markCurrentRead()
       } else {
         loadConvs() // 其他会话来消息：刷新会话列表未读
       }
+      window.dispatchEvent(new CustomEvent('msg-unread-changed'))
     } catch {
       // 忽略非 JSON 帧
     }
@@ -55,6 +58,17 @@ function connectWs() {
   }
   ws.onopen = () => {
     wsRetry = 0
+  }
+}
+
+// 当前会话立即已读：复用 messages 接口（服务端 MarkRead），并刷新会话列表角标
+async function markCurrentRead() {
+  if (!activePeer.value) return
+  try {
+    await api.message.messages(activePeer.value, 1, 1)
+    loadConvs()
+  } catch {
+    // 已读失败不阻塞展示
   }
 }
 
