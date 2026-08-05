@@ -195,7 +195,7 @@
 - [x] M3-OPS-01 Banner/推荐位/热搜配置系统（Banner 部分：0018 迁移 banner 表；banner 模块（公开 GET /banners image 空回退稿件封面 + admin CRUD bvid 校验）；权限点 banner:view/banner:edit（operator 角色）；admin Banner 配置页（预览/标题/跳转/排序/启停/CRUD 弹窗）；首页轮播接入（配置优先，右侧 2×2 网格最热填充不空白，无配置回退最热前 8）；AdminLayout 菜单分组/路由映射补 banner；E2E 实测封面兜底/CRUD/启停/轮播展示跳转/菜单 icon 全通） `2026-08-04`
 - [x] M3-OPS-02 数据大盘（DAU/播放/投稿/审核时效）（GET /admin/dashboard/stats：今日实时 4 指标（活跃/新增/投稿/有效播放）+ 近 7 日四线趋势补零对齐 + 平均审核时长（TIMESTAMPDIFF）+ 待审数；admin 工作台数据大盘区块：4 渐变卡 + echarts 四线图（legend/tooltip/smooth）+ 审核时效条，5 分钟自动轮询；E2E 实测 4 卡/图表渲染/tooltip/审核时效全通） `2026-08-05`
 - [x] 稿件管理页（PRD admin.md 2.4 新增 VMG-01~04）：GET /admin/videos（全状态列表 + 状态/分区/关键词筛选，Card 补 category_id）+ PUT /admin/videos/:bvid/status（已发布↔已锁定 下架/恢复）+ DELETE /admin/videos/:bvid（软删除，均审计留痕 video_offline/video_restore/video_delete）；权限点 video:view（menu）/video:manage（button，审核主管/审核员分配）；admin 稿件管理页（筛选栏/表格/下架恢复删除/分页）；E2E 实测列表筛选/下架恢复持久化/权限按钮/分页/分区列/下拉全通） `2026-08-05`
-- [ ] M3-OPS-03 A/B 实验分流框架
+- [x] M3-OPS-03 A/B 实验分流框架（0020 迁移 experiment 表；abtest 模块：按 uid 哈希稳定分流（FNV-1a(target:uid) % 100 < ratio → B 组，无需用户表字段）；admin CRUD（experiment:view/edit 权限，operator 分配）；admin 实验管理页（列表/新建/编辑/启停/删除，ratio slider）；真实场景接入：推荐策略变体（target=recommend，variant_b=hot_only 时退化为纯热度榜、hybrid 默认混合召回）；E2E 实测：同用户两次请求分流稳定、A 组含个性化召回/B 组纯热度、停用后回默认策略、admin CRUD 全通） `2026-08-05`
 
 ### 基建演进（ENG）
 
@@ -237,8 +237,8 @@
 | M0 | 13 | 12 | 92% |
 | M1 | 34 | 34 | 100% |
 | M2 | 40 | 40 | 100% |
-| M3 | 24 | 14 | 58% |
+| M3 | 24 | 15 | 63% |
 | M4 | 13 | 0 | 0% |
-| **合计** | **124** | **100** | **80.6%** |
+| **合计** | **124** | **101** | **81.5%** |
 
 > 勾选任务后请同步更新本表与 [开发进度管理](/project/progress) 的模块矩阵。
