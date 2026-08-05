@@ -14,15 +14,24 @@ const userStore = useUserStore()
 const unread = ref(0)
 let unreadTimer: ReturnType<typeof setInterval> | null = null
 
+// 私信未读数（M3-IM：与通知同轮询）
+const msgUnread = ref(0)
+
 async function pollUnread() {
   if (!userStore.token) {
     unread.value = 0
+    msgUnread.value = 0
     return
   }
   try {
     unread.value = (await api.notify.unreadCount()).count
   } catch {
     // 静默失败，下轮重试
+  }
+  try {
+    msgUnread.value = (await api.message.unreadCount()).unread
+  } catch {
+    // 静默失败
   }
 }
 
@@ -38,7 +47,7 @@ onUnmounted(() => {
 watch(
   () => route.name,
   (name) => {
-    if (name === 'notifications') setTimeout(pollUnread, 1000)
+    if (name === 'notifications' || name === 'messages') setTimeout(pollUnread, 1000)
   },
 )
 
@@ -108,6 +117,17 @@ async function onLogout() {
               v-if="unread > 0"
               class="dli-bell__badge"
             >{{ unread > 99 ? '99+' : unread }}</span>
+          </RouterLink>
+          <RouterLink
+            to="/messages"
+            class="dli-bell"
+            title="私信"
+          >
+            <span class="i-mingcute-chat-3-line text-5.5" />
+            <span
+              v-if="msgUnread > 0"
+              class="dli-bell__badge"
+            >{{ msgUnread > 99 ? '99+' : msgUnread }}</span>
           </RouterLink>
           <el-dropdown>
             <div class="dli-user flex items-center gap-2 cursor-pointer outline-none">

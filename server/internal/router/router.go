@@ -17,6 +17,7 @@ import (
 	"github.com/dlidli/server/internal/module/danmaku"
 	"github.com/dlidli/server/internal/module/dynamic"
 	"github.com/dlidli/server/internal/module/growth"
+	"github.com/dlidli/server/internal/module/im"
 	"github.com/dlidli/server/internal/module/interaction"
 	"github.com/dlidli/server/internal/module/notify"
 	"github.com/dlidli/server/internal/module/recommend"
@@ -146,6 +147,11 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// UP 主合集（M3-CRT-05 合集部分）
 		collectionSvc := collection.NewService(collection.NewRepo(res.DB), videoSvc)
 		collection.NewHandler(collectionSvc).RegisterRoutes(v1, authMW)
+
+		// 私信 IM（M3-IM）：会话/消息 + 发送限制 + 机审 + WS 实时推送
+		imHub := im.NewHub(cfg.App.AllowOrigins, log)
+		imSvc := im.NewService(im.NewRepo(res.DB), accountSvc, relationSvc, imHub, log)
+		im.NewHandler(imSvc).RegisterRoutes(v1, authMW)
 
 		// 创作者中心（M3-CRT）：数据看板 + 激励结算
 		creatorSvc := creator.NewService(creator.NewRepo(res.DB), log)
