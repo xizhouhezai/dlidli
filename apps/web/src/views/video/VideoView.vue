@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { bindKeyboard, PlayerCore, qualityLabel } from '@dlidli/player'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
-import { ApiError, type CollectionItem, type DanmakuItem, type StreamItem, type VideoCard, type VideoDetail } from '@dlidli/api-client'
+import { ApiError, type CollectionItem, type DanmakuItem, type PartItem, type StreamItem, type VideoCard, type VideoDetail } from '@dlidli/api-client'
 import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import DanmakuLayer from '@/components/DanmakuLayer.vue'
@@ -40,6 +40,22 @@ const playerBox = ref<HTMLElement>()
 const currentStream = ref<StreamItem | null>(null)
 let player: PlayerCore | null = null
 let unbindKeys: (() => void) | null = null
+
+// 多P投稿（PRD VID-05）：分P列表与当前 P
+const partList = ref<PartItem[]>([])
+const currentPart = ref(0)
+
+function switchPart(i: number) {
+  if (i === currentPart.value || !partList.value[i]) return
+  const part = partList.value[i]
+  if (!part.streams.length) {
+    ElMessage.warning('该分P暂无可用播放流')
+    return
+  }
+  currentPart.value = i
+  // 切换播放源（保留播放器实例，跳过续播：跨 P 进度独立由服务端按 bvid 记忆）
+  player?.setSources(part.streams)
+}
 
 // 倍速
 const playbackRate = ref(1)
@@ -437,15 +453,23 @@ async function load(bvid: string) {
   player = null
 
   try {
-    detail.value = await api.video.detail(bvid)
-    document.title = `${detail.value.title} - DliDli`
+    const [d, partsRes] = await Promise.all([
+      api.video.detail(bvid),
+      api.video.parts(bvid).catch(() => ({ list: [] as PartItem[] })),
+    ])
+    detail.value = d
+    document.title = `${d.title} - DliDli`
 
     // 先结束骨架屏让 <video> 渲染，再挂播放源（否则 videoEl 尚未存在，挂流静默失败）
     loading.value = false
     await nextTick()
     playbackRate.value = 1
+    partList.value = partsRes.list
+    currentPart.value = 0
     const p = ensurePlayer()
-    p?.setSources(detail.value.streams) // 默认最高画质（streams 按 quality 降序，HLS 优先）
+    // 多P：默认播第一 P 的流；单P：详情 streams
+    const sources = partList.value[0]?.streams?.length ? partList.value[0].streams : detail.value.streams
+    p?.setSources(sources) // 默认最高画质（streams 按 quality 降序，HLS 优先）
     // 绑定快捷键（首次）
     if (!unbindKeys && videoEl.value) {
       unbindKeys = bindKeyboard(videoEl.value, { container: playerBox.value ?? null })
@@ -604,6 +628,24 @@ onBeforeUnmount(() => {
           :settings="dmSettings"
           @report="onDmReport"
         />
+      </div>
+
+      <!-- 分P列表（多P投稿 PRD VID-05） -->
+      <div
+        v-if="partList.length > 0"
+        class="part-list"
+      >
+        <div
+          v-for="(p, i) in partList"
+          :key="p.index"
+          class="part-list__item"
+          :class="{ 'is-active': currentPart === i }"
+          @click="switchPart(i)"
+        >
+          <span class="part-list__idx">P{{ i + 1 }}</span>
+          <span class="part-list__title">{{ p.title || `分P${i + 1}` }}</span>
+          <span class="part-list__dur">{{ p.duration ? formatDuration(p.duration) : '' }}</span>
+        </div>
       </div>
       <!-- 控制行：弹幕开关（图标 toggle）+ 清晰度 -->
       <div class="play-controls">
@@ -1224,6 +1266,58 @@ onBeforeUnmount(() => {
 
 .player-box {
   position: relative;
+}
+
+/* 分P列表（多P投稿） */
+.part-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.part-list__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--dli-border);
+  font-size: 12.5px;
+  color: var(--dli-text-2);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    color: var(--dli-primary);
+    border-color: var(--dli-primary);
+  }
+
+  &.is-active {
+    background: var(--dli-primary);
+    border-color: var(--dli-primary);
+    color: #fff;
+  }
+}
+
+.part-list__idx {
+  font-weight: 700;
+}
+
+.part-list__title {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.part-list__dur {
+  color: var(--dli-text-3);
+  font-size: 11.5px;
+}
+
+.part-list__item.is-active .part-list__dur {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .play-video {

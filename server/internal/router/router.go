@@ -12,6 +12,7 @@ import (
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/module/admin"
 	"github.com/dlidli/server/internal/module/banner"
+	"github.com/dlidli/server/internal/module/collection"
 	"github.com/dlidli/server/internal/module/creator"
 	"github.com/dlidli/server/internal/module/danmaku"
 	"github.com/dlidli/server/internal/module/dynamic"
@@ -141,6 +142,10 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		recommendSvc.SetABTest(abtestSvc)
 		abtest.NewHandler(abtestSvc).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret),
 			func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) })
+
+		// UP 主合集（M3-CRT-05 合集部分）
+		collectionSvc := collection.NewService(collection.NewRepo(res.DB), videoSvc)
+		collection.NewHandler(collectionSvc).RegisterRoutes(v1, authMW)
 
 		// 创作者中心（M3-CRT）：数据看板 + 激励结算
 		creatorSvc := creator.NewService(creator.NewRepo(res.DB), log)

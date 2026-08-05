@@ -59,6 +59,16 @@ export interface SubmitVideoReq {
   tags: string[]
   copyright: 1 | 2
   cover?: string
+  /** 多P投稿（PRD VID-05）：每项为分P（file_id + 标题）；空则单P */
+  parts?: Array<{ file_id: string, title?: string }>
+}
+
+/** 分P播放项 */
+export interface PartItem {
+  index: number
+  title: string
+  duration: number
+  streams: StreamItem[]
 }
 
 /** 首页轮播 Banner（公开运营位） */
@@ -93,6 +103,9 @@ export function createVideoApi(http: HttpClient) {
       http.post<null>(`/api/v1/videos/${bvid}/progress`, { position }),
 
     submit: (req: SubmitVideoReq) => http.post<VideoDetail>('/api/v1/videos', req),
+
+    /** 稿件分P列表（含各 P 播放流；单P返回空） */
+    parts: (bvid: string) => http.get<{ list: PartItem[] }>(`/api/v1/videos/${bvid}/parts`),
 
     /** 上传封面图（投稿前调用）；Blob 需指定带扩展名的 filename */
     uploadCover: (file: File | Blob, filename?: string) => {

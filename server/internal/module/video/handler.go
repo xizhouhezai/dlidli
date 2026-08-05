@@ -29,6 +29,7 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 		g.GET("", h.publicList)
 		g.GET("/mine", auth, h.mine) // 需在 /:bvid 之前注册同级静态路由
 		g.GET("/:bvid", h.publicDetail)
+		g.GET("/:bvid/parts", h.parts)
 		g.POST("", auth, h.submit)
 		g.POST("/cover", auth, h.uploadCover)
 		g.POST("/:bvid/view", optionalAuth, h.addView) // 游客也计播放
@@ -119,6 +120,21 @@ func (h *Handler) publicList(c *gin.Context) {
 		return
 	}
 	response.OK(c, gin.H{"list": cards})
+}
+
+// @Summary  稿件分P列表（含各 P 播放流）
+// @Tags     视频
+// @Produce  json
+// @Param    bvid path string true "视频 BV 号"
+// @Success  200 {object} response.Body
+// @Router   /videos/{bvid}/parts [get]
+func (h *Handler) parts(c *gin.Context) {
+	items, err := h.svc.Parts(c.Request.Context(), c.Param("bvid"))
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"list": items})
 }
 
 // @Summary  视频详情（含播放地址/流）

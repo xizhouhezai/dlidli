@@ -42,6 +42,12 @@ const router = createRouter({
           meta: { title: '搜索' },
         },
         {
+          path: 'collections/:id',
+          name: 'collection-detail',
+          component: () => import('@/views/collection/CollectionDetailView.vue'),
+          meta: { title: '合集' },
+        },
+        {
           path: 'space/:uid',
           name: 'space',
           component: () => import('@/views/space/SpaceView.vue'),
