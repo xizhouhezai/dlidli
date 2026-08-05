@@ -101,6 +101,12 @@ const router = createRouter({
           component: () => import('@/views/operation/BannersView.vue'),
           meta: { title: 'Banner 配置', requiresAuth: true },
         },
+        {
+          path: 'experiments',
+          name: 'experiments',
+          component: () => import('@/views/operation/ExperimentsView.vue'),
+          meta: { title: 'A/B 实验', requiresAuth: true },
+        },
       ],
     },
     // 后续：审计日志（M2-SYS-01）

@@ -190,6 +190,19 @@ export interface SaveCategoryPayload {
   status: number
 }
 
+/** A/B 实验（M3-OPS-03） */
+export interface ExperimentItem {
+  id: string
+  name: string
+  target: string
+  variant_a: string
+  variant_b: string
+  ratio: number
+  status: number
+  remark: string
+  created_at: string
+}
+
 /** 管理端稿件项（复用 ReviewItem 结构：Card + Description） */
 export type AdminVideoItem = ReviewItem
 
@@ -221,6 +234,18 @@ export function createAdminApi(http: HttpClient) {
     /** 删除稿件（软删除） */
     deleteVideo: (bvid: string) =>
       http.delete<null>(`/api/v1/admin/videos/${bvid}`),
+
+    // ---- A/B 实验（M3-OPS-03） ----
+    experiments: () => http.get<{ list: ExperimentItem[] }>('/api/v1/admin/experiments'),
+
+    createExperiment: (payload: { name: string, target: string, variant_a: string, variant_b: string, ratio: number, status?: number, remark?: string }) =>
+      http.post<null>('/api/v1/admin/experiments', payload),
+
+    updateExperiment: (id: string, payload: { name: string, target: string, variant_a: string, variant_b: string, ratio: number, status?: number, remark?: string }) =>
+      http.put<null>(`/api/v1/admin/experiments/${id}`, payload),
+
+    deleteExperiment: (id: string) =>
+      http.delete<null>(`/api/v1/admin/experiments/${id}`),
 
     reviewList: (page = 1, pageSize = 20) =>
       http.get<{ list: ReviewItem[]; total: number }>('/api/v1/admin/videos/review', {

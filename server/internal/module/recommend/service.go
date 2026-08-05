@@ -28,16 +28,27 @@ type candidate struct {
 	isNew bool
 }
 
+// abtestProvider A/B 实验分流（M3-OPS-03，接口避免循环依赖）。
+type abtestProvider interface {
+	Variant(ctx context.Context, uid int64, target string) (string, error)
+}
+
 // Service 推荐域服务：热度榜、混合召回推荐、行为采集、负反馈、推荐开关。
 type Service struct {
 	repo     *Repo
 	videoSvc *video.Service
 	rdb      *redis.Client
 	log      *zap.Logger
+	ab       abtestProvider
 }
 
 func NewService(repo *Repo, videoSvc *video.Service, rdb *redis.Client, log *zap.Logger) *Service {
 	return &Service{repo: repo, videoSvc: videoSvc, rdb: rdb, log: log}
+}
+
+// SetABTest 注入 A/B 实验分流器（router 装配时调用）。
+func (s *Service) SetABTest(ab abtestProvider) {
+	s.ab = ab
 }
 
 func hotCacheKey(categoryID int) string {
@@ -97,6 +108,18 @@ func (s *Service) Recommend(ctx context.Context, uid int64, page, size int) ([]v
 		if on, err := s.repo.RecommendOn(uid); err == nil && on {
 			personalized = true
 		}
+	}
+
+	// A/B 实验分流（M3-OPS-03）：target=recommend 的启用实验按用户哈希分 A/B 组。
+	// variant=hot_only 时退化为纯热度榜（关闭个性化召回），hybrid 或空串走默认混合策略。
+	variant := ""
+	if s.ab != nil {
+		if v, err := s.ab.Variant(ctx, uid, "recommend"); err == nil {
+			variant = v
+		}
+	}
+	if variant == "hot_only" {
+		personalized = false
 	}
 
 	var cands []candidate
