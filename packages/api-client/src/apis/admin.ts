@@ -190,11 +190,22 @@ export interface SaveCategoryPayload {
   status: number
 }
 
+/** 数据大盘（M3-OPS-02） */
+export interface DashboardStats {
+  today: { dau: number, new_users: number, uploads: number, views: number }
+  trend: Array<{ date: string, dau: number, new_users: number, uploads: number, views: number }>
+  review_hours: number
+  pending_review: number
+}
+
 /** 后台管理接口（对应 /api/v1/admin，需管理员令牌）。 */
 export function createAdminApi(http: HttpClient) {
   return {
     login: (username: string, password: string) =>
       http.post<AdminLoginResp>('/api/v1/admin/login', { username, password }),
+
+    /** 数据大盘（今日实时 + 近 7 日趋势 + 审核时效） */
+    dashboardStats: () => http.get<DashboardStats>('/api/v1/admin/dashboard/stats'),
 
     reviewList: (page = 1, pageSize = 20) =>
       http.get<{ list: ReviewItem[]; total: number }>('/api/v1/admin/videos/review', {
