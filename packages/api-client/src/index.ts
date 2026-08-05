@@ -15,6 +15,7 @@ import { createReportApi } from './apis/report'
 import { createRecommendApi } from './apis/recommend'
 import { createCreatorApi } from './apis/creator'
 import { createCollectionApi } from './apis/collection'
+import { createMessageApi } from './apis/messages'
 
 export * from './http'
 export * from './error'
@@ -31,6 +32,7 @@ export type { GrowthSummary, GrowthTask, AssetLogItem } from './apis/growth'
 export type { SubmitReportReq, ReportTargetType, ReportReasonType } from './apis/report'
 export type { CreatorOverview, CreatorVideoStat, TrendPoint, SettlementItem } from './apis/creator'
 export type { CollectionCard, CollectionDetail } from './apis/collection'
+export type { ConversationItem, MessageItem } from './apis/messages'
 
 /**
  * 创建 API 客户端。业务模块接口（account/video/...）随 M1 后端接口逐步补充，
@@ -56,6 +58,7 @@ export function createApiClient(cfg: ClientConfig = {}) {
     recommend: createRecommendApi(http),
     creator: createCreatorApi(http),
     collection: createCollectionApi(http),
+    message: createMessageApi(http),
   }
 }
 

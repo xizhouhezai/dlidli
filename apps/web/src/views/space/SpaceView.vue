@@ -237,6 +237,13 @@ watch(activeTab, loadTab)
             {{ following ? '已关注' : '+ 关注' }}
           </el-button>
           <el-button
+            v-if="!isSelf"
+            round
+            @click="router.push({ path: '/messages', query: { peer: uid } })"
+          >
+            发私信
+          </el-button>
+          <el-button
             v-else
             round
             @click="router.push('/settings')"

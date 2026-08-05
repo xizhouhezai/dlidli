@@ -1,0 +1,457 @@
+<script setup lang="ts">
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import type { ConversationItem, MessageItem } from '@dlidli/api-client'
+import { api } from '@/api'
+import { useUserStore } from '@/stores/user'
+import { readToken } from '@/utils/token'
+import defaultAvatar from '@/assets/default-avatar.png'
+
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+
+const convs = ref<ConversationItem[]>([])
+const activePeer = ref('')
+const messages = ref<MessageItem[]>([])
+const input = ref('')
+const sending = ref(false)
+const listBox = ref<HTMLDivElement>()
+
+// 当前会话对方信息
+const activeConv = computed(() => convs.value.find((c) => c.peer_id === activePeer.value))
+
+// WS 实时接收（M3-IM-02，PRD MSG-13）
+let ws: WebSocket | null = null
+let wsRetry = 0
+
+function connectWs() {
+  const token = readToken()
+  if (!token || ws) return
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  ws = new WebSocket(`${proto}://${window.location.host}${api.message.wsUrl()}?token=${encodeURIComponent(token)}`)
+  ws.onmessage = (e) => {
+    try {
+      const frame = JSON.parse(e.data)
+      if (frame.type !== 'message') return
+      const msg: MessageItem = frame.data
+      if (msg.sender_id === activePeer.value) {
+        messages.value.push(msg)
+        scrollBottom()
+      } else {
+        loadConvs() // 其他会话来消息：刷新会话列表未读
+      }
+    } catch {
+      // 忽略非 JSON 帧
+    }
+  }
+  ws.onclose = () => {
+    ws = null
+    if (wsRetry < 5) {
+      wsRetry++
+      setTimeout(connectWs, 3000)
+    }
+  }
+  ws.onopen = () => {
+    wsRetry = 0
+  }
+}
+
+async function loadConvs() {
+  try {
+    convs.value = (await api.message.conversations()).list ?? []
+  } catch {
+    convs.value = []
+  }
+}
+
+async function openPeer(peer: string) {
+  if (activePeer.value === peer) return
+  activePeer.value = peer
+  messages.value = []
+  const conv = convs.value.find((c) => c.peer_id === peer)
+  if (conv && conv.unread > 0) {
+    conv.unread = 0
+  }
+  try {
+    const res = await api.message.messages(peer, 1, 50)
+    messages.value = res.list ?? []
+  } catch {
+    messages.value = []
+  }
+  await nextTick()
+  scrollBottom()
+}
+
+function scrollBottom() {
+  if (listBox.value) listBox.value.scrollTop = listBox.value.scrollHeight
+}
+
+async function send() {
+  const content = input.value.trim()
+  if (!content) return
+  if (!activePeer.value) return
+  sending.value = true
+  try {
+    const msg = await api.message.send({ to_uid: activePeer.value, content, content_type: 1 })
+    messages.value.push(msg)
+    input.value = ''
+    scrollBottom()
+    loadConvs()
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : '发送失败')
+  } finally {
+    sending.value = false
+  }
+}
+
+function formatTime(t: string) {
+  const d = new Date(t)
+  const now = new Date()
+  if (d.toDateString() === now.toDateString()) {
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+  return `${d.getMonth() + 1}/${d.getDate()}`
+}
+
+onMounted(() => {
+  loadConvs()
+  connectWs()
+  const peer = route.query.peer as string | undefined
+  if (peer) {
+    openPeer(peer)
+  }
+})
+
+// 路由 peer 参数变化时切换会话
+watch(
+  () => route.query.peer,
+  (p) => {
+    if (p && String(p) !== activePeer.value) openPeer(String(p))
+  },
+)
+
+onBeforeUnmount(() => {
+  ws?.close()
+  ws = null
+})
+</script>
+
+<template>
+  <div class="msg-wrap">
+    <!-- 会话列表 -->
+    <div class="msg-convs">
+      <div class="msg-convs__head">
+        私信
+      </div>
+      <el-empty
+        v-if="convs.length === 0"
+        description="暂无会话"
+        :image-size="60"
+      />
+      <div
+        v-for="c in convs"
+        :key="c.peer_id"
+        class="msg-conv"
+        :class="{ 'is-active': activePeer === c.peer_id }"
+        @click="openPeer(c.peer_id)"
+      >
+        <img
+          :src="c.avatar || defaultAvatar"
+          alt=""
+          class="msg-conv__avatar"
+        >
+        <div class="msg-conv__main">
+          <div class="msg-conv__top">
+            <span class="msg-conv__name">{{ c.nickname }}</span>
+            <span class="msg-conv__time">{{ formatTime(c.last_at) }}</span>
+          </div>
+          <div class="msg-conv__bottom">
+            <span class="msg-conv__preview">{{ c.last_content }}</span>
+            <span
+              v-if="c.unread > 0"
+              class="msg-conv__badge"
+            >{{ c.unread > 99 ? '99+' : c.unread }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 聊天窗 -->
+    <div class="msg-chat">
+      <div
+        v-if="!activePeer"
+        class="msg-chat__empty"
+      >
+        选择会话开始聊天
+      </div>
+      <template v-else>
+        <div class="msg-chat__head">
+          <span
+            class="msg-chat__name"
+            @click="router.push(`/space/${activePeer}`)"
+          >{{ activeConv?.nickname ?? '对方' }}</span>
+        </div>
+        <div
+          ref="listBox"
+          class="msg-chat__list"
+        >
+          <div
+            v-for="m in messages"
+            :key="m.id"
+            class="msg-bubble"
+            :class="m.mine ? 'is-mine' : 'is-peer'"
+          >
+            <img
+              :src="m.mine ? (userStore.profile?.avatar || defaultAvatar) : (activeConv?.avatar || defaultAvatar)"
+              alt=""
+              class="msg-bubble__avatar"
+            >
+            <div class="msg-bubble__body">
+              <p
+                v-if="m.content_type === 2"
+                class="msg-bubble__img"
+              >
+                <img
+                  :src="m.content"
+                  alt="图片消息"
+                >
+              </p>
+              <p
+                v-else
+                class="msg-bubble__text"
+              >
+                {{ m.content }}
+              </p>
+              <span class="msg-bubble__time">{{ formatTime(m.created_at) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="msg-chat__input">
+          <el-input
+            v-model="input"
+            type="textarea"
+            :rows="2"
+            maxlength="500"
+            placeholder="输入消息（≤500 字，敏感内容将被拦截）"
+            @keydown.enter.exact.prevent="send"
+          />
+          <el-button
+            type="primary"
+            :loading="sending"
+            @click="send"
+          >
+            发送
+          </el-button>
+        </div>
+      </template>
+    </div>
+  </div>
+</template>
+
+<style scoped lang="scss">
+@use '@/styles/variables' as v;
+
+.msg-wrap {
+  display: flex;
+  height: calc(100vh - 120px);
+  gap: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.msg-convs {
+  width: 280px;
+  flex-shrink: 0;
+  background: v.$surface;
+  border-radius: v.$radius-lg;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.msg-convs__head {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 4px 8px 12px;
+}
+
+.msg-conv {
+  display: flex;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: v.$radius-md;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f6f7f8;
+  }
+
+  &.is-active {
+    background: #{v.$primary}14;
+  }
+}
+
+.msg-conv__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.msg-conv__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.msg-conv__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.msg-conv__name {
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.msg-conv__time {
+  font-size: 11px;
+  color: v.$text-3;
+  flex-shrink: 0;
+}
+
+.msg-conv__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.msg-conv__preview {
+  font-size: 12px;
+  color: v.$text-2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.msg-conv__badge {
+  background: v.$primary;
+  color: #fff;
+  font-size: 11px;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 8px;
+  text-align: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.msg-chat {
+  flex: 1;
+  background: v.$surface;
+  border-radius: v.$radius-lg;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.msg-chat__empty {
+  margin: auto;
+  color: v.$text-3;
+  font-size: 14px;
+}
+
+.msg-chat__head {
+  padding: 14px 18px;
+  border-bottom: 1px solid v.$border;
+}
+
+.msg-chat__name {
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    color: v.$primary;
+  }
+}
+
+.msg-chat__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.msg-bubble {
+  display: flex;
+  gap: 8px;
+  max-width: 70%;
+
+  &.is-mine {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+}
+
+.msg-bubble__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.msg-bubble__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.msg-bubble__text {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  background: #f6f7f8;
+  word-break: break-all;
+}
+
+.is-mine .msg-bubble__text {
+  background: v.$primary;
+  color: #fff;
+}
+
+.msg-bubble__img img {
+  max-width: 180px;
+  border-radius: 10px;
+  display: block;
+}
+
+.msg-bubble__time {
+  font-size: 11px;
+  color: v.$text-3;
+}
+
+.is-mine .msg-bubble__time {
+  text-align: right;
+}
+
+.msg-chat__input {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 12px 18px;
+  border-top: 1px solid v.$border;
+}
+</style>
