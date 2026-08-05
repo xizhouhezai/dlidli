@@ -94,6 +94,9 @@ var builtinPermissions = []Permission{
 	// 运营 - Banner
 	{Code: "banner:view", Name: "Banner 配置", Type: "menu", Path: "/banners", Icon: "i-mingcute-photo-album-line", Sort: 13},
 	{Code: "banner:edit", Name: "增删改 Banner", Type: "button", Parent: "banner:view"},
+	// 运营 - A/B 实验
+	{Code: "experiment:view", Name: "A/B 实验", Type: "menu", Path: "/experiments", Icon: "i-mingcute-flask-line", Sort: 15},
+	{Code: "experiment:edit", Name: "增删改实验", Type: "button", Parent: "experiment:view"},
 }
 
 // 内置角色定义（code → 权限码集合；super 特殊，拥有全部）。
@@ -115,8 +118,9 @@ var builtinRoles = []builtinRole{
 	{Code: "moderator", Name: "用户治理", Remark: "用户查询与处罚、举报处理", Perms: []string{
 		"dashboard:view", "user:view", "user:punish", "report:view", "report:handle",
 	}},
-	{Code: "operator", Name: "运营", Remark: "运营配置（分区、Banner 等）", Perms: []string{
+	{Code: "operator", Name: "运营", Remark: "运营配置（分区、Banner、A/B 实验等）", Perms: []string{
 		"dashboard:view", "category:view", "category:edit", "banner:view", "banner:edit",
+		"experiment:view", "experiment:edit",
 	}},
 	{Code: "analyst", Name: "数据分析", Remark: "数据大盘只读（预留）", Perms: []string{
 		"dashboard:view",

@@ -8,6 +8,7 @@ import (
 
 	"github.com/dlidli/server/internal/infra"
 	"github.com/dlidli/server/internal/middleware"
+	"github.com/dlidli/server/internal/module/abtest"
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/module/admin"
 	"github.com/dlidli/server/internal/module/banner"
@@ -134,6 +135,12 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// 推荐系统（M3-REC）：热度榜 + 混合召回 + 行为采集 + 负反馈 + 推荐开关
 		recommendSvc := recommend.NewService(recommend.NewRepo(res.DB), videoSvc, res.Redis, log)
 		recommend.NewHandler(recommendSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
+
+		// A/B 实验（M3-OPS-03）：分流框架 + 推荐策略变体接入
+		abtestSvc := abtest.NewService(abtest.NewRepo(res.DB))
+		recommendSvc.SetABTest(abtestSvc)
+		abtest.NewHandler(abtestSvc).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret),
+			func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) })
 
 		// 创作者中心（M3-CRT）：数据看板 + 激励结算
 		creatorSvc := creator.NewService(creator.NewRepo(res.DB), log)
