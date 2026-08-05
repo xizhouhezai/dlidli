@@ -69,6 +69,21 @@ func (r *Repo) RecentWatchedIDs(uid int64, limit int) ([]int64, error) {
 	return ids, err
 }
 
+// SimilarByVideos ItemCF 相似视频召回：给定视频的相似视频（按分数降序去重，限流）。
+func (r *Repo) SimilarByVideos(videoIDs []int64, limit int) ([]int64, error) {
+	if len(videoIDs) == 0 {
+		return []int64{}, nil
+	}
+	var ids []int64
+	err := r.db.Table("video_similar").
+		Select("DISTINCT similar_video_id").
+		Where("video_id IN ?", videoIDs).
+		Order("score DESC").
+		Limit(limit).
+		Pluck("similar_video_id", &ids).Error
+	return ids, err
+}
+
 // DislikesOf 用户负反馈（内容/UP主/分区）。
 func (r *Repo) DislikesOf(uid int64) ([]UserDislike, error) {
 	var list []UserDislike
