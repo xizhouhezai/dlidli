@@ -520,7 +520,7 @@ const stageText: Record<UploadProgress['stage'], string> = {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 @use '@/styles/variables' as v;
 
 .upload-wrap {
