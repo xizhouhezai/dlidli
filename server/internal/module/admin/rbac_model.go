@@ -58,6 +58,9 @@ var builtinPermissions = []Permission{
 	// 审核
 	{Code: "review:view", Name: "审核工作台", Type: "menu", Path: "/review", Icon: "i-mingcute-task-2-line", Sort: 2},
 	{Code: "review:approve", Name: "通过/驳回稿件", Type: "button", Parent: "review:view"},
+	// 稿件管理（内容治理）
+	{Code: "video:view", Name: "稿件管理", Type: "menu", Path: "/videos", Icon: "i-mingcute-play-circle-line", Sort: 14},
+	{Code: "video:manage", Name: "下架/恢复/删除稿件", Type: "button", Parent: "video:view"},
 	// 敏感词
 	{Code: "sensitive:view", Name: "敏感词库", Type: "menu", Path: "/sensitive-words", Icon: "i-mingcute-shield-line", Sort: 3},
 	{Code: "sensitive:edit", Name: "增删敏感词", Type: "button", Parent: "sensitive:view"},
@@ -103,11 +106,11 @@ type builtinRole struct {
 
 var builtinRoles = []builtinRole{
 	{Code: SuperRoleCode, Name: "超级管理员", Perms: nil, Remark: "拥有全部权限，含账号/角色/权限管理"},
-	{Code: "review_lead", Name: "审核主管", Remark: "审核 + 敏感词库", Perms: []string{
-		"dashboard:view", "review:view", "review:approve", "sensitive:view", "sensitive:edit",
+	{Code: "review_lead", Name: "审核主管", Remark: "审核 + 稿件管理 + 敏感词库", Perms: []string{
+		"dashboard:view", "review:view", "review:approve", "video:view", "video:manage", "sensitive:view", "sensitive:edit",
 	}},
 	{Code: "reviewer", Name: "审核员", Remark: "仅稿件审核", Perms: []string{
-		"dashboard:view", "review:view", "review:approve",
+		"dashboard:view", "review:view", "review:approve", "video:view",
 	}},
 	{Code: "moderator", Name: "用户治理", Remark: "用户查询与处罚、举报处理", Perms: []string{
 		"dashboard:view", "user:view", "user:punish", "report:view", "report:handle",

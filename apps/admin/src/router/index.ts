@@ -30,6 +30,12 @@ const router = createRouter({
           meta: { title: '审核工作台', requiresAuth: true },
         },
         {
+          path: 'videos',
+          name: 'videos',
+          component: () => import('@/views/content/VideosManageView.vue'),
+          meta: { title: '稿件管理', requiresAuth: true },
+        },
+        {
           path: 'sensitive-words',
           name: 'sensitive-words',
           component: () => import('@/views/content/SensitiveWordsView.vue'),

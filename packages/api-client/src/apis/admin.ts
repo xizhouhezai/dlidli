@@ -190,6 +190,9 @@ export interface SaveCategoryPayload {
   status: number
 }
 
+/** 管理端稿件项（复用 ReviewItem 结构：Card + Description） */
+export type AdminVideoItem = ReviewItem
+
 /** 数据大盘（M3-OPS-02） */
 export interface DashboardStats {
   today: { dau: number, new_users: number, uploads: number, views: number }
@@ -206,6 +209,18 @@ export function createAdminApi(http: HttpClient) {
 
     /** 数据大盘（今日实时 + 近 7 日趋势 + 审核时效） */
     dashboardStats: () => http.get<DashboardStats>('/api/v1/admin/dashboard/stats'),
+
+    /** 稿件管理列表（全状态 + 状态/分区/关键词筛选） */
+    videoList: (params: { status?: number, category_id?: number, keyword?: string, page?: number, page_size?: number }) =>
+      http.get<{ list: AdminVideoItem[]; total: number }>('/api/v1/admin/videos', params),
+
+    /** 稿件下架/恢复（4 发布 / 6 锁定） */
+    updateVideoStatus: (bvid: string, status: number) =>
+      http.put<null>(`/api/v1/admin/videos/${bvid}/status`, { status }),
+
+    /** 删除稿件（软删除） */
+    deleteVideo: (bvid: string) =>
+      http.delete<null>(`/api/v1/admin/videos/${bvid}`),
 
     reviewList: (page = 1, pageSize = 20) =>
       http.get<{ list: ReviewItem[]; total: number }>('/api/v1/admin/videos/review', {
