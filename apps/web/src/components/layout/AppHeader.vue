@@ -38,10 +38,13 @@ async function pollUnread() {
 onMounted(() => {
   pollUnread()
   unreadTimer = setInterval(pollUnread, 60_000)
+  // 私信实时收消息时刷新头部未读（MessagesView 派发）
+  window.addEventListener('msg-unread-changed', pollUnread)
 })
 
 onUnmounted(() => {
   if (unreadTimer) clearInterval(unreadTimer)
+  window.removeEventListener('msg-unread-changed', pollUnread)
 })
 
 watch(
