@@ -110,6 +110,14 @@ func (s *Service) Recommend(ctx context.Context, uid int64, page, size int) ([]v
 				}
 			}
 		}
+		// ItemCF 相似视频召回（M3-REC-03）：最近观看 2 个视频的相似视频，提升个性化
+		if watched, err := s.repo.RecentWatchedIDs(uid, 2); err == nil && len(watched) > 0 {
+			if sims, err := s.repo.SimilarByVideos(watched, 12); err == nil {
+				for _, id := range sims {
+					cands = append(cands, candidate{id: id, cat: s.catOf(ctx, id), up: s.upOf(ctx, id)})
+				}
+			}
+		}
 	}
 	// 全站热度兜底（个性化时也混入，保证召回量与多样性）
 	hotAll := s.hotIDsCached(ctx, hotCacheKey(0), 0)
