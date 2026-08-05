@@ -144,6 +144,7 @@ type Card struct {
 	Duration    int        `json:"duration"`
 	Status      int8       `json:"status"`
 	RiskLevel   int8       `json:"risk_level"` // 0低 1中 2高
+	CategoryID  int        `json:"category_id"`
 	PublishedAt *time.Time `json:"published_at"`
 	CreatedAt   time.Time  `json:"created_at"`
 	Owner       OwnerBrief `json:"owner"`

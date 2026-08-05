@@ -285,6 +285,27 @@ func (r *Repo) ListByStatus(status int8, page, size int) ([]Video, int64, error)
 	return list, total, err
 }
 
+// ListAdmin 管理端全状态列表（稿件管理用）：可选状态/分区/标题关键词筛选，排除已删除，新→旧。
+func (r *Repo) ListAdmin(categoryID int, status int8, keyword string, page, size int) ([]Video, int64, error) {
+	q := r.db.Model(&Video{}).Where("status <> ?", StatusDeleted)
+	if status > 0 {
+		q = q.Where("status = ?", status)
+	}
+	if categoryID > 0 {
+		q = q.Where("category_id = ?", categoryID)
+	}
+	if keyword != "" {
+		q = q.Where("title LIKE ?", "%"+keyword+"%")
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var list []Video
+	err := q.Order("id DESC").Offset((page - 1) * size).Limit(size).Find(&list).Error
+	return list, total, err
+}
+
 // SoftDelete 软删除（乐观锁）。
 func (r *Repo) SoftDelete(v *Video) error {
 	res := r.db.Model(&Video{}).

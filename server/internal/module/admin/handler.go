@@ -37,6 +37,10 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, adminAuth gin.HandlerFunc)
 
 			authed.GET("/videos/review", perm("review:view"), h.reviewList)
 			authed.POST("/videos/:bvid/review", perm("review:approve"), h.review)
+			// 稿件管理（全状态列表 + 下架/恢复/删除）
+			authed.GET("/videos", perm("video:view"), h.videoList)
+			authed.PUT("/videos/:bvid/status", perm("video:manage"), h.setVideoStatus)
+			authed.DELETE("/videos/:bvid", perm("video:manage"), h.deleteVideo)
 			authed.GET("/sensitive-words", perm("sensitive:view"), h.listWords)
 			authed.POST("/sensitive-words", perm("sensitive:edit"), h.addWord)
 			authed.DELETE("/sensitive-words/:id", perm("sensitive:edit"), h.deleteWord)
@@ -116,6 +120,78 @@ func (h *Handler) dashboardStats(c *gin.Context) {
 		return
 	}
 	response.OK(c, stats)
+}
+
+// @Summary  稿件管理列表（全状态 + 筛选）
+// @Tags     管理后台-稿件
+// @Produce  json
+// @Security BearerAuth
+// @Param    status query int false "状态（0全部 4已发布 6已锁定等）"
+// @Param    category_id query int false "分区"
+// @Param    keyword query string false "标题关键词"
+// @Param    page query int false "页码（默认1）"
+// @Param    page_size query int false "每页条数（默认10）"
+// @Success  200 {object} response.Body
+// @Router   /admin/videos [get]
+func (h *Handler) videoList(c *gin.Context) {
+	categoryID, _ := strconv.Atoi(c.DefaultQuery("category_id", "0"))
+	status, _ := strconv.Atoi(c.DefaultQuery("status", "0"))
+	keyword := c.Query("keyword")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 50 {
+		size = 10
+	}
+	items, total, err := h.svc.VideoList(c.Request.Context(), categoryID, int8(status), keyword, page, size)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"list": items, "total": total})
+}
+
+// @Summary  稿件下架/恢复（已发布 ↔ 已锁定）
+// @Tags     管理后台-稿件
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    bvid path string true "稿件 bvid"
+// @Param    body body object true "{status: 4 恢复 / 6 下架}"
+// @Success  200 {object} response.Body
+// @Router   /admin/videos/{bvid}/status [put]
+func (h *Handler) setVideoStatus(c *gin.Context) {
+	var req struct {
+		Status int8 `json:"status" binding:"required,oneof=4 6"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	adminID := c.GetInt64(middleware.CtxAdminID)
+	if err := h.svc.SetVideoStatus(c.Request.Context(), adminID, c.Param("bvid"), req.Status); err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, nil)
+}
+
+// @Summary  删除稿件（软删除）
+// @Tags     管理后台-稿件
+// @Produce  json
+// @Security BearerAuth
+// @Param    bvid path string true "稿件 bvid"
+// @Success  200 {object} response.Body
+// @Router   /admin/videos/{bvid} [delete]
+func (h *Handler) deleteVideo(c *gin.Context) {
+	adminID := c.GetInt64(middleware.CtxAdminID)
+	if err := h.svc.DeleteVideo(c.Request.Context(), adminID, c.Param("bvid")); err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, nil)
 }
 
 // @Summary  待审稿件队列

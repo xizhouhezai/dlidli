@@ -388,6 +388,49 @@ func (s *Service) AdminDelete(_ context.Context, bv string) error {
 	return s.repo.SoftDelete(v)
 }
 
+// AdminList 管理端稿件列表（全状态 + 状态/分区/关键词筛选）。
+func (s *Service) AdminList(ctx context.Context, categoryID int, status int8, keyword string, page, size int) ([]ReviewItem, int64, error) {
+	list, total, err := s.repo.ListAdmin(categoryID, status, keyword, page, size)
+	if err != nil {
+		return nil, 0, err
+	}
+	cards, err := s.cards(ctx, list)
+	if err != nil {
+		return nil, 0, err
+	}
+	items := make([]ReviewItem, 0, len(list))
+	for i, v := range list {
+		items = append(items, ReviewItem{Card: cards[i], Description: v.Description})
+	}
+	return items, total, nil
+}
+
+// AdminSetStatus 稿件管理定档：已发布 ↔ 已锁定（下架/恢复）。
+func (s *Service) AdminSetStatus(_ context.Context, bv string, status int8) error {
+	if status != StatusPublished && status != StatusLocked {
+		return errcode.ErrInvalidParams.WithMsg("仅支持下架（锁定）或恢复（发布）")
+	}
+	v, err := s.repo.FindByBvid(bv)
+	if err != nil {
+		return err
+	}
+	if v == nil || v.Status == StatusDeleted {
+		return errcode.ErrNotFound.WithMsg("稿件不存在或已删除")
+	}
+	// 仅允许 已发布 ↔ 已锁定 互转
+	if v.Status != StatusPublished && v.Status != StatusLocked {
+		return errcode.ErrInvalidParams.WithMsg("仅已发布/已锁定稿件可操作")
+	}
+	if v.Status == status {
+		return nil
+	}
+	fields := map[string]any{"status": status}
+	if status == StatusPublished {
+		fields["published_at"] = time.Now()
+	}
+	return s.repo.UpdateVideoFields(v.ID, fields)
+}
+
 // ---- 观看进度（跨端续播）----
 
 const progressTTL = 90 * 24 * time.Hour
@@ -599,6 +642,7 @@ func (s *Service) card(v *Video, st Stat, owner account.Profile) Card {
 		Cover:       v.Cover,
 		Duration:    v.Duration,
 		Status:      v.Status,
+		CategoryID:  v.CategoryID,
 		PublishedAt: v.PublishedAt,
 		CreatedAt:   v.CreatedAt,
 		Owner:       OwnerBrief{ID: owner.ID, Nickname: owner.Nickname, Avatar: owner.Avatar},

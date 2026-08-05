@@ -29,7 +29,7 @@ interface MenuGroup { title: string, items: MenuItem[] }
 // 权限码 → 分组标题 映射
 function groupOf(code: string): string {
   if (code.startsWith('dashboard')) return '概览'
-  if (code.startsWith('review') || code.startsWith('sensitive')) return '内容审核'
+  if (code.startsWith('review') || code.startsWith('sensitive') || code.startsWith('video')) return '内容审核'
   if (code.startsWith('user')) return '用户治理'
   if (code.startsWith('category') || code.startsWith('banner')) return '运营管理'
   if (code.startsWith('admin') || code.startsWith('role')) return '系统管理'
@@ -42,6 +42,7 @@ const groupOrder = ['概览', '内容审核', '用户治理', '运营管理', '�
 const pathToName: Record<string, string> = {
   '/dashboard': 'dashboard',
   '/review': 'review',
+  '/videos': 'videos',
   '/sensitive-words': 'sensitive-words',
   '/users': 'users',
   '/categories': 'categories',

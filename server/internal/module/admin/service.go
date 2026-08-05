@@ -147,6 +147,43 @@ func (s *Service) ReviewList(ctx context.Context, page, size int) ([]video.Revie
 	return s.videoSvc.ReviewList(ctx, page, size)
 }
 
+// VideoList 稿件管理列表（全状态 + 筛选）。
+func (s *Service) VideoList(ctx context.Context, categoryID int, status int8, keyword string, page, size int) ([]video.ReviewItem, int64, error) {
+	return s.videoSvc.AdminList(ctx, categoryID, status, keyword, page, size)
+}
+
+// SetVideoStatus 稿件下架/恢复并留痕。
+func (s *Service) SetVideoStatus(ctx context.Context, adminID int64, bv string, status int8) error {
+	if err := s.videoSvc.AdminSetStatus(ctx, bv, status); err != nil {
+		return err
+	}
+	action := "video_offline"
+	if status == video.StatusPublished {
+		action = "video_restore"
+	}
+	oid, _ := strconv.ParseInt(bv[2:], 36, 64)
+	if err := s.repo.AddAudit(&AuditLog{
+		AdminID: adminID, Action: action, ObjType: "video", Oid: oid, Detail: "bvid=" + bv,
+	}); err != nil {
+		s.log.Warn("稿件定档审计留痕失败", zap.String("bvid", bv), zap.Error(err))
+	}
+	return nil
+}
+
+// DeleteVideo 删除稿件并留痕。
+func (s *Service) DeleteVideo(ctx context.Context, adminID int64, bv string) error {
+	if err := s.videoSvc.AdminDelete(ctx, bv); err != nil {
+		return err
+	}
+	oid, _ := strconv.ParseInt(bv[2:], 36, 64)
+	if err := s.repo.AddAudit(&AuditLog{
+		AdminID: adminID, Action: "video_delete", ObjType: "video", Oid: oid, Detail: "bvid=" + bv,
+	}); err != nil {
+		s.log.Warn("稿件删除审计留痕失败", zap.String("bvid", bv), zap.Error(err))
+	}
+	return nil
+}
+
 // Review 审核稿件并留痕。
 func (s *Service) Review(ctx context.Context, adminID int64, bv string, req *ReviewReq) error {
 	if err := s.videoSvc.Review(ctx, bv, req.Approve, req.Reason); err != nil {
