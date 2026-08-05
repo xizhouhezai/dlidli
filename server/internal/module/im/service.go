@@ -67,7 +67,7 @@ func (s *Service) Send(ctx context.Context, uid int64, req *SendReq) (*MessageIt
 			return nil, errcode.ErrInvalidParams.WithMsg("图片消息需为图片 URL")
 		}
 	}
-	// 发送限制（PRD MSG-11）：未互关每天最多 1 条
+	// 发送限制（PRD MSG-11）：未互关每天最多 1 条；提示语区分关注方向
 	mutual, err := s.relationSvc.IsMutual(ctx, uid, toUID)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,15 @@ func (s *Service) Send(ctx context.Context, uid int64, req *SendReq) (*MessageIt
 			return nil, err
 		}
 		if cnt >= dailyLimitUnfollow {
-			return nil, errcode.ErrInvalidParams.WithMsg("对方未关注你，今日私信已达上限（互关后不限）")
+			// 我已关注对方但对方未回关 → 提示对方；否则提示我先关注对方
+			iFollow, err := s.relationSvc.IsFollowing(ctx, uid, toUID)
+			if err != nil {
+				return nil, err
+			}
+			if iFollow {
+				return nil, errcode.ErrInvalidParams.WithMsg("对方未关注你，今日私信已达上限（互关后不限）")
+			}
+			return nil, errcode.ErrInvalidParams.WithMsg("你未关注对方，今日私信已达上限（互关后不限）")
 		}
 	}
 

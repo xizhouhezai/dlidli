@@ -131,6 +131,11 @@ func (s *Service) IsMutual(ctx context.Context, a, b int64) (bool, error) {
 	return s.repo.IsFollowing(b, a)
 }
 
+// IsFollowing 是否已关注对方（私信提示语区分关注方向用）。
+func (s *Service) IsFollowing(_ context.Context, a, b int64) (bool, error) {
+	return s.repo.IsFollowing(a, b)
+}
+
 func (s *Service) Toggle(ctx context.Context, uid, target int64) (bool, error) {
 	if uid == target {
 		return false, errcode.ErrFollowSelf
