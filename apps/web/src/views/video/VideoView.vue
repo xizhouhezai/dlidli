@@ -117,6 +117,16 @@ function dmSeekTo(timeMs: number) {
   video.currentTime = timeMs / 1000
 }
 
+// 弹幕文字颜色：浅色底上白/近白弹幕映射为深灰，保证可读（彩色保留）
+function dmTextColor(color: number): string {
+  const hex = (color || 0xffffff).toString(16).padStart(6, '0')
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b
+  return lum > 200 ? '#333' : '#' + hex
+}
+
 // 弹幕设置面板
 const dmSettingsVisible = ref(false)
 const AREA_OPTIONS: Array<{ label: string; value: DanmakuSettings['area'] }> = [
@@ -963,7 +973,7 @@ onBeforeUnmount(() => {
             <span class="dm-panel__time">{{ formatDuration(d.time_ms / 1000) }}</span>
             <span
               class="dm-panel__text"
-              :style="{ color: '#' + (d.color || 0xffffff).toString(16).padStart(6, '0') }"
+              :style="{ color: dmTextColor(d.color) }"
             >{{ d.content }}</span>
           </div>
           <div
@@ -1115,6 +1125,9 @@ onBeforeUnmount(() => {
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 20px;
   align-items: start;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
 }
 
 @media (max-width: 1000px) {
@@ -1525,10 +1538,11 @@ onBeforeUnmount(() => {
   color: var(--dli-text-3);
 }
 
-/* 弹幕列表面板（内嵌） */
+/* 弹幕列表面板（内嵌，浅色底；白色弹幕由 dmTextColor 映射为深色保证可读） */
 .dm-panel {
   max-height: 280px;
   overflow-y: auto;
+  background: #f8f9fa;
   border: 1px solid var(--dli-border);
   border-radius: 8px;
   padding: 4px 6px;
@@ -1541,11 +1555,12 @@ onBeforeUnmount(() => {
   padding: 6px 8px;
   border-radius: 6px;
   font-size: 12.5px;
+  color: var(--dli-text-1);
   cursor: pointer;
   transition: background 0.15s;
 
   &:hover {
-    background: #f6f7f8;
+    background: #eef0f1;
   }
 }
 
