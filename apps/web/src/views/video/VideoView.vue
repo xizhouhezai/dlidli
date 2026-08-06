@@ -470,6 +470,8 @@ async function load(bvid: string) {
     // 多P：默认播第一 P 的流；单P：详情 streams
     const sources = partList.value[0]?.streams?.length ? partList.value[0].streams : detail.value.streams
     p?.setSources(sources) // 默认最高画质（streams 按 quality 降序，HLS 优先）
+    // 右侧弹幕面板：进入即加载最近弹幕（失败不影响播放）
+    loadDmList(true).catch(() => {})
     // 绑定快捷键（首次）
     if (!unbindKeys && videoEl.value) {
       unbindKeys = bindKeyboard(videoEl.value, { container: playerBox.value ?? null })
@@ -630,23 +632,6 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <!-- 分P列表（多P投稿 PRD VID-05） -->
-      <div
-        v-if="partList.length > 0"
-        class="part-list"
-      >
-        <div
-          v-for="(p, i) in partList"
-          :key="p.index"
-          class="part-list__item"
-          :class="{ 'is-active': currentPart === i }"
-          @click="switchPart(i)"
-        >
-          <span class="part-list__idx">P{{ i + 1 }}</span>
-          <span class="part-list__title">{{ p.title || `分P${i + 1}` }}</span>
-          <span class="part-list__dur">{{ p.duration ? formatDuration(p.duration) : '' }}</span>
-        </div>
-      </div>
       <!-- 控制行：弹幕开关（图标 toggle）+ 清晰度 -->
       <div class="play-controls">
         <span
@@ -944,8 +929,107 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <!-- 右：相关推荐 -->
+    <!-- 右：UP 主信息 / 分P / 弹幕列表 / 相关推荐（B 站风格侧栏） -->
     <aside class="play-side">
+      <!-- UP 主卡片 -->
+      <div class="up-card">
+        <el-avatar
+          :size="44"
+          :src="detail.owner.avatar || defaultAvatar"
+          class="up-card__avatar is-clickable"
+          @click="$router.push(`/space/${detail.owner.id}`)"
+        >
+          {{ detail.owner.nickname?.slice(0, 1) ?? 'U' }}
+        </el-avatar>
+        <div class="up-card__info">
+          <p
+            class="up-card__name is-clickable"
+            @click="$router.push(`/space/${detail.owner.id}`)"
+          >
+            {{ detail.owner.nickname }}
+          </p>
+          <p class="up-card__sign">
+            {{ formatCount(followerCnt) }} 粉丝
+          </p>
+        </div>
+        <el-button
+          v-if="userStore.profile?.id !== detail.owner.id"
+          round
+          class="up-card__follow"
+          :class="{ 'is-following': following }"
+          :loading="followPending"
+          @click="toggleFollow"
+        >
+          {{ following ? '已关注' : '+ 关注' }}
+        </el-button>
+      </div>
+
+      <!-- 分P列表（竖排，多P投稿 PRD VID-05） -->
+      <div
+        v-if="partList.length > 0"
+        class="side-block"
+      >
+        <p class="side-block__title">
+          分P列表
+        </p>
+        <div
+          v-for="(p, i) in partList"
+          :key="p.index"
+          class="part-list__item"
+          :class="{ 'is-active': currentPart === i }"
+          @click="switchPart(i)"
+        >
+          <span class="part-list__idx">P{{ i + 1 }}</span>
+          <span class="part-list__title">{{ p.title || `分P${i + 1}` }}</span>
+          <span class="part-list__dur">{{ p.duration ? formatDuration(p.duration) : '' }}</span>
+        </div>
+      </div>
+
+      <!-- 弹幕列表面板（内嵌，点击跳转进度） -->
+      <div class="side-block">
+        <p class="side-block__title">
+          弹幕列表
+          <span class="side-block__count">{{ dmListTotal }}</span>
+        </p>
+        <div
+          v-if="dmList.length === 0"
+          class="dm-panel__empty"
+        >
+          还没有弹幕，来发第一条吧
+        </div>
+        <div
+          v-else
+          class="dm-panel"
+        >
+          <div
+            v-for="d in dmList"
+            :key="d.id"
+            class="dm-panel__item"
+            @click="dmSeekTo(d.time_ms)"
+          >
+            <span class="dm-panel__time">{{ formatDuration(d.time_ms / 1000) }}</span>
+            <span
+              class="dm-panel__text"
+              :style="{ color: '#' + (d.color || 0xffffff).toString(16).padStart(6, '0') }"
+            >{{ d.content }}</span>
+          </div>
+          <div
+            v-if="dmList.length < dmListTotal"
+            class="text-center py-1"
+          >
+            <el-button
+              link
+              size="small"
+              :loading="dmListLoading"
+              @click="dmListPage++; loadDmList()"
+            >
+              加载更多（{{ dmList.length }}/{{ dmListTotal }}）
+            </el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 相关推荐 -->
       <p class="side-title">
         相关推荐
       </p>
@@ -1115,8 +1199,9 @@ onBeforeUnmount(() => {
 
 .play-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
 }
 
 @media (max-width: 1000px) {
@@ -1268,25 +1353,20 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
-/* 分P列表（多P投稿） */
-.part-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 10px 0 4px;
-}
-
+/* 分P列表（竖排，侧栏内） */
 .part-list__item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 14px;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
   border: 1px solid var(--dli-border);
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--dli-text-2);
   cursor: pointer;
   transition: all 0.15s;
+  margin-bottom: 6px;
 
   &:hover {
     color: var(--dli-primary);
@@ -1302,10 +1382,12 @@ onBeforeUnmount(() => {
 
 .part-list__idx {
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .part-list__title {
-  max-width: 260px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1314,6 +1396,7 @@ onBeforeUnmount(() => {
 .part-list__dur {
   color: var(--dli-text-3);
   font-size: 11.5px;
+  flex-shrink: 0;
 }
 
 .part-list__item.is-active .part-list__dur {
@@ -1541,15 +1624,83 @@ onBeforeUnmount(() => {
   }
 }
 
-/* UP 主卡片 */
+/* 侧栏信息块（分P / 弹幕列表） */
+.side-block {
+  margin-top: 16px;
+}
+
+.side-block__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.side-block__count {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--dli-text-3);
+}
+
+/* 弹幕列表面板（内嵌） */
+.dm-panel {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--dli-border);
+  border-radius: 8px;
+  padding: 4px 6px;
+}
+
+.dm-panel__item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f6f7f8;
+  }
+}
+
+.dm-panel__time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--dli-text-3);
+  min-width: 34px;
+}
+
+.dm-panel__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dm-panel__empty {
+  padding: 14px 0;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--dli-text-3);
+  border: 1px dashed var(--dli-border);
+  border-radius: 8px;
+}
+
+/* UP 主卡片（侧栏置顶） */
 .up-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px;
   background: #fff;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  border: 1px solid var(--dli-border);
+  border-radius: 10px;
 }
 
 .up-card__avatar {
