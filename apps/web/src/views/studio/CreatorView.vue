@@ -139,12 +139,17 @@ async function loadVideos(reset = false) {
   videosLoading.value = true
   try {
     const res = await api.creator.videos(videosPage.value, 10)
-    videos.value = reset ? (res.list ?? []) : [...videos.value, ...(res.list ?? [])]
+    videos.value = res.list ?? []
     videosTotal.value = res.total
   } finally {
     videosLoading.value = false
     if (reset) videosLoaded.value = true
   }
+}
+
+function onVideosPage(page: number) {
+  videosPage.value = page
+  loadVideos()
 }
 
 async function loadSettles(reset = false) {
@@ -155,12 +160,17 @@ async function loadSettles(reset = false) {
   settlesLoading.value = true
   try {
     const res = await api.creator.settlements(settlesPage.value, 10)
-    settles.value = reset ? (res.list ?? []) : [...settles.value, ...(res.list ?? [])]
+    settles.value = res.list ?? []
     settlesTotal.value = res.total
   } finally {
     settlesLoading.value = false
     if (reset) settlesLoaded.value = true
   }
+}
+
+function onSettlesPage(page: number) {
+  settlesPage.value = page
+  loadSettles()
 }
 
 type TabKey = 'videos' | 'settlements'
@@ -388,16 +398,17 @@ onBeforeUnmount(() => {
               </el-table-column>
             </el-table>
             <div
-              v-if="videos.length < videosTotal"
+              v-if="videosTotal > 10"
               class="text-center py-2"
             >
-              <el-button
-                link
-                :loading="videosLoading"
-                @click="videosPage++; loadVideos()"
-              >
-                加载更多（{{ videos.length }}/{{ videosTotal }}）
-              </el-button>
+              <el-pagination
+                background
+                layout="prev, pager, next, total"
+                :total="videosTotal"
+                :page-size="10"
+                :current-page="videosPage"
+                @current-change="onVideosPage"
+              />
             </div>
           </div>
 
@@ -442,16 +453,17 @@ onBeforeUnmount(() => {
               </el-table-column>
             </el-table>
             <div
-              v-if="settles.length < settlesTotal"
+              v-if="settlesTotal > 10"
               class="text-center py-2"
             >
-              <el-button
-                link
-                :loading="settlesLoading"
-                @click="settlesPage++; loadSettles()"
-              >
-                加载更多（{{ settles.length }}/{{ settlesTotal }}）
-              </el-button>
+              <el-pagination
+                background
+                layout="prev, pager, next, total"
+                :total="settlesTotal"
+                :page-size="10"
+                :current-page="settlesPage"
+                @current-change="onSettlesPage"
+              />
             </div>
           </div>
         </div>
