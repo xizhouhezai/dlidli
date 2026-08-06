@@ -69,7 +69,10 @@ function renderTrend() {
       trigger: 'axis',
       formatter: (params: unknown) => {
         const p = (params as Array<{ name?: string; value?: number }>)[0]
-        return `${p?.name ?? ''}<br/>${metricLabel.value}：${p?.value ?? 0}`
+        const v = p?.value ?? 0
+        // 收益为分，tooltip 统一显示为 ¥ 元（与累计收益卡片同单位，避免歧义）
+        const text = trendMetric.value === 'earning' ? `¥${(v / 100).toFixed(2)}` : String(v)
+        return `${p?.name ?? ''}<br/>${metricLabel.value}：${text}`
       },
     },
     grid: { left: 40, right: 16, top: 28, bottom: 28 },
