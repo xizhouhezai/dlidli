@@ -206,6 +206,35 @@ export DLIDLI_STORAGE_BASEURL="https://cdn.example.com"
 ./dlidli-api -config configs/prod.yaml       # 常驻
 ```
 
+### 3.1 staging 环境（M0-ENG-13，2026-08-06）
+
+staging 与 dev **完全隔离**（独立端口/库/Redis/上传目录），用于联调演示：
+
+| 维度 | dev | staging |
+| --- | --- | --- |
+| API 端口 | 8000 | 8100 |
+| 数据库 | dlidli | dlidli_staging（脚本自动创建） |
+| Redis db | 0 | 1 |
+| 上传目录 | ./uploads | ./uploads_staging |
+| 审核 | 人工（autoApprove=false） | 自动（autoApprove=true） |
+
+**部署命令**（Windows）：
+
+```powershell
+cd server
+powershell -ExecutionPolicy Bypass -File deploy/staging.ps1
+# 可选：-SkipMigrate 跳过迁移（库已就绪）；-SkipStart 仅构建+验证已有实例
+```
+
+脚本流程：构建二进制 → 迁移独立库 → 启动服务（8100）→ HelloWorld 验证（`/health` 组件健康 + `/api/v1/ping`）→ 环境汇总。
+
+**验证命令**：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8100/health      # {code:0, env:staging, mysql/redis:up}
+Invoke-RestMethod http://127.0.0.1:8100/api/v1/ping   # {code:0, pong:...}
+```
+
 systemd 示例 `/etc/systemd/system/dlidli-api.service`：
 
 ```ini
