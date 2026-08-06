@@ -87,8 +87,7 @@ const DM_COLORS: Array<{ name: string; value: number }> = [
 ]
 const isDmLevel3 = () => (userStore.profile?.level ?? 0) >= 3
 
-// 弹幕列表面板（独立弹窗）
-const dmListVisible = ref(false)
+// 弹幕列表面板（右侧内嵌，M3-DM-01 列表）
 const dmList = ref<DanmakuItem[]>([])
 const dmListTotal = ref(0)
 const dmListPage = ref(1)
@@ -112,16 +111,10 @@ async function loadDmList(reset = false) {
   }
 }
 
-function openDmList() {
-  dmListVisible.value = true
-  loadDmList(true)
-}
-
 function dmSeekTo(timeMs: number) {
   const video = videoEl.value
   if (!video) return
   video.currentTime = timeMs / 1000
-  dmListVisible.value = false
 }
 
 // 弹幕设置面板
@@ -645,13 +638,6 @@ onBeforeUnmount(() => {
         </span>
         <span
           class="dm-tool"
-          title="弹幕列表"
-          @click="openDmList"
-        >
-          <span class="i-mingcute-list-collapse-line" />
-        </span>
-        <span
-          class="dm-tool"
           title="弹幕设置"
           @click="dmSettingsVisible = true"
         >
@@ -858,39 +844,6 @@ onBeforeUnmount(() => {
         </span>
       </div>
 
-      <!-- UP 主卡片 -->
-      <div class="up-card">
-        <el-avatar
-          :size="44"
-          :src="detail.owner.avatar || defaultAvatar"
-          class="up-card__avatar is-clickable"
-          @click="$router.push(`/space/${detail.owner.id}`)"
-        >
-          {{ detail.owner.nickname?.slice(0, 1) ?? 'U' }}
-        </el-avatar>
-        <div class="up-card__info">
-          <p
-            class="up-card__name is-clickable"
-            @click="$router.push(`/space/${detail.owner.id}`)"
-          >
-            {{ detail.owner.nickname }}
-          </p>
-          <p class="up-card__sign">
-            {{ formatCount(followerCnt) }} 粉丝
-          </p>
-        </div>
-        <el-button
-          v-if="userStore.profile?.id !== detail.owner.id"
-          round
-          class="up-card__follow"
-          :class="{ 'is-following': following }"
-          :loading="followPending"
-          @click="toggleFollow"
-        >
-          {{ following ? '已关注' : '+ 关注' }}
-        </el-button>
-      </div>
-
       <!-- 简介与标签 -->
       <div
         v-if="detail.description"
@@ -1085,46 +1038,6 @@ onBeforeUnmount(() => {
     :target-id="dmReportItem?.id ?? ''"
     :title="dmReportItem ? `弹幕：${dmReportItem.content}` : ''"
   />
-
-  <!-- 弹幕列表面板（独立弹窗） -->
-  <el-dialog
-    v-model="dmListVisible"
-    title="弹幕列表"
-    width="480px"
-    top="8vh"
-  >
-    <div class="dm-list">
-      <div
-        v-for="d in dmList"
-        :key="d.id"
-        class="dm-list__item"
-        @click="dmSeekTo(d.time_ms)"
-      >
-        <span class="dm-list__time">{{ formatDuration(d.time_ms / 1000) }}</span>
-        <span
-          class="dm-list__content"
-          :style="{ color: '#' + (d.color || 0xffffff).toString(16).padStart(6, '0') }"
-        >{{ d.content }}</span>
-      </div>
-      <el-empty
-        v-if="!dmListLoading && dmList.length === 0"
-        description="暂无弹幕"
-        :image-size="64"
-      />
-      <div
-        v-if="dmList.length < dmListTotal"
-        class="text-center py-2"
-      >
-        <el-button
-          link
-          :loading="dmListLoading"
-          @click="dmListPage++; loadDmList()"
-        >
-          加载更多（{{ dmList.length }}/{{ dmListTotal }}）
-        </el-button>
-      </div>
-    </div>
-  </el-dialog>
 
   <!-- 弹幕设置面板 -->
   <el-dialog
@@ -1539,38 +1452,6 @@ onBeforeUnmount(() => {
     opacity: 0.35;
     cursor: not-allowed;
   }
-}
-
-/* 弹幕列表面板 */
-.dm-list {
-  max-height: 55vh;
-  overflow-y: auto;
-}
-
-.dm-list__item {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  padding: 6px 8px;
-  border-radius: v.$radius-md;
-  cursor: pointer;
-  transition: background 0.15s;
-
-  &:hover {
-    background: #fafafa;
-  }
-}
-
-.dm-list__time {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: v.$text-2;
-  font-variant-numeric: tabular-nums;
-}
-
-.dm-list__content {
-  font-size: 13.5px;
-  word-break: break-all;
 }
 
 /* 弹幕设置面板 */
