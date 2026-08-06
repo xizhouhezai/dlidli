@@ -20,7 +20,7 @@
 - [x] M0-ENG-10 Web 前端脚手架（Vue3+Vite+TS+Pinia+Router+Element Plus，含 ESLint、登录页框架、后端联通验证） `2026-07-28`
 - [x] M0-ENG-11 packages/api-client 骨架（请求封装、token 拦截、401 回调、适配器模式、系统接口） `2026-07-28`
 - [x] M0-ENG-12 packages/shared 骨架（统一响应类型、错误码/状态常量、格式化工具） `2026-07-28`
-- [ ] M0-ENG-13 staging 环境部署脚本 + HelloWorld API 上线验证
+- [x] M0-ENG-13 staging 环境部署脚本 + HelloWorld API 上线验证（configs/staging.yaml（独立端口 8100/库 dlidli_staging/Redis db1/uploads_staging/自动过审）+ deploy/staging.ps1（构建→迁移→启动→/health 与 /api/v1/ping 验证→汇总）；修复迁移文件历史冲突：0001 与 0005 重复建 relation、0022 与收藏夹 collection 冲突（0022 改为 video_collection/0025 no-op）；实测 staging 全流程通过且与 dev 完全隔离） `2026-08-06`
 
 ## M1 MVP（W5-W12）
 
@@ -234,11 +234,11 @@
 
 | 阶段 | 任务总数 | 已完成 | 完成率 |
 | --- | :-: | :-: | :-: |
-| M0 | 13 | 12 | 92% |
+| M0 | 13 | 13 | 100% |
 | M1 | 34 | 34 | 100% |
 | M2 | 40 | 40 | 100% |
 | M3 | 24 | 19 | 79% |
 | M4 | 13 | 0 | 0% |
-| **合计** | **124** | **105** | **84.7%** |
+| **合计** | **124** | **106** | **85.5%** |
 
 > 勾选任务后请同步更新本表与 [开发进度管理](/project/progress) 的模块矩阵。

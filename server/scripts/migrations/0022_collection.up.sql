@@ -1,5 +1,6 @@
 -- 0022_collection: UP 主合集（M3-CRT-05 合集部分，PRD 扩展）
-CREATE TABLE collection (
+-- 注：表名 video_collection（避免与收藏夹 collection 表冲突；0025 为历史修复记录）
+CREATE TABLE video_collection (
   id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id     BIGINT UNSIGNED NOT NULL COMMENT 'UP主',
   title       VARCHAR(64)  NOT NULL COMMENT '合集标题',
@@ -9,7 +10,7 @@ CREATE TABLE collection (
   KEY idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='UP主视频合集';
 
-CREATE TABLE collection_item (
+CREATE TABLE video_collection_item (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   collection_id BIGINT UNSIGNED NOT NULL,
   video_id      BIGINT UNSIGNED NOT NULL,

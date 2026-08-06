@@ -142,12 +142,4 @@ CREATE TABLE `danmaku` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='弹幕';
 
 -- ============ 关系域 ============
-CREATE TABLE `relation` (
-  `id`         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `user_id`    BIGINT UNSIGNED NOT NULL COMMENT '关注者',
-  `target_id`  BIGINT UNSIGNED NOT NULL COMMENT '被关注者',
-  `type`       TINYINT  NOT NULL DEFAULT 1 COMMENT '1关注 2特别关注 3拉黑',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY `uk_user_target` (`user_id`, `target_id`),
-  KEY `idx_target` (`target_id`, `type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关系';
+-- 关系表由 0005_relation 正式迁移创建（0001 早期草案与此冲突，已移除）
