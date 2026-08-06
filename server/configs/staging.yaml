@@ -1,0 +1,40 @@
+app:
+  name: dlidli-api
+  env: staging
+  port: 8100
+  # staging 环境自动过审，便于联调演示（生产仍走人工审核）
+  autoApprove: true
+  allowOrigins:
+    - http://localhost:5173
+    - http://localhost:5174
+    - http://localhost:5175
+
+log:
+  level: info
+
+# staging 独立数据库（与 dev 隔离），部署脚本自动创建
+mysql:
+  dsn: "root:root@tcp(127.0.0.1:3307)/dlidli_staging?charset=utf8mb4&parseTime=True&loc=Local"
+  maxOpenConns: 50
+  maxIdleConns: 10
+
+redis:
+  addr: 127.0.0.1:6379
+  password: ""
+  db: 1 # staging 独立 db，与 dev(0) 隔离
+
+jwt:
+  # 生产环境必须通过环境变量 DLIDLI_JWT_SECRET 覆盖
+  secret: "staging-secret-do-not-use-in-prod"
+  accessTtlMin: 120
+
+storage:
+  driver: local
+  localDir: ./uploads_staging
+  baseUrl: http://localhost:8100/static
+
+transcode:
+  enabled: true
+  workers: 1
+  ffmpegPath: C:\Users\yr137\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe
+  ffprobePath: C:\Users\yr137\AppData\Local\Microsoft\WinGet\Links\ffprobe.exe
