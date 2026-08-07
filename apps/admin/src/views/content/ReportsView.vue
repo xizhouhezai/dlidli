@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { type ReportItem } from '@dlidli/api-client'
 import { adminApi } from '@/api'
 import { usePagedList } from '@/composables/usePagedList'
 import { useApiAction } from '@/composables/useApiAction'
 import PageHead from '@/components/PageHead.vue'
+import { readAdminToken } from '@/utils/token'
 
 const status = ref(0)
 
@@ -70,6 +71,31 @@ async function handlePunish(r: ReportItem) {
   )
   if (ok) load()
 }
+
+// 导出 CSV（当前状态筛选，SYS-06）
+async function exportCsv() {
+  const qs = new URLSearchParams()
+  qs.set('status', String(status.value))
+  try {
+    const res = await fetch(`/api/v1/admin/reports/export?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${readAdminToken() ?? ''}` },
+    })
+    if (!res.ok) {
+      ElMessage.error('导出失败')
+      return
+    }
+    const blob = await res.blob()
+    const match = (res.headers.get('Content-Disposition') ?? '').match(/filename="?([^";]+)"?/)
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = match?.[1] ?? `reports-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败，请稍后再试')
+  }
+}
 </script>
 
 <template>
@@ -99,6 +125,13 @@ async function handlePunish(r: ReportItem) {
             全部
           </el-radio-button>
         </el-radio-group>
+        <el-button
+          v-perm="'report:view'"
+          class="pink-btn ml-auto"
+          @click="exportCsv"
+        >
+          导出 CSV
+        </el-button>
       </div>
 
       <el-table

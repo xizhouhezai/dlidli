@@ -7,6 +7,8 @@ import { usePagedList } from '@/composables/usePagedList'
 import { useApiAction } from '@/composables/useApiAction'
 import PageHead from '@/components/PageHead.vue'
 import defaultAvatar from '@/assets/default-avatar.png'
+import { readAdminToken } from '@/utils/token'
+import { ElMessage } from 'element-plus'
 
 const keyword = ref('')
 const status = ref(-1)
@@ -28,6 +30,32 @@ const { list: users, total, loading, page, pageSize, load, search, onPageChange 
   (p, size) => adminApi.admin.users({ keyword: keyword.value.trim(), status: status.value, page: p, page_size: size }),
 )
 const { run } = useApiAction()
+
+// 导出 CSV（当前筛选，SYS-06）
+async function exportCsv() {
+  const qs = new URLSearchParams()
+  if (keyword.value.trim()) qs.set('keyword', keyword.value.trim())
+  if (status.value !== -1) qs.set('status', String(status.value))
+  try {
+    const res = await fetch(`/api/v1/admin/users/export?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${readAdminToken() ?? ''}` },
+    })
+    if (!res.ok) {
+      ElMessage.error('导出失败')
+      return
+    }
+    const blob = await res.blob()
+    const match = (res.headers.get('Content-Disposition') ?? '').match(/filename="?([^";]+)"?/)
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = match?.[1] ?? `users-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败，请稍后再试')
+  }
+}
 
 async function punish(user: AdminUserItem, action: PunishAction) {
   const ok = await run(async () => {
@@ -106,6 +134,13 @@ async function punish(user: AdminUserItem, action: PunishAction) {
           @click="search"
         >
           查询
+        </el-button>
+        <el-button
+          v-perm="'user:view'"
+          class="pink-btn"
+          @click="exportCsv"
+        >
+          导出 CSV
         </el-button>
       </div>
 

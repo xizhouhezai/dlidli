@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { type AdminVideoItem, type CategoryItem } from '@dlidli/api-client'
 import { adminApi } from '@/api'
 import { useApiAction } from '@/composables/useApiAction'
 import PageHead from '@/components/PageHead.vue'
+import { readAdminToken } from '@/utils/token'
 
 const list = ref<AdminVideoItem[]>([])
 const total = ref(0)
@@ -56,6 +57,33 @@ async function load(reset = false) {
 
 function search() {
   load(true)
+}
+
+// 导出 CSV（当前筛选，SYS-06）
+async function exportCsv() {
+  const qs = new URLSearchParams()
+  if (status.value) qs.set('status', String(status.value))
+  if (categoryId.value) qs.set('category_id', String(categoryId.value))
+  if (keyword.value.trim()) qs.set('keyword', keyword.value.trim())
+  try {
+    const res = await fetch(`/api/v1/admin/videos/export?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${readAdminToken() ?? ''}` },
+    })
+    if (!res.ok) {
+      ElMessage.error('导出失败')
+      return
+    }
+    const blob = await res.blob()
+    const match = (res.headers.get('Content-Disposition') ?? '').match(/filename="?([^";]+)"?/)
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = match?.[1] ?? `videos-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败，请稍后再试')
+  }
 }
 
 function categoryName(id: number) {
@@ -147,6 +175,13 @@ onMounted(async () => {
           @click="search"
         >
           查询
+        </el-button>
+        <el-button
+          v-perm="'video:view'"
+          class="pink-btn"
+          @click="exportCsv"
+        >
+          导出 CSV
         </el-button>
       </div>
 
