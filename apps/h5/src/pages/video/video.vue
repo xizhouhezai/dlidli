@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
+import { formatCount, formatPubdate } from '@dlidli/shared'
 import type { VideoDetail } from '@dlidli/api-client'
 import { api } from '@/api'
 
