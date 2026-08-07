@@ -24,6 +24,13 @@ export function createRelationApi(http: HttpClient) {
     /** 关注/取关开关 */
     follow: (uid: string) => http.post<{ following: boolean }>(`/api/v1/space/${uid}/follow`),
 
+    /** 拉黑/取消拉黑（MSG-12） */
+    block: (uid: string) => http.post<{ blocked: boolean }>(`/api/v1/space/${uid}/block`),
+
+    /** 双向拉黑状态 */
+    blockStatus: (uid: string) =>
+      http.get<{ i_blocked: boolean; blocked_me: boolean }>(`/api/v1/space/${uid}/block-status`),
+
     /** 关系状态（是否已关注 + 关注/粉丝数） */
     stat: (uid: string) => http.get<RelationStat>(`/api/v1/space/${uid}/relation`),
 
