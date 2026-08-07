@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-const topN = 10   // 每稿保留相似数量
+const topN = 10      // 每稿保留相似数量
 const minScore = 0.1 // 相似度阈值
 
 func main() {

@@ -46,20 +46,20 @@ func (r *Repo) CountMineVideos(uid int64) (int64, error) {
 
 // StatsByVideos 稿件统计（join video 校验归属）。
 func (r *Repo) StatsByVideos(uid int64) ([]struct {
-	VideoID int64
-	ViewCnt int64
-	LikeCnt int64
-	CoinCnt int64
-	FavCnt  int64
+	VideoID    int64
+	ViewCnt    int64
+	LikeCnt    int64
+	CoinCnt    int64
+	FavCnt     int64
 	CommentCnt int64
 	DanmakuCnt int64
 }, error) {
 	var list []struct {
-		VideoID int64
-		ViewCnt int64
-		LikeCnt int64
-		CoinCnt int64
-		FavCnt  int64
+		VideoID    int64
+		ViewCnt    int64
+		LikeCnt    int64
+		CoinCnt    int64
+		FavCnt     int64
 		CommentCnt int64
 		DanmakuCnt int64
 	}

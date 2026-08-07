@@ -7,7 +7,7 @@ import (
 
 // DashboardStats 数据大盘（M3-OPS-02）：全站实时聚合，本地务实版不做 T+1 数仓。
 type DashboardStats struct {
-	Today DashboardToday `json:"today"`
+	Today DashboardToday   `json:"today"`
 	Trend []DashboardTrend `json:"trend"`
 	// ReviewHours 近 7 日审核通过稿件平均审核耗时（小时，0 表示无数据）
 	ReviewHours float64 `json:"review_hours"`

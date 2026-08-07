@@ -16,8 +16,8 @@ func (r *Repo) CountByDay(table, column, from, expr string) (map[string]int64, e
 	}
 	var list []row
 	err := r.db.Table(table).
-		Select("DATE_FORMAT(" + column + ", '%Y-%m-%d') AS date, " + expr + " AS n").
-		Where(column + " >= ?", from).
+		Select("DATE_FORMAT("+column+", '%Y-%m-%d') AS date, "+expr+" AS n").
+		Where(column+" >= ?", from).
 		Group("date").
 		Scan(&list).Error
 	if err != nil {

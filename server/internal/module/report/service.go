@@ -206,9 +206,9 @@ func (s *Service) targetDesc(ctx context.Context, targetType int8, targetID int6
 // HandleReq 处理举报请求。
 type HandleReq struct {
 	Action string `json:"action" binding:"required,oneof=ignore delete punish"` // 忽略/删除内容/删除并处罚
-	Note   string `json:"note" binding:"max=255"`                                // 处理备注
-	Punish string `json:"punish" binding:"omitempty,oneof=mute ban"`             // punish 时的处罚类型
-	Days   int    `json:"days"`                                                  // 处罚天数（ban 传 0 = 永久）
+	Note   string `json:"note" binding:"max=255"`                               // 处理备注
+	Punish string `json:"punish" binding:"omitempty,oneof=mute ban"`            // punish 时的处罚类型
+	Days   int    `json:"days"`                                                 // 处罚天数（ban 传 0 = 永久）
 }
 
 // Handle 处理举报：ignore 忽略；delete 删除内容；punish 删除内容并处罚作者。

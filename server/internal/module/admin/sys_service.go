@@ -208,7 +208,7 @@ func (s *Service) CreateConfig(_ context.Context, req *SaveConfigReq) error {
 	}
 	return s.repo.CreateConfig(&SystemConfig{
 		ConfigKey: strings.TrimSpace(req.ConfigKey),
-		Name: req.Name, Value: req.Value, Remark: req.Remark,
+		Name:      req.Name, Value: req.Value, Remark: req.Remark,
 	})
 }
 
@@ -266,7 +266,7 @@ func (s *Service) CreateDict(_ context.Context, req *SaveDictReq) error {
 	}
 	return s.repo.CreateDict(&DataDict{
 		DictType: strings.TrimSpace(req.DictType),
-		Label: req.Label, Value: req.Value, Sort: req.Sort, Remark: req.Remark,
+		Label:    req.Label, Value: req.Value, Sort: req.Sort, Remark: req.Remark,
 	})
 }
 

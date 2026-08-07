@@ -49,7 +49,7 @@ func (Video) TableName() string { return "video" }
 type Stream struct {
 	ID        int64 `gorm:"primaryKey"`
 	VideoID   int64
-	PartIndex int8  // 分P（0=单P默认，>0 对应 video_part.part_index）
+	PartIndex int8 // 分P（0=单P默认，>0 对应 video_part.part_index）
 	Quality   int16
 	Format    string
 	PlayPath  string
