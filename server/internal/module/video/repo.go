@@ -104,14 +104,14 @@ func (r *Repo) CreateWithParts(v *Video, parts []VideoPart, streams []Stream, jo
 		for i := range streams {
 			streams[i].VideoID = v.ID
 			if err := tx.Create(&streams[i]).Error; err != nil {
-			return err
-		}
+				return err
+			}
 		}
 		for i := range parts {
 			parts[i].VideoID = v.ID
 			if err := tx.Create(&parts[i]).Error; err != nil {
-			return err
-		}
+				return err
+			}
 		}
 		for _, q := range jobQualities {
 			for _, p := range parts {

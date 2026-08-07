@@ -31,24 +31,24 @@ type Overview struct {
 
 // TrendPoint 播放趋势点。
 type TrendPoint struct {
-	Date string `json:"date"`
-	Views int64 `json:"views"`
+	Date  string `json:"date"`
+	Views int64  `json:"views"`
 }
 
 // VideoStatItem 单稿数据。
 type VideoStatItem struct {
-	Bvid        string `json:"bvid"`
-	Title       string `json:"title"`
-	Cover       string `json:"cover"`
-	Status      int8   `json:"status"`
-	View        int64  `json:"view"`
-	Like        int64  `json:"like"`
-	Coin        int64  `json:"coin"`
-	Fav         int64  `json:"fav"`
-	Comment     int64  `json:"comment"`
-	Danmaku     int64  `json:"danmaku"`
-	ValidViews  int64  `json:"valid_views"` // 有效播放（>5s）
-	Earnings    int64  `json:"earnings"`     // 该稿累计收益（分）
+	Bvid        string     `json:"bvid"`
+	Title       string     `json:"title"`
+	Cover       string     `json:"cover"`
+	Status      int8       `json:"status"`
+	View        int64      `json:"view"`
+	Like        int64      `json:"like"`
+	Coin        int64      `json:"coin"`
+	Fav         int64      `json:"fav"`
+	Comment     int64      `json:"comment"`
+	Danmaku     int64      `json:"danmaku"`
+	ValidViews  int64      `json:"valid_views"` // 有效播放（>5s）
+	Earnings    int64      `json:"earnings"`    // 该稿累计收益（分）
 	PublishedAt *time.Time `json:"published_at"`
 }
 

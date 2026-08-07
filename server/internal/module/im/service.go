@@ -21,11 +21,11 @@ const dailyLimitUnfollow = 1
 
 // Service 私信服务：发送（限制+机审+会话维护）、会话/消息读取、未读、WS 推送。
 type Service struct {
-	repo       *Repo
-	accountSvc *account.Service
+	repo        *Repo
+	accountSvc  *account.Service
 	relationSvc *relation.Service
-	hub        *Hub
-	log        *zap.Logger
+	hub         *Hub
+	log         *zap.Logger
 }
 
 func NewService(repo *Repo, accountSvc *account.Service, relationSvc *relation.Service, hub *Hub, log *zap.Logger) *Service {

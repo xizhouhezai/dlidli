@@ -88,8 +88,8 @@ type AddWordReq struct {
 // PunishReq 用户处罚请求。
 type PunishReq struct {
 	Action string `json:"action" binding:"required,oneof=mute unmute ban unban"` // 处罚动作
-	Days   int    `json:"days" binding:"min=0,max=3650"`                          // 处罚天数（ban 传 0=永久）
-	Reason string `json:"reason" binding:"max=200"`                               // 处罚原因（审计留痕）
+	Days   int    `json:"days" binding:"min=0,max=3650"`                         // 处罚天数（ban 传 0=永久）
+	Reason string `json:"reason" binding:"max=200"`                              // 处罚原因（审计留痕）
 }
 
 // LoginReq 后台登录请求。
