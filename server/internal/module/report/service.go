@@ -2,6 +2,7 @@ package report
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
 	"strconv"
 	"strings"
@@ -145,6 +146,33 @@ func (s *Service) AdminList(ctx context.Context, status int8, page, size int) ([
 		items = append(items, item)
 	}
 	return items, total, nil
+}
+
+// ExportCSV 举报列表导出（当前状态筛选，上限 10000；SYS-06）。
+func (s *Service) ExportCSV(ctx context.Context, status int8) ([]byte, string, error) {
+	list, _, err := s.AdminList(ctx, status, 1, 10000)
+	if err != nil {
+		return nil, "", err
+	}
+	var sb strings.Builder
+	sb.WriteString("\xEF\xBB\xBF") // UTF-8 BOM
+	w := csv.NewWriter(&sb)
+	_ = w.Write([]string{"ID", "对象类型", "对象摘要", "对象ID", "举报人", "原因类型", "补充说明", "状态", "时间"})
+	for _, r := range list {
+		st := "待处理"
+		if r.Status == 1 {
+			st = "已处理"
+		}
+		_ = w.Write([]string{
+			r.ID, r.TargetName, r.TargetDesc, r.TargetID, r.ReporterName,
+			r.ReasonName, r.Reason, st, r.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return nil, "", err
+	}
+	return []byte(sb.String()), fmt.Sprintf("reports-%s.csv", time.Now().Format("20060102-150405")), nil
 }
 
 // targetDesc 对象摘要（视频标题/评论弹幕动态内容/用户昵称；对象已删除时提示）。

@@ -1,6 +1,7 @@
 package report
 
 import (
+	"net/http"
 	"strconv"
 
 	"github.com/dlidli/server/internal/middleware"
@@ -27,8 +28,27 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth gin.HandlerFunc,
 	g := v1.Group("/admin/reports", adminAuth)
 	{
 		g.GET("", perm("report:view"), h.adminList)
+		g.GET("/export", perm("report:view"), h.adminExport)
 		g.POST("/:id/handle", perm("report:handle"), h.adminHandle)
 	}
+}
+
+// @Summary  举报列表导出 CSV（当前状态筛选，SYS-06）
+// @Tags     管理后台-举报
+// @Produce  text/csv
+// @Security BearerAuth
+// @Param    status query int false "-1全部 0待处理 1已处理"
+// @Success  200 {string} string "CSV 文件"
+// @Router   /admin/reports/export [get]
+func (h *Handler) adminExport(c *gin.Context) {
+	status, _ := strconv.Atoi(c.DefaultQuery("status", "0"))
+	data, filename, err := h.svc.ExportCSV(c.Request.Context(), int8(status))
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
 }
 
 // @Summary  提交举报（视频/评论/弹幕/动态/用户）

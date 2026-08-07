@@ -112,6 +112,80 @@ func (s *Service) ExportAuditLogsCSV(ctx context.Context, q *AuditQuery) ([]byte
 	return []byte(sb.String()), fmt.Sprintf("audit-log-%s.csv", time.Now().Format("20060102-150405")), nil
 }
 
+// 用户/稿件状态中文（与 admin 前端一致，SYS-06 导出用）。
+var userStatusNames = map[int]string{0: "正常", 1: "禁言", 2: "封禁"}
+var videoStatusNames = map[int8]string{0: "草稿", 2: "转码中", 3: "审核中", 4: "已发布", 5: "已驳回", 6: "已锁定"}
+
+// ExportUsersCSV 用户列表导出（当前筛选，上限 10000；SYS-06）。
+func (s *Service) ExportUsersCSV(ctx context.Context, keyword string, status int) ([]byte, string, error) {
+	list, _, err := s.accountSvc.AdminListUsers(ctx, keyword, status, 1, 10000)
+	if err != nil {
+		return nil, "", err
+	}
+	var sb strings.Builder
+	sb.WriteString("\xEF\xBB\xBF") // UTF-8 BOM
+	w := csv.NewWriter(&sb)
+	_ = w.Write([]string{"ID", "昵称", "手机号", "等级", "硬币", "状态", "禁言至", "封禁至"})
+	for _, u := range list {
+		muted, banned := "", ""
+		if u.MutedUntil != nil {
+			muted = u.MutedUntil.Format("2006-01-02 15:04:05")
+		}
+		if u.BannedUntil != nil {
+			banned = u.BannedUntil.Format("2006-01-02 15:04:05")
+		}
+		_ = w.Write([]string{
+			strconv.FormatInt(u.ID, 10), u.Nickname, u.Phone,
+			strconv.Itoa(int(u.Level)), strconv.Itoa(u.Coin),
+			userStatusNames[int(u.Status)], muted, banned,
+		})
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return nil, "", err
+	}
+	return []byte(sb.String()), fmt.Sprintf("users-%s.csv", time.Now().Format("20060102-150405")), nil
+}
+
+// ExportVideosCSV 稿件列表导出（当前筛选，上限 10000；SYS-06）。
+func (s *Service) ExportVideosCSV(ctx context.Context, categoryID int, status int8, keyword string) ([]byte, string, error) {
+	list, _, err := s.videoSvc.AdminList(ctx, categoryID, status, keyword, 1, 10000)
+	if err != nil {
+		return nil, "", err
+	}
+	// 分区 ID → 名称映射（人读友好）
+	catName := map[int]string{}
+	if cats, err := s.videoSvc.AdminCategories(ctx); err == nil {
+		for _, c := range cats {
+			catName[c.ID] = c.Name
+		}
+	}
+	var sb strings.Builder
+	sb.WriteString("\xEF\xBB\xBF") // UTF-8 BOM
+	w := csv.NewWriter(&sb)
+	_ = w.Write([]string{"bvid", "标题", "分区", "UP主", "状态", "播放", "点赞", "发布时间"})
+	for _, v := range list {
+		pub := ""
+		if v.PublishedAt != nil {
+			pub = v.PublishedAt.Format("2006-01-02 15:04:05")
+		}
+		cat := catName[v.CategoryID]
+		if cat == "" {
+			cat = strconv.Itoa(v.CategoryID)
+		}
+		_ = w.Write([]string{
+			v.Bvid, v.Title, cat, v.Owner.Nickname,
+			videoStatusNames[v.Status],
+			strconv.FormatInt(v.Stat.View, 10), strconv.FormatInt(v.Stat.Like, 10), pub,
+		})
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return nil, "", err
+	}
+	return []byte(sb.String()), fmt.Sprintf("videos-%s.csv", time.Now().Format("20060102-150405")), nil
+}
+
 // ---- 系统配置（M2-SYS-02） ----
 
 // SaveConfigReq 新建/编辑配置请求。
