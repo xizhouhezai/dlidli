@@ -27,7 +27,51 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 		g.GET("/relation", optionalAuth, h.stat)
 		g.GET("/followings", h.followings)
 		g.GET("/followers", h.followers)
+		g.POST("/block", auth, h.toggleBlock)
+		g.GET("/block-status", auth, h.blockStatus)
 	}
+}
+
+// @Summary  拉黑/取消拉黑（MSG-12）
+// @Tags     关系
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "目标用户ID"
+// @Success  200 {object} response.Body
+// @Router   /space/{id}/block [post]
+func (h *Handler) toggleBlock(c *gin.Context) {
+	target, ok := targetID(c)
+	if !ok {
+		return
+	}
+	uid := c.GetInt64(middleware.CtxUserID)
+	blocked, err := h.svc.ToggleBlock(c.Request.Context(), uid, target)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"blocked": blocked})
+}
+
+// @Summary  双向拉黑状态（私信会话页用）
+// @Tags     关系
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path string true "目标用户ID"
+// @Success  200 {object} response.Body
+// @Router   /space/{id}/block-status [get]
+func (h *Handler) blockStatus(c *gin.Context) {
+	target, ok := targetID(c)
+	if !ok {
+		return
+	}
+	uid := c.GetInt64(middleware.CtxUserID)
+	iBlocked, blockedMe, err := h.svc.BlockStatus(c.Request.Context(), uid, target)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"i_blocked": iBlocked, "blocked_me": blockedMe})
 }
 
 func targetID(c *gin.Context) (int64, bool) {

@@ -108,6 +108,41 @@ func (r *Repo) ListFollowerIDs(target int64, page, size int) ([]int64, int64, er
 	return ids, total, err
 }
 
+// UserBlock 对应 user_block 表（MSG-12 私信拉黑拦截）。
+type UserBlock struct {
+	ID         int64 `gorm:"primaryKey;autoIncrement"`
+	UID        int64
+	BlockedUID int64
+	CreatedAt  time.Time
+}
+
+func (UserBlock) TableName() string { return "user_block" }
+
+// ToggleBlock 拉黑/取消拉黑（幂等切换）。
+func (r *Repo) ToggleBlock(uid, blocked int64) (blockedNow bool, err error) {
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		res := tx.Where("uid = ? AND blocked_uid = ?", uid, blocked).Delete(&UserBlock{})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected > 0 {
+			blockedNow = false
+			return nil
+		}
+		blockedNow = true
+		return tx.Create(&UserBlock{UID: uid, BlockedUID: blocked}).Error
+	})
+	return blockedNow, err
+}
+
+// IsBlocked uid 是否拉黑了 blocked。
+func (r *Repo) IsBlocked(uid, blocked int64) (bool, error) {
+	var cnt int64
+	err := r.db.Model(&UserBlock{}).
+		Where("uid = ? AND blocked_uid = ?", uid, blocked).Count(&cnt).Error
+	return cnt > 0, err
+}
+
 type Service struct {
 	repo       *Repo
 	accountSvc *account.Service
@@ -134,6 +169,28 @@ func (s *Service) IsMutual(ctx context.Context, a, b int64) (bool, error) {
 // IsFollowing 是否已关注对方（私信提示语区分关注方向用）。
 func (s *Service) IsFollowing(_ context.Context, a, b int64) (bool, error) {
 	return s.repo.IsFollowing(a, b)
+}
+
+// ToggleBlock 拉黑/取消拉黑对方（MSG-12）。
+func (s *Service) ToggleBlock(_ context.Context, uid, target int64) (bool, error) {
+	if uid == target {
+		return false, errcode.ErrInvalidParams.WithMsg("不能拉黑自己")
+	}
+	return s.repo.ToggleBlock(uid, target)
+}
+
+// BlockStatus 双向拉黑状态（私信会话页用）。
+func (s *Service) BlockStatus(_ context.Context, uid, target int64) (iBlocked, blockedMe bool, err error) {
+	if iBlocked, err = s.repo.IsBlocked(uid, target); err != nil {
+		return false, false, err
+	}
+	blockedMe, err = s.repo.IsBlocked(target, uid)
+	return iBlocked, blockedMe, err
+}
+
+// IsBlocked uid 是否拉黑了 blocked（私信发送拦截用）。
+func (s *Service) IsBlocked(_ context.Context, uid, blocked int64) (bool, error) {
+	return s.repo.IsBlocked(uid, blocked)
 }
 
 func (s *Service) Toggle(ctx context.Context, uid, target int64) (bool, error) {
