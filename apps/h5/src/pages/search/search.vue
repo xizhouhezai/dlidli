@@ -47,7 +47,7 @@ function openVideo(bvid: string) {
   uni.navigateTo({ url: `/pages/video/video?bvid=${bvid}` })
 }
 
-function openSpace(id: string) {
+function openSpace(_id: string) {
   uni.showToast({ title: '空间页待开发', icon: 'none' })
 }
 </script>
