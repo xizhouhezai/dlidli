@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"net/http"
 	"strconv"
 
 	"github.com/dlidli/server/internal/middleware"
@@ -39,12 +40,14 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, adminAuth gin.HandlerFunc)
 			authed.POST("/videos/:bvid/review", perm("review:approve"), h.review)
 			// 稿件管理（全状态列表 + 下架/恢复/删除）
 			authed.GET("/videos", perm("video:view"), h.videoList)
+			authed.GET("/videos/export", perm("video:view"), h.exportVideos)
 			authed.PUT("/videos/:bvid/status", perm("video:manage"), h.setVideoStatus)
 			authed.DELETE("/videos/:bvid", perm("video:manage"), h.deleteVideo)
 			authed.GET("/sensitive-words", perm("sensitive:view"), h.listWords)
 			authed.POST("/sensitive-words", perm("sensitive:edit"), h.addWord)
 			authed.DELETE("/sensitive-words/:id", perm("sensitive:edit"), h.deleteWord)
 			authed.GET("/users", perm("user:view"), h.listUsers)
+			authed.GET("/users/export", perm("user:view"), h.exportUsers)
 			authed.POST("/users/:id/punish", perm("user:punish"), h.punishUser)
 
 			// 权限点：目录为元数据（角色分配树与权限管理页共用），读取仅需登录；写操作需 permission:edit
@@ -192,6 +195,46 @@ func (h *Handler) deleteVideo(c *gin.Context) {
 		return
 	}
 	response.OK(c, nil)
+}
+
+// @Summary  用户列表导出 CSV（当前筛选，SYS-06）
+// @Tags     管理后台-用户
+// @Produce  text/csv
+// @Security BearerAuth
+// @Param    keyword query string false "昵称/手机号模糊"
+// @Param    status query int false "0正常 1禁言 2封禁"
+// @Success  200 {string} string "CSV 文件"
+// @Router   /admin/users/export [get]
+func (h *Handler) exportUsers(c *gin.Context) {
+	status, _ := strconv.Atoi(c.DefaultQuery("status", "-1"))
+	data, filename, err := h.svc.ExportUsersCSV(c.Request.Context(), c.Query("keyword"), status)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
+}
+
+// @Summary  稿件列表导出 CSV（当前筛选，SYS-06）
+// @Tags     管理后台-稿件
+// @Produce  text/csv
+// @Security BearerAuth
+// @Param    category_id query int false "分区ID"
+// @Param    status query int false "状态"
+// @Param    keyword query string false "标题/UP主模糊"
+// @Success  200 {string} string "CSV 文件"
+// @Router   /admin/videos/export [get]
+func (h *Handler) exportVideos(c *gin.Context) {
+	categoryID, _ := strconv.Atoi(c.DefaultQuery("category_id", "0"))
+	status, _ := strconv.Atoi(c.DefaultQuery("status", "0"))
+	data, filename, err := h.svc.ExportVideosCSV(c.Request.Context(), categoryID, int8(status), c.Query("keyword"))
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
 }
 
 // @Summary  待审稿件队列
