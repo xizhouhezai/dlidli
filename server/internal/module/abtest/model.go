@@ -8,11 +8,11 @@ import "time"
 type Experiment struct {
 	ID        int64     `gorm:"primaryKey;autoIncrement" json:"id,string"`
 	Name      string    `json:"name"`
-	Target    string    `json:"target"`   // 应用场景：recommend 等
+	Target    string    `json:"target"`    // 应用场景：recommend 等
 	VariantA  string    `json:"variant_a"` // A 组策略标识
 	VariantB  string    `json:"variant_b"` // B 组策略标识
-	Ratio     int8      `json:"ratio"`    // B 组流量占比 0-100
-	Status    int8      `json:"status"`   // 0启用 1停用
+	Ratio     int8      `json:"ratio"`     // B 组流量占比 0-100
+	Status    int8      `json:"status"`    // 0启用 1停用
 	Remark    string    `json:"remark"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

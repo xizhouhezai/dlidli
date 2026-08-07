@@ -88,7 +88,7 @@ type Service struct {
 func NewService(repo *Repo, videoSvc *video.Service, accountSvc *account.Service, cfg *config.Config, log *zap.Logger) *Service {
 	s := &Service{repo: repo, videoSvc: videoSvc, accountSvc: accountSvc, cfg: cfg, log: log}
 	s.ensureDefaultAdmin()
-	s.seedRBAC()   // 初始化 RBAC 权限点/内置角色，并给默认 admin 绑 super
+	s.seedRBAC()    // 初始化 RBAC 权限点/内置角色，并给默认 admin 绑 super
 	s.reloadWords() // 启动时从 DB 加载敏感词库到 moderate
 	return s
 }

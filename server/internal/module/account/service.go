@@ -329,7 +329,7 @@ func (s *Service) GrantCoins(_ context.Context, uid int64, count int, reason str
 // coinReasonNames 硬币流水来源文案（未登记回退原样）。
 var coinReasonNames = map[string]string{
 	"daily_login": "每日登录",
-	"coin_video": "投币",
+	"coin_video":  "投币",
 	"coin_refund": "投币退款",
 }
 

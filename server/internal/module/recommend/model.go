@@ -6,9 +6,9 @@ import "time"
 
 // 行为类型
 const (
-	ActionExpose  int8 = 1 // 曝光
-	ActionClick   int8 = 2 // 点击
-	ActionPlay    int8 = 3 // 播放（>5s 有效）
+	ActionExpose   int8 = 1 // 曝光
+	ActionClick    int8 = 2 // 点击
+	ActionPlay     int8 = 3 // 播放（>5s 有效）
 	ActionInteract int8 = 4 // 互动（赞/币/藏/评）
 )
 
