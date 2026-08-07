@@ -67,6 +67,14 @@ func (s *Service) Send(ctx context.Context, uid int64, req *SendReq) (*MessageIt
 			return nil, errcode.ErrInvalidParams.WithMsg("图片消息需为图片 URL")
 		}
 	}
+	// 拉黑拦截（PRD MSG-12）：对方已拉黑我 → 不可发送
+	blockedMe, err := s.relationSvc.IsBlocked(ctx, toUID, uid)
+	if err != nil {
+		return nil, err
+	}
+	if blockedMe {
+		return nil, errcode.ErrInvalidParams.WithMsg("对方已将你拉黑，无法发送私信")
+	}
 	// 发送限制（PRD MSG-11）：未互关每天最多 1 条；提示语区分关注方向
 	mutual, err := s.relationSvc.IsMutual(ctx, uid, toUID)
 	if err != nil {

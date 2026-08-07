@@ -7,6 +7,7 @@ import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import { readToken } from '@/utils/token'
 import defaultAvatar from '@/assets/default-avatar.png'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,6 +22,42 @@ const listBox = ref<HTMLDivElement>()
 
 // 当前会话对方信息
 const activeConv = computed(() => convs.value.find((c) => c.peer_id === activePeer.value))
+
+// 拉黑状态（MSG-12）
+const blockedMe = ref(false)
+const iBlocked = ref(false)
+const blockPending = ref(false)
+const reportDialog = ref<InstanceType<typeof ReportDialog>>()
+
+async function loadBlockStatus() {
+  if (!activePeer.value) return
+  try {
+    const s = await api.relation.blockStatus(activePeer.value)
+    iBlocked.value = s.i_blocked
+    blockedMe.value = s.blocked_me
+  } catch {
+    iBlocked.value = false
+    blockedMe.value = false
+  }
+}
+
+async function toggleBlock() {
+  if (!activePeer.value || blockPending.value) return
+  blockPending.value = true
+  try {
+    const r = await api.relation.block(activePeer.value)
+    iBlocked.value = r.blocked
+    ElMessage.success(r.blocked ? '已拉黑对方，TA 将无法给你发私信' : '已取消拉黑')
+  } catch {
+    // http 层已弹错误提示
+  } finally {
+    blockPending.value = false
+  }
+}
+
+function openReport() {
+  reportDialog.value?.open()
+}
 
 // WS 实时接收（M3-IM-02，PRD MSG-13）
 let ws: WebSocket | null = null
@@ -88,6 +125,7 @@ async function openPeer(peer: string) {
   }
   activePeer.value = peer
   messages.value = []
+  loadBlockStatus()
   // 列表无此对象时（新会话/仅对方发过未读），用对方资料拼临时会话项
   let conv = convs.value.find((c) => c.peer_id === peer)
   if (!conv) {
@@ -227,6 +265,24 @@ onBeforeUnmount(() => {
             class="msg-chat__name"
             @click="router.push(`/space/${activePeer}`)"
           >{{ activeConv?.nickname ?? '对方' }}</span>
+          <span class="msg-chat__actions">
+            <span
+              class="msg-chat__action"
+              :title="iBlocked ? '取消拉黑' : '拉黑对方'"
+              @click="toggleBlock"
+            >
+              <span class="i-mingcute-user-remove-line" />
+              {{ iBlocked ? '已拉黑' : '拉黑' }}
+            </span>
+            <span
+              class="msg-chat__action"
+              title="举报会话"
+              @click="openReport"
+            >
+              <span class="i-mingcute-warning-line" />
+              举报
+            </span>
+          </span>
         </div>
         <div
           ref="listBox"
@@ -264,17 +320,26 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="msg-chat__input">
+          <el-alert
+            v-if="blockedMe"
+            type="warning"
+            :closable="false"
+            title="对方已将你拉黑，无法发送私信"
+            class="mb-2"
+          />
           <el-input
             v-model="input"
             type="textarea"
             :rows="2"
             maxlength="500"
-            placeholder="输入消息（≤500 字，敏感内容将被拦截）"
+            :disabled="blockedMe"
+            :placeholder="blockedMe ? '对方已将你拉黑，无法发送消息' : '输入消息（≤500 字，敏感内容将被拦截）'"
             @keydown.enter.exact.prevent="send"
           />
           <el-button
             type="primary"
             :loading="sending"
+            :disabled="blockedMe"
             @click="send"
           >
             发送
@@ -283,6 +348,14 @@ onBeforeUnmount(() => {
       </template>
     </div>
   </div>
+
+  <!-- 举报会话对象（target_type=5：举报用户，即私信对方） -->
+  <ReportDialog
+    ref="reportDialog"
+    :target-type="5"
+    :target-id="activePeer"
+    :title="activeConv ? `私信会话：${activeConv.nickname}` : '私信会话'"
+  />
 </template>
 
 <style scoped lang="scss">
@@ -405,8 +478,31 @@ onBeforeUnmount(() => {
 }
 
 .msg-chat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 14px 18px;
   border-bottom: 1px solid v.$border;
+}
+
+.msg-chat__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.msg-chat__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: v.$text-2;
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: v.$primary;
+  }
 }
 
 .msg-chat__name {
