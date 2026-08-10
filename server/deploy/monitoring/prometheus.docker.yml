@@ -1,0 +1,10 @@
+# DliDli Prometheus 抓取配置（M1-REL-02，docker-compose 运行：容器内经 host.docker.internal 访问宿主机 API）
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: dlidli-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8000"]

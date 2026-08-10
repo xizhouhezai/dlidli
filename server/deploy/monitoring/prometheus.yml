@@ -1,0 +1,10 @@
+# DliDli Prometheus 抓取配置（M1-REL-02，本地便携运行）
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: dlidli-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:8000"]
