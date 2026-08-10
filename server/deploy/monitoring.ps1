@@ -105,11 +105,12 @@ function Start-Grafana {
   $env:GF_PATHS_PROVISIONING = Join-Path $MonitoringDir 'grafana\provisioning'
   $env:DLIDLI_DASHBOARDS_PATH = Join-Path $MonitoringDir 'grafana\dashboards'
   $env:GRAFANA_PROM_URL = "http://localhost:9090"
+  $env:GF_USERS_DEFAULT_LANGUAGE = 'zh-Hans'   # 界面汉化（Grafana 内置 zh-Hans 语言包）
   if ($VerboseLog) { $env:GF_LOG_LEVEL = 'debug' }
   $p = Start-Process -FilePath $GrafanaExe -ArgumentList @('server', "--homepath=$GrafanaDir") -PassThru -WindowStyle Hidden `
     -RedirectStandardOutput (Join-Path $ToolsRoot 'grafana.out.log') `
     -RedirectStandardError (Join-Path $ToolsRoot 'grafana.err.log')
-  Remove-Item Env:\GF_PATHS_DATA, Env:\GF_PATHS_LOGS, Env:\GF_PATHS_PROVISIONING, Env:\DLIDLI_DASHBOARDS_PATH, Env:\GRAFANA_PROM_URL
+  Remove-Item Env:\GF_PATHS_DATA, Env:\GF_PATHS_LOGS, Env:\GF_PATHS_PROVISIONING, Env:\DLIDLI_DASHBOARDS_PATH, Env:\GRAFANA_PROM_URL, Env:\GF_USERS_DEFAULT_LANGUAGE
   if ($VerboseLog) { Remove-Item Env:\GF_LOG_LEVEL }
   if (-not $p) { throw "grafana failed to start" }
   Set-Content -Path (Join-Path $ToolsRoot 'grafana.pid') -Value $p.Id

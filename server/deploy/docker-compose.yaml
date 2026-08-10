@@ -95,6 +95,7 @@ services:
     environment:
       - GRAFANA_PROM_URL=http://prometheus:9090
       - DLIDLI_DASHBOARDS_PATH=/var/lib/grafana/dashboards
+      - GF_USERS_DEFAULT_LANGUAGE=zh-Hans   # 界面汉化（Grafana 内置 zh-Hans 语言包）
     volumes:
       - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
