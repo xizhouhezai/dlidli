@@ -71,6 +71,35 @@ services:
       timeout: 5s
       retries: 5
 
+  # 监控（M1-REL-02）：Prometheus 抓取 dlidli-api /metrics，Grafana 自动加载基础面板
+  # 访问：http://localhost:9090（Prometheus）/ http://localhost:3000（Grafana admin/admin）
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: dlidli-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/monitoring/prometheus.docker.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: dlidli-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GRAFANA_PROM_URL=http://prometheus:9090
+      - DLIDLI_DASHBOARDS_PATH=/var/lib/grafana/dashboards
+    volumes:
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+
   # Elasticsearch 于 M2（搜索）阶段启用
   # elasticsearch:
   #   image: elasticsearch:8.14.0
@@ -86,3 +115,5 @@ volumes:
   redis-data:
   kafka-data:
   minio-data:
+  prometheus-data:
+  grafana-data:

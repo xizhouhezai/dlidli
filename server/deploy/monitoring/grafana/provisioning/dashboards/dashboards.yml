@@ -1,0 +1,17 @@
+# Grafana 仪表盘自动加载（M1-REL-02）
+# 仪表盘 JSON 目录支持环境变量覆盖：DLIDLI_DASHBOARDS_PATH
+# - Docker：/var/lib/grafana/dashboards（compose 挂载）
+# - 本地原生（monitoring.ps1）：指向仓库 server/deploy/monitoring/grafana/dashboards
+# 注意：Grafana provisioning 环境变量语法为双美元 $${VAR}
+apiVersion: 1
+
+providers:
+  - name: dlidli
+    orgId: 1
+    folder: DliDli
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: ${DLIDLI_DASHBOARDS_PATH}
