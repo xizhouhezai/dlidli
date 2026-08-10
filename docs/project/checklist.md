@@ -87,7 +87,7 @@
 ### 发布准备
 
 - [x] M1-REL-01 核心链路压测（scripts/k6/core-load.js：首页推荐→视频详情→弹幕列表→搜索，匿名 5→20 VU 60s + 登录链路；阈值 failed<1%/p95<500ms；实测 2964 请求 0 失败、p95=384ms、checks 99.96%；k6 v0.57.0 二进制被 *.exe 忽略不入库） `2026-08-07`
-- [ ] M1-REL-02 监控告警（Prometheus + Grafana 基础面板）（后端 /metrics 已暴露：dlidli_http 请求量/耗时直方图/in-flight + Go 运行时指标；Prometheus 抓取与 Grafana 面板待部署环境）
+- [x] M1-REL-02 监控告警（Prometheus + Grafana 基础面板）（后端 /metrics 已暴露：dlidli_http 请求量/耗时直方图/in-flight + Go 运行时指标；deploy/monitoring.ps1 便携版启动 Prometheus(9090)+Grafana(3000)（无 Docker），provisioning 自动加载 Prometheus 数据源 + DliDli 基础监控面板；实测 target up/指标可查询/面板加载全通；docker-compose 双配置（本地/docker 抓取目标）） `2026-08-10`
 - [x] M1-REL-03 内测环境部署 + 种子内容准备（≥50 个视频）（种子脚本：FFmpeg 生成 10 源×5 UP 投 50 稿→转码→批量过审，发布总数 56；全流程走查：首页/播放/赞币评弹/搜索全通；部署待 staging 环境） `2026-07-30`
 - [ ] M1-REL-04 内测邀请机制（邀请码注册开关）
 

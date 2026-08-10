@@ -1,0 +1,13 @@
+# Grafana 数据源自动配置（M1-REL-02）
+# 地址支持环境变量覆盖：GRAFANA_PROM_URL（docker-compose 注入 http://prometheus:9090，本地默认 http://localhost:9090）
+# 注意：Grafana provisioning 环境变量语法为双美元 $${VAR}
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: ${GRAFANA_PROM_URL}
+    isDefault: true
+    uid: prometheus
+    editable: true
