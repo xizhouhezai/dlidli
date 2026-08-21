@@ -27,18 +27,125 @@ export default defineConfig({
   extends: teekConfig,
   lang: 'zh-CN',
   title: 'DliDli 视频社区',
-  description: 'DliDli 视频社区项目文档：产品需求、技术架构、开发进度管理',
+  description: 'DliDli 视频社区项目文档：功能规格（SDD）、技术架构、开发进度管理',
   lastUpdated: true,
 
   themeConfig: {
     nav: [
       { text: '首页', link: '/' },
+      { text: '功能规格（SDD）', link: '/specs/' },
       { text: '产品文档', link: '/product/overview' },
       { text: '技术架构', link: '/architecture/overview' },
       { text: '项目管理', link: '/project/roadmap' }
     ],
 
     sidebar: {
+      '/specs/': [
+        {
+          text: '规范',
+          items: [
+            { text: 'SDD 总纲', link: '/specs/' },
+            { text: '模板：spec（需求）', link: '/specs/templates/spec' },
+            { text: '模板：plan（方案）', link: '/specs/templates/plan' },
+            { text: '模板：tasks（任务）', link: '/specs/templates/tasks' }
+          ]
+        },
+        {
+          text: '账号体系',
+          items: [
+            { text: 'spec 需求', link: '/specs/account/spec' },
+            { text: 'plan 方案', link: '/specs/account/plan' },
+            { text: 'tasks 任务', link: '/specs/account/tasks' }
+          ]
+        },
+        {
+          text: '视频投稿与播放',
+          items: [
+            { text: 'spec 需求', link: '/specs/video/spec' },
+            { text: 'plan 方案', link: '/specs/video/plan' },
+            { text: 'tasks 任务', link: '/specs/video/tasks' }
+          ]
+        },
+        {
+          text: '弹幕系统',
+          items: [
+            { text: 'spec 需求', link: '/specs/danmaku/spec' },
+            { text: 'plan 方案', link: '/specs/danmaku/plan' },
+            { text: 'tasks 任务', link: '/specs/danmaku/tasks' }
+          ]
+        },
+        {
+          text: '互动体系',
+          items: [
+            { text: 'spec 需求', link: '/specs/interaction/spec' },
+            { text: 'plan 方案', link: '/specs/interaction/plan' },
+            { text: 'tasks 任务', link: '/specs/interaction/tasks' }
+          ]
+        },
+        {
+          text: '社区动态与关注',
+          items: [
+            { text: 'spec 需求', link: '/specs/community/spec' },
+            { text: 'plan 方案', link: '/specs/community/plan' },
+            { text: 'tasks 任务', link: '/specs/community/tasks' }
+          ]
+        },
+        {
+          text: '消息通知与私信',
+          items: [
+            { text: 'spec 需求', link: '/specs/notification/spec' },
+            { text: 'plan 方案', link: '/specs/notification/plan' },
+            { text: 'tasks 任务', link: '/specs/notification/tasks' }
+          ]
+        },
+        {
+          text: '搜索与推荐',
+          items: [
+            { text: 'spec 需求', link: '/specs/search-recommend/spec' },
+            { text: 'plan 方案', link: '/specs/search-recommend/plan' },
+            { text: 'tasks 任务', link: '/specs/search-recommend/tasks' }
+          ]
+        },
+        {
+          text: '创作者中心',
+          items: [
+            { text: 'spec 需求', link: '/specs/creator/spec' },
+            { text: 'plan 方案', link: '/specs/creator/plan' },
+            { text: 'tasks 任务', link: '/specs/creator/tasks' }
+          ]
+        },
+        {
+          text: '内容审核与管理后台',
+          items: [
+            { text: 'spec 需求', link: '/specs/admin/spec' },
+            { text: 'plan 方案', link: '/specs/admin/plan' },
+            { text: 'tasks 任务', link: '/specs/admin/tasks' }
+          ]
+        },
+        {
+          text: '会员与商业化',
+          items: [
+            { text: 'spec 需求', link: '/specs/monetization/spec' },
+            { text: 'plan 方案', link: '/specs/monetization/plan' },
+            { text: 'tasks 任务', link: '/specs/monetization/tasks' }
+          ]
+        },
+        {
+          text: '直播（V3 预研）',
+          items: [
+            { text: 'spec 需求', link: '/specs/live/spec' },
+            { text: 'plan 方案', link: '/specs/live/plan' },
+            { text: 'tasks 任务', link: '/specs/live/tasks' }
+          ]
+        },
+        {
+          text: '工程与端侧（横切）',
+          items: [
+            { text: 'tasks 任务', link: '/specs/engineering/tasks' }
+          ]
+        }
+      ],
+
       '/product/': [
         {
           text: '产品总览',
@@ -49,25 +156,15 @@ export default defineConfig({
           ]
         },
         {
-          text: '功能需求（PRD）',
-          items: [
-            { text: '用户账号体系', link: '/product/prd/account' },
-            { text: '视频投稿与播放', link: '/product/prd/video' },
-            { text: '弹幕系统', link: '/product/prd/danmaku' },
-            { text: '互动体系（点赞/投币/收藏/评论）', link: '/product/prd/interaction' },
-            { text: '搜索与推荐', link: '/product/prd/search-recommend' },
-            { text: '社区动态与关注', link: '/product/prd/community' },
-            { text: '消息通知', link: '/product/prd/notification' },
-            { text: '创作者中心', link: '/product/prd/creator' },
-            { text: '直播（远期）', link: '/product/prd/live' },
-            { text: '会员与商业化', link: '/product/prd/monetization' },
-            { text: '内容审核与管理后台', link: '/product/prd/admin' }
-          ]
-        },
-        {
           text: '非功能需求',
           items: [
             { text: '性能 / 安全 / 合规', link: '/product/nfr' }
+          ]
+        },
+        {
+          text: '功能规格（SDD）',
+          items: [
+            { text: '前往 specs 规格库', link: '/specs/' }
           ]
         }
       ],
@@ -91,7 +188,6 @@ export default defineConfig({
           items: [
             { text: '路线图（Roadmap）', link: '/project/roadmap' },
             { text: '开发进度管理', link: '/project/progress' },
-            { text: '开发清单（Checklist）', link: '/project/checklist' },
             { text: '协作规范', link: '/project/conventions' },
             { text: '部署与运行指南', link: '/project/deployment' }
           ]
