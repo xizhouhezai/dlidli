@@ -1,6 +1,6 @@
 # 协作规范
 
-> 状态：`V1.1` ｜ 更新日期：2026-07-31
+> 状态：`V2.0（SDD）` ｜ 更新日期：2026-08-21
 
 ## 1. 分支与提交
 
@@ -99,12 +99,12 @@ git branch -d optimize/<...>
 <type>(<scope>): <subject>
 
 type:  feat | fix | docs | refactor | test | chore | perf
-scope: acc | vid | dm | itr | flw | msg | srh | rec | crt | adm | eng | web | h5 | mp
+scope: acc | vid | dm | itr | flw | msg | srh | rec | crt | adm | eng | web | h5 | mp | spec
 例：   feat(acc): 手机号验证码登录接口
-       docs(prd): 更新弹幕屏蔽规则
+       docs(spec): 更新弹幕屏蔽规则（DM-20）
 ```
 
-- PR 必须关联开发清单任务编号（如 `M1-ACC-01`），CI 全绿 + 至少 1 人 Review 后合入。
+- PR 必须关联模块任务编号（如 `M1-ACC-01`，定义于 `docs/specs/*/tasks.md`），CI 全绿 + 至少 1 人 Review 后合入；合并后在对应 tasks.md 勾选并核对"覆盖"的需求 ID。
 
 ## 2. 代码规范
 
@@ -114,17 +114,29 @@ scope: acc | vid | dm | itr | flw | msg | srh | rec | crt | adm | eng | web | h5
 | TS/Vue | ESLint + Prettier；组件 PascalCase；组合式 API（`<script setup>`） |
 | SQL | 禁止 `SELECT *`；DDL 变更走 migration 文件评审 |
 | API | REST 命名复数资源；破坏性变更须升 `/api/v2` |
-| 后台权限 | **新增任何管理后台（apps/admin）功能必须同步登记权限点**：新页面登记页面权限（menu），页内每个受控操作登记按钮权限（button，挂到该 menu 下），在 `seedRBAC` 的 `builtinPermissions` 登记、按需分配到内置角色，后端路由挂 `RequirePerm(code)`、前端按钮加 `v-perm` + 菜单图标加 uno safelist。权限点是验收项，缺失视为未完成。详见 [管理后台 PRD §6.4](/product/prd/admin) |
+| 后台权限 | **新增任何管理后台（apps/admin）功能必须同步登记权限点**：新页面登记页面权限（menu），页内每个受控操作登记按钮权限（button，挂到该 menu 下），在 `seedRBAC` 的 `builtinPermissions` 登记、按需分配到内置角色，后端路由挂 `RequirePerm(code)`、前端按钮加 `v-perm` + 菜单图标加 uno safelist。权限点是验收项，缺失视为未完成。详见 [admin spec §5.1 权限治理规范](/specs/admin/spec) |
 
-## 3. 文档维护约定
+## 3. 文档维护约定（SDD 规格驱动）
+
+需求以 `docs/specs/` 为单一事实来源：**一模块一目录，spec（WHAT）→ plan（HOW）→ tasks（进度）三件套**。新功能或需求变更必须按顺序走：
+
+```
+clarify（澄清，可选）→ specify（改 spec.md + changelog，评审通过）→ plan（定方案 plan.md）
+→ tasks（拆任务 tasks.md 并标注覆盖的需求 ID）→ implement（开发，完成即勾选）→ checklist（交付前逐条核对 EARS 验收标准）
+```
+
+- **铁律：先改 spec 再写代码**，禁止"代码先行、文档后补"；spec 与实现不一致时，第一动作是修正 spec。
+- 验收标准用 EARS 语法书写（**WHEN/WHILE/IF/WHERE … THE SYSTEM SHALL …**），语法与模板见 [SDD 总纲](/specs/) 与 `docs/specs/templates/`。
+- 需求编号沿用模块分域前缀（ACC-/VID-/DM-…），任务编号沿用 `{阶段}-{模块}-{序号}`（如 M1-VID-03），并保持 git 分支/PR 关联。
 
 | 文档 | 更新时机 | 责任人 |
 | --- | --- | --- |
-| PRD（product/prd/*） | 需求变更时同步修改，标注版本 | 产品 |
-| 架构文档 | 技术方案变更（先文档后编码） | 后端/前端负责人 |
-| [开发清单](/project/checklist) | 任务完成即勾选 | 任务执行者 |
-| [进度管理](/project/progress) | 每周五 | 项目负责人 |
-| API 文档（OpenAPI） | 接口变更随 PR 提交 | 后端 |
+| `specs/*/spec.md`（需求规格） | 需求变更时先改 spec（含 changelog 与日期），评审后进入开发 | 需求提出人 |
+| `specs/*/plan.md`（技术方案） | 技术方案变更（先文档后编码） | 后端/前端负责人 |
+| `specs/*/tasks.md`（任务清单） | 任务完成即勾选 + 日期 + 验证结论，同步更新进度表 | 任务执行者 |
+| 架构文档（architecture/*） | 全局横切架构变更 | 后端/前端负责人 |
+| [进度管理](/project/progress) | 每周五（数据来源：各模块 tasks 进度表） | 项目负责人 |
+| API 文档（OpenAPI） | 接口变更随 PR 提交（重跑 `swag init`） | 后端 |
 
 ## 4. 环境与发布
 

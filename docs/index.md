@@ -7,6 +7,9 @@ hero:
   tagline: 类哔哩哔哩的视频网站 · Go 后端 · Web / H5 / 小程序多端前端
   actions:
     - theme: brand
+      text: 功能规格（SDD）
+      link: /specs/
+    - theme: alt
       text: 产品文档
       link: /product/overview
     - theme: alt
@@ -18,8 +21,12 @@ hero:
 
 features:
   - icon: 📺
-    title: 产品需求（PRD）
-    details: 产品定位、用户画像、11 大功能模块需求说明、非功能需求，覆盖 MVP 到 V3 的版本规划。
+    title: 功能规格（SDD）
+    details: 11 大模块的 spec（EARS 验收标准）/ plan（技术方案）/ tasks（任务进度）三件套，规格驱动的单一事实来源。
+    link: /specs/
+  - icon: 🧭
+    title: 产品文档
+    details: 产品定位、用户画像、版本规划（MVP → V3）、非功能需求（性能/安全/合规）。
     link: /product/overview
   - icon: 🏗️
     title: 技术架构
@@ -27,6 +34,6 @@ features:
     link: /architecture/overview
   - icon: 📋
     title: 项目管理
-    details: 里程碑路线图、开发进度看板、按模块拆解的开发清单（Checklist）、协作规范。
+    details: 里程碑路线图、开发进度看板、SDD 协作流程与规范（Git Flow / Conventional Commits）。
     link: /project/roadmap
 ---
