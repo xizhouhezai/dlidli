@@ -51,6 +51,7 @@
 - [ ] M3-ENG-04 链路追踪全覆盖（OpenTelemetry）
 - [x] M3-ENG-05 后端核心层单测补全 + 中间件组合顺序缺陷修复（middleware：TraceID/Auth/OptionalAuth/AdminAuth/CORS/Recovery/PlaySignGuard/限流 fail-open/组合中间件；pkg：storage 本地驱动含跨平台路径穿越防护、config 默认值、contentmod 规则机审、moderate 词库热加载；**修复** v0.23.1 引入的 Chain 组合顺序缺陷——Auth 尾部 c.Next() 直通业务导致限流器后置执行，改为单一 AuthedRateLimited 中间件保证限流先于业务；go build/vet/test 全绿） `2026-08-25`
 - [x] M3-ENG-06 Web 视频详情页巨型组件拆分（VideoView 1743 行 → 1375 行）：script 逻辑抽为 4 个组合式（useVideoPlayer/useDanmakuController/useVideoActions/usePlaybackReport），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
+- [x] M3-ENG-07 Web 投稿页巨型组件拆分（UploadView 728 行 → 594 行）：script 逻辑抽为 3 个组合式（useUploadParts 分P 管理/useUploadCover 封面三级兜底/useUploadForm 表单与投稿），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
 
 ## M4（W49+）App
 
@@ -65,8 +66,8 @@
 | M0 | 13 | 13 |
 | M1 | 4 | 3 |
 | M2 | 6 | 3 |
-| M3 | 9 | 2 |
+| M3 | 10 | 3 |
 | M4 | 3 | 0 |
-| **合计** | **35** | **21** |
+| **合计** | **36** | **22** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
