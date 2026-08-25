@@ -37,9 +37,10 @@ func NewLocal(dir, baseURL string) (*Local, error) {
 }
 
 func (l *Local) Save(_ context.Context, key string, r io.Reader) (string, error) {
-	// 防路径穿越
+	// 防路径穿越（跨平台：同时拦截 .. 前缀、绝对路径与以分隔符开头的 key）
 	clean := filepath.Clean(key)
-	if strings.HasPrefix(clean, "..") || filepath.IsAbs(clean) {
+	if strings.HasPrefix(clean, "..") || filepath.IsAbs(clean) ||
+		strings.HasPrefix(clean, "/") || strings.HasPrefix(clean, "\\") {
 		return "", fmt.Errorf("非法存储 key: %s", key)
 	}
 

@@ -99,13 +99,12 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		})
 	}
 
-	authMW := middleware.Auth(cfg.JWT.Secret)
 	optionalAuthMW := middleware.OptionalAuth(cfg.JWT.Secret)
 
-	// 写接口限流（仅统计 POST/PUT/PATCH/DELETE；依赖 Redis，不可用时放行）
+	// 需登录路由组：鉴权 + 写接口限流（合并为单一中间件，保证限流先于业务执行；
+	// 仅统计 POST/PUT/PATCH/DELETE，依赖 Redis 不可用时放行）
 	rateLimiter := middleware.NewRateLimiter(res.Redis, cfg.RateLimit.PerMinute, log)
-	// 需登录路由组 = 先鉴权(写入 user_id) 再限流；GET 读请求在中间件内直接放行
-	authedRateLimited := middleware.Chain(authMW, middleware.WriteLimiter(rateLimiter))
+	authedRateLimited := middleware.AuthedRateLimited(cfg.JWT.Secret, rateLimiter)
 
 	// 业务模块路由（依赖 MySQL/Redis，缺失时跳过并告警）
 	if res.DB != nil && res.Redis != nil {
