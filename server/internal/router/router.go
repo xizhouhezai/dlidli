@@ -3,6 +3,7 @@ package router
 
 import (
 	"context"
+	"net/http"
 	"path/filepath"
 	"time"
 
@@ -60,13 +61,28 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 	}
 
 	// 健康检查（供负载均衡/监控拨测）
+	// 服务存活(进程运行)恒返回 200；业务就绪(MySQL/Redis 可用、业务路由已注册)返回 ready=true，
+	// 否则返回 503，便于监控区分"进程活着但业务不可用"。
 	e.GET("/health", func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
-		response.OK(c, gin.H{
-			"app":        cfg.App.Name,
-			"env":        cfg.App.Env,
-			"components": res.Health(ctx),
+		ready := res.DB != nil && res.Redis != nil
+		code := http.StatusOK
+		msg := "ok"
+		if !ready {
+			code = http.StatusServiceUnavailable
+			msg = "service unavailable: business dependencies not ready"
+		}
+		c.JSON(code, gin.H{
+			"code":    0,
+			"message": msg,
+			"data": gin.H{
+				"app":        cfg.App.Name,
+				"env":        cfg.App.Env,
+				"ready":      ready,
+				"components": res.Health(ctx),
+			},
+			"trace_id": c.GetString(response.CtxTraceID),
 		})
 	})
 
