@@ -22,6 +22,7 @@
 | 稿件编辑 | 状态机 + `version` 乐观锁；dev 提供 autoApprove 自动过审（审核后台上线后关闭） | 防并发状态错乱 | 分布式锁 |
 | 多 P | `video_part` 表 + `video_stream`/`transcode_job` 加 part_index，唯一键含分 P | 转码按 P 隔离互不影响 | 稿件拆多条（体验差） |
 | 合集 | `video_collection` / `video_collection_item`（与收藏夹 favorite_folder 表名区分） | 合集=稿件组织形态，与收藏行为解耦 | 复用收藏夹模型（语义冲突） |
+| 上传文件归属（VID-24） | 投稿前 `uploadSvc.GetUserFile(ctx, uid, fileID)` 强制校验 `file.user_id == uid`，不匹配返回禁权；跨用户秒传不再返回他人 `file_id`（uk_hash 唯一约束下改为走本人上传会话） | 杜绝越权复用他人上传原文件（P0 安全）；不改表结构、最小侵入 | 去掉 uk_hash 唯一约束 + 跨用户秒传建立本人记录（需迁移、成本高） |
 
 ## 3. 数据模型
 
@@ -38,8 +39,8 @@ transcode_job         { video_id, part_index, status, retry_cnt }   -- 任务队
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| POST | /api/v1/videos/upload/init ｜ /parts ｜ /complete | 分片上传三段式（init 返回任务与已传分片） |
-| GET | /api/v1/videos/upload/progress ｜ /hash/{hash} | 进度查询 ｜ 秒传探测 |
+| POST | /api/v1/upload/init ｜ /upload/{id}/parts/{index} ｜ /upload/{id}/complete | 分片上传三段式（init 返回任务与已传分片；upload 独立模块路由，见 upload handler） |
+| GET | /api/v1/upload/{id} | 上传进度查询 |
 | POST/PUT/DELETE | /api/v1/videos... | 稿件 CRUD（投稿/详情/我的稿件/公开列表/软删除） |
 | GET | /api/v1/videos/{bvid}/parts | 分 P 列表（各 P 签名流） |
 | GET | /api/v1/videos/{bvid} | 详情（含签名播放地址下发） |
@@ -58,4 +59,5 @@ transcode_job         { video_id, part_index, status, retry_cnt }   -- 任务队
 - [ ] Kafka 替换 DB 任务队列（规模化）
 - [ ] 1080P / 4K 档位与会员清晰度鉴权（V1 / V3）
 - [ ] 定时发布（VID-04）、视频指纹（VID-13）未实现
+- [x] 上传文件归属校验（VID-24）已实现（2026-08-25，投稿前 uid 校验 + 跨用户秒传禁复用）
 - [ ] 稿件编辑重新送审完整闭环（VID-06，编辑入口已随稿件管理页补）

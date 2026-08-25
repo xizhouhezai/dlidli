@@ -147,7 +147,7 @@ func (s *Service) Submit(ctx context.Context, uid int64, req *SubmitReq) (*Detai
 	if err != nil {
 		return nil, errcode.ErrInvalidParams
 	}
-	file, err := s.uploadSvc.GetUserFile(ctx, fileID)
+	file, err := s.uploadSvc.GetUserFile(ctx, uid, fileID)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func (s *Service) Submit(ctx context.Context, uid int64, req *SubmitReq) (*Detai
 			if err != nil {
 				return nil, errcode.ErrInvalidParams
 			}
-			pf, err := s.uploadSvc.GetUserFile(ctx, pfID)
+			pf, err := s.uploadSvc.GetUserFile(ctx, uid, pfID)
 			if err != nil {
 				return nil, err
 			}

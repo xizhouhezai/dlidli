@@ -53,10 +53,10 @@ func (s *Service) Init(ctx context.Context, uid int64, req *InitReq) (*InitResp,
 	}
 	hash := strings.ToLower(req.FileHash)
 
-	// 秒传：同 hash 文件已存在
+	// 秒传：同 hash 文件已存在且属于当前用户时直接复用（VID-24：跨用户不暴露他人 file_id）
 	if f, err := s.repo.FindByHash(hash); err != nil {
 		return nil, err
-	} else if f != nil {
+	} else if f != nil && f.UserID == uid {
 		return &InitResp{Fast: true, FileID: fmt.Sprintf("%d", f.ID), StoreKey: f.StoreKey}, nil
 	}
 
@@ -229,15 +229,26 @@ func (s *Service) Complete(ctx context.Context, uid int64, uploadID string) (*Co
 	return &CompleteResp{FileID: fmt.Sprintf("%d", record.ID), StoreKey: record.StoreKey}, nil
 }
 
+// ensureOwnership 校验上传文件归属（VID-24）：文件必须属于 uid，否则返回禁权错误。
+func ensureOwnership(f *UploadFile, uid int64) error {
+	if f.UserID != uid {
+		return errcode.ErrForbidden.WithMsg("该文件不属于当前用户，不能用于投稿")
+	}
+	return nil
+}
+
 // GetUserFile 按 ID 获取当前用户可用的已完成文件（供 video 模块投稿时校验）。
-// 秒传场景下文件首传者可能不是当前用户，故不限制 user_id。
-func (s *Service) GetUserFile(_ context.Context, fileID int64) (*UploadFile, error) {
+// 归属校验：文件必须属于当前用户，防止越权复用他人上传的原文件（VID-24）。
+func (s *Service) GetUserFile(_ context.Context, uid, fileID int64) (*UploadFile, error) {
 	f, err := s.repo.FindByID(fileID)
 	if err != nil {
 		return nil, err
 	}
 	if f == nil {
 		return nil, errcode.ErrNotFound.WithMsg("上传文件不存在")
+	}
+	if err := ensureOwnership(f, uid); err != nil {
+		return nil, err
 	}
 	return f, nil
 }
