@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { bindKeyboard, PlayerCore, qualityLabel } from '@dlidli/player'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { qualityLabel } from '@dlidli/player'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
-import { ApiError, type CollectionItem, type DanmakuItem, type PartItem, type StreamItem, type VideoCard, type VideoDetail } from '@dlidli/api-client'
+import type { PartItem, StreamItem, VideoCard, VideoDetail } from '@dlidli/api-client'
 import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import DanmakuLayer from '@/components/DanmakuLayer.vue'
 import CommentSection from '@/components/CommentSection.vue'
 import ReportDialog from '@/components/ReportDialog.vue'
-import { useDanmakuSettings, type DanmakuSettings } from '@/composables/useDanmakuSettings'
+import { useVideoPlayer } from '@/composables/video/useVideoPlayer'
+import { useDanmakuController } from '@/composables/video/useDanmakuController'
+import { useVideoActions } from '@/composables/video/useVideoActions'
+import { usePlaybackReport } from '@/composables/video/usePlaybackReport'
 import defaultCover from '@/assets/default-cover.svg'
 import defaultAvatar from '@/assets/default-avatar.png'
 
@@ -34,413 +36,90 @@ function openReport() {
   reportDialog.value?.open()
 }
 
-// 播放器与清晰度
-const videoEl = ref<HTMLVideoElement>()
-const playerBox = ref<HTMLElement>()
-const currentStream = ref<StreamItem | null>(null)
-let player: PlayerCore | null = null
-let unbindKeys: (() => void) | null = null
+// —— 拆分出的子模块（M3-ENG-06）：播放器 / 弹幕 / 互动 / 播放统计 ——
+const player = useVideoPlayer(detail)
+const dm = useDanmakuController(detail, player.videoEl)
+const acts = useVideoActions(detail)
+const report = usePlaybackReport(detail, player.videoEl)
 
-// 多P投稿（PRD VID-05）：分P列表与当前 P
-const partList = ref<PartItem[]>([])
-const currentPart = ref(0)
+const {
+  videoEl,
+  playerBox,
+  currentStream,
+  partList,
+  currentPart,
+  playbackRate,
+  rateOptions,
+  setRate,
+  switchPart,
+  ensurePlayer,
+  switchTo,
+  destroy,
+  bindKeys,
+  unbindKeyListeners,
+  tryResume,
+  tryAutoplay,
+} = player
+const {
+  dmEnabled,
+  dmInput,
+  dmSending,
+  dmLayer,
+  dmSettings,
+  dmMode,
+  dmColor,
+  DM_COLORS,
+  isDmLevel3,
+  dmList,
+  dmListTotal,
+  dmListPage,
+  dmListLoading,
+  loadDmList,
+  dmSeekTo,
+  dmTextColor,
+  dmSettingsVisible,
+  AREA_OPTIONS,
+  SPEED_OPTIONS,
+  DENSITY_OPTIONS,
+  dmReportDialog,
+  dmReportItem,
+  onDmReport,
+  sendDanmaku,
+} = dm
+const {
+  liked,
+  coined,
+  faved,
+  coinPopVisible,
+  following,
+  followerCnt,
+  followPending,
+  favPopVisible,
+  collections,
+  newColName,
+  openCoinPop,
+  doCoin,
+  doFav,
+  createCollection,
+  openShare,
+  toggleFav,
+  toggleFollow,
+  startPress,
+  endPress,
+} = acts
 
-function switchPart(i: number) {
-  if (i === currentPart.value || !partList.value[i]) return
-  const part = partList.value[i]
-  if (!part.streams.length) {
-    ElMessage.warning('该分P暂无可用播放流')
-    return
-  }
-  currentPart.value = i
-  // 切换播放源（保留播放器实例，跳过续播：跨 P 进度独立由服务端按 bvid 记忆）
-  player?.setSources(part.streams)
-}
-
-// 倍速
-const playbackRate = ref(1)
-const rateOptions = [0.5, 0.75, 1, 1.25, 1.5, 2]
-function setRate(rate: number) {
-  playbackRate.value = rate
-  player?.setRate(rate)
-}
-
-// 弹幕
-const dmEnabled = ref(true)
-const dmInput = ref('')
-const dmSending = ref(false)
-const dmLayer = ref<InstanceType<typeof DanmakuLayer>>()
-const dmSettings = useDanmakuSettings().settings
-
-// 发送工具条（M2-DM-01）：模式 + 颜色（非白/顶底需 Lv3）
-const dmMode = ref<1 | 2 | 3>(1)
-const dmColor = ref(0xffffff)
-const DM_COLORS: Array<{ name: string; value: number }> = [
-  { name: '白', value: 0xffffff },
-  { name: '红', value: 0xff0000 },
-  { name: '橙', value: 0xff7f00 },
-  { name: '黄', value: 0xffff00 },
-  { name: '绿', value: 0x00ff00 },
-  { name: '蓝', value: 0x00bfff },
-  { name: '紫', value: 0xff00ff },
-  { name: '粉', value: 0xff69b4 },
-]
-const isDmLevel3 = () => (userStore.profile?.level ?? 0) >= 3
-
-// 弹幕列表面板（右侧内嵌，M3-DM-01 列表）
-const dmList = ref<DanmakuItem[]>([])
-const dmListTotal = ref(0)
-const dmListPage = ref(1)
-const dmListLoading = ref(false)
-
-async function loadDmList(reset = false) {
-  if (reset) {
-    dmListPage.value = 1
-    dmList.value = []
-  }
-  if (!detail.value) return
-  dmListLoading.value = true
-  try {
-    const res = await api.danmaku.listAll(detail.value.bvid, dmListPage.value, 50)
-    dmList.value = reset ? res.list : [...dmList.value, ...res.list]
-    dmListTotal.value = res.total
-  } catch {
-    ElMessage.error('弹幕列表加载失败')
-  } finally {
-    dmListLoading.value = false
-  }
-}
-
-function dmSeekTo(timeMs: number) {
-  const video = videoEl.value
-  if (!video) return
-  video.currentTime = timeMs / 1000
-}
-
-// 弹幕文字颜色：浅色底上白/近白弹幕映射为深灰，保证可读（彩色保留）
-function dmTextColor(color: number): string {
-  const hex = (color || 0xffffff).toString(16).padStart(6, '0')
-  const r = parseInt(hex.slice(0, 2), 16)
-  const g = parseInt(hex.slice(2, 4), 16)
-  const b = parseInt(hex.slice(4, 6), 16)
-  const lum = 0.299 * r + 0.587 * g + 0.114 * b
-  return lum > 200 ? '#333' : '#' + hex
-}
-
-// 弹幕设置面板
-const dmSettingsVisible = ref(false)
-const AREA_OPTIONS: Array<{ label: string; value: DanmakuSettings['area'] }> = [
-  { label: '1/4 屏', value: 'quarter' },
-  { label: '半屏', value: 'half' },
-  { label: '全屏', value: 'full' },
-]
-const SPEED_OPTIONS: Array<{ label: string; value: DanmakuSettings['speed'] }> = [
-  { label: '慢', value: 'slow' },
-  { label: '标准', value: 'normal' },
-  { label: '快', value: 'fast' },
-]
-const DENSITY_OPTIONS: Array<{ label: string; value: DanmakuSettings['density'] }> = [
-  { label: '低', value: 'low' },
-  { label: '标准', value: 'normal' },
-  { label: '高', value: 'high' },
-]
-
-// 弹幕举报（复用 ReportDialog，target_type=3）
-const dmReportDialog = ref<InstanceType<typeof ReportDialog> | null>(null)
-const dmReportItem = ref<DanmakuItem | null>(null)
-function onDmReport(item: DanmakuItem) {
-  dmReportItem.value = item
-  dmReportDialog.value?.open()
-}
-
-// 三连：赞 / 币 / 藏
-const liked = ref(false)
-const coined = ref(0) // 已投币数
-const faved = ref(false)
-const acting = ref(false)
-const coinPopVisible = ref(false)
-
-function requireLogin(): boolean {
-  if (!userStore.token) {
-    router.push('/login')
-    return false
-  }
-  return true
-}
-
-async function toggleLike() {
-  if (!requireLogin() || !detail.value || acting.value) return
-  acting.value = true
-  try {
-    const res = await api.interaction.likeVideo(detail.value.bvid)
-    liked.value = res.liked
-    detail.value.stat.like += res.liked ? 1 : -1
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
-  } finally {
-    acting.value = false
-  }
-}
-
-// 关注（UP 主卡片）
-const following = ref(false)
-const followerCnt = ref(0)
-const followPending = ref(false)
-
-function loadRelation(ownerID: string) {
-  api.relation
-    .stat(ownerID)
-    .then((st) => {
-      following.value = st.following
-      followerCnt.value = st.follower_cnt
-    })
-    .catch(() => {})
-}
-
-async function toggleFollow() {
-  if (!requireLogin() || !detail.value || followPending.value) return
-  followPending.value = true
-  try {
-    const res = await api.relation.follow(detail.value.owner.id)
-    following.value = res.following
-    followerCnt.value += res.following ? 1 : -1
-    ElMessage.success(res.following ? '关注成功，可以召唤 TA 的更多更新啦' : '已取消关注')
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
-  } finally {
-    followPending.value = false
-  }
-}
-
-// 长按点赞 0.8s 触发一键三连（B 站同款交互）
-let pressTimer: ReturnType<typeof setTimeout> | null = null
-let longPressed = false
-
-function startPress() {
-  if (!userStore.token || !detail.value) return
-  longPressed = false
-  pressTimer = setTimeout(() => {
-    longPressed = true
-    doTriple()
-  }, 800)
-}
-
-function endPress(isClick: boolean) {
-  if (pressTimer) {
-    clearTimeout(pressTimer)
-    pressTimer = null
-  }
-  if (isClick && !longPressed) toggleLike()
-}
-
-async function doTriple() {
-  if (!requireLogin() || !detail.value || acting.value) return
-  acting.value = true
-  try {
-    const res = await api.interaction.triple(detail.value.bvid)
-    liked.value = res.liked
-    coined.value = res.coin_count
-    faved.value = res.faved
-    detail.value.stat.like += res.like_delta
-    detail.value.stat.coin += res.coin_delta
-    detail.value.stat.fav += res.fav_delta
-    ElMessage.success(res.coin_delta > 0 ? '三连成功，感谢支持！' : '三连成功！')
-    userStore.refreshProfile()
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
-  } finally {
-    acting.value = false
-  }
-}
-
-function openCoinPop() {
-  if (!requireLogin() || !detail.value) return
-  if (coined.value > 0) {
-    ElMessage.info('已经投过币啦')
-    return
-  }
-  coinPopVisible.value = !coinPopVisible.value
-}
-
-async function doCoin(count: 1 | 2) {
-  coinPopVisible.value = false
-  if (!detail.value || acting.value) return
-  acting.value = true
-  try {
-    await api.interaction.coinVideo(detail.value.bvid, count)
-    coined.value = count
-    detail.value.stat.coin += count
-    ElMessage.success(`投了 ${count} 枚硬币～`)
-    userStore.refreshProfile()
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '投币失败')
-  } finally {
-    acting.value = false
-  }
-}
-
-// 转发到动态
-async function openShare() {
-  if (!requireLogin() || !detail.value) return
-  let content = ''
-  try {
-    const res = await ElMessageBox.prompt('说点什么（可留空）', '转发到动态', {
-      confirmButtonText: '转发',
-      cancelButtonText: '取消',
-      inputPlaceholder: '分享给关注你的人~',
-    })
-    content = res.value?.trim() ?? ''
-  } catch {
-    return
-  }
-  try {
-    await api.dynamic.shareVideo(detail.value.bvid, content)
-    detail.value.stat.share += 1
-    ElMessage.success('已转发到动态')
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '转发失败')
-  }
-}
-
-async function toggleFav() {
-  if (!requireLogin() || !detail.value || acting.value) return
-  if (faved.value) {
-    // 已收藏 → 直接取消
-    doFav('0')
-    return
-  }
-  // 未收藏 → 弹层选收藏夹
-  favPopVisible.value = !favPopVisible.value
-  if (favPopVisible.value) loadCollections()
-}
-
-// 收藏夹弹层
-const favPopVisible = ref(false)
-const collections = ref<CollectionItem[]>([])
-const newColName = ref('')
-
-async function loadCollections() {
-  try {
-    collections.value = await api.interaction.listCollections()
-  } catch {
-    collections.value = []
-  }
-}
-
-async function createCollection() {
-  const name = newColName.value.trim()
-  if (!name) return
-  try {
-    const col = await api.interaction.createCollection(name)
-    collections.value = [...collections.value, col]
-    newColName.value = ''
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '创建失败')
-  }
-}
-
-async function doFav(collectionId: string) {
-  favPopVisible.value = false
-  if (!detail.value || acting.value) return
-  acting.value = true
-  try {
-    const res = await api.interaction.toggleFavorite(detail.value.bvid, collectionId)
-    faved.value = res.faved
-    detail.value.stat.fav += res.faved ? 1 : -1
-    ElMessage.success(res.faved ? '已收藏' : '已取消收藏')
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
-  } finally {
-    acting.value = false
-  }
-}
-
-async function sendDanmaku() {
-  if (!userStore.token) {
-    router.push('/login')
-    return
-  }
-  const content = dmInput.value.trim()
-  if (!content || !detail.value) return
-  dmSending.value = true
-  try {
-    const item = await api.danmaku.send(detail.value.bvid, {
-      content,
-      time_ms: Math.floor((videoEl.value?.currentTime ?? 0) * 1000),
-      mode: dmMode.value,
-      color: dmColor.value,
-    })
-    dmLayer.value?.inject(item) // 乐观上屏
-    dmInput.value = ''
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '发送失败，请重试')
-  } finally {
-    dmSending.value = false
-  }
-}
-
-// 有效播放上报（>5s，一次）
-let viewReported = false
-let watchedSeconds = 0
-let lastTime = 0
-// 观看进度上报节流
-let lastProgressSave = 0
-
-/** 登录用户续播：定位到上次观看位置（>2s 才续播，接近看完从头播） */
-function tryResume(bvid: string) {
-  if (!userStore.token) return
-  api.video
-    .getProgress(bvid)
-    .then(({ position }) => {
-      const video = videoEl.value
-      if (!video || position <= 2) return
-      const apply = () => {
-        const dur = detail.value?.duration || 0
-        if (dur > 0 && position >= dur - 3) return // 接近看完不续播
-        video.currentTime = position
-        lastTime = position
-        ElMessage.info(`已定位到上次观看位置 ${formatDuration(position)}`)
-      }
-      if (video.readyState >= 1) apply()
-      else video.addEventListener('loadedmetadata', apply, { once: true })
-    })
-    .catch(() => {})
-}
-
-/** 进页自动播放；被浏览器拦截时降级为静音自动播放 */
-async function tryAutoplay() {
-  const video = videoEl.value
-  if (!video) return
-  try {
-    await video.play()
-  } catch {
-    video.muted = true
-    try {
-      await video.play()
-      ElMessage.info('已静音自动播放，点击声音图标开启声音')
-    } catch {
-      // 仍被拦截则保持暂停，由用户手动播放
-    }
-  }
-}
-
-/** 确保 PlayerCore 已创建（绑定到当前 <video>）。 */
-function ensurePlayer(): PlayerCore | null {
-  const video = videoEl.value
-  if (!video) return null
-  if (!player) {
-    player = new PlayerCore(video, {
-      onSourceChange: (s) => {
-        currentStream.value = s as StreamItem
-      },
-    })
-  }
-  return player
-}
+// 模板 ref 绑定：vue-tsc 对解构变量不识别模板引用，此处显式登记避免误报未使用
+void playerBox
+void dmLayer
+void dmReportDialog
 
 function switchQuality(stream: StreamItem) {
-  player?.switchTo(stream)
-  lastTime = videoEl.value?.currentTime ?? lastTime
+  switchTo(stream)
+  report.notePosition()
+}
+
+function onTimeUpdate(e: Event) {
+  report.onTimeUpdate(e)
 }
 
 async function load(bvid: string) {
@@ -448,12 +127,8 @@ async function load(bvid: string) {
   notFound.value = false
   detail.value = null
   related.value = []
-  viewReported = false
-  watchedSeconds = 0
-  lastTime = 0
-  lastProgressSave = 0
-  player?.destroy()
-  player = null
+  report.reset()
+  destroy()
 
   try {
     const [d, partsRes] = await Promise.all([
@@ -475,21 +150,13 @@ async function load(bvid: string) {
     p?.setSources(sources) // 默认最高画质（streams 按 quality 降序，HLS 优先）
     // 右侧弹幕面板：进入即加载最近弹幕（失败不影响播放）
     loadDmList(true).catch(() => {})
-    // 绑定快捷键（首次）
-    if (!unbindKeys && videoEl.value) {
-      unbindKeys = bindKeyboard(videoEl.value, { container: playerBox.value ?? null })
-    }
+    bindKeys()
     tryResume(bvid)
     void tryAutoplay()
 
-    // 互动状态：赞/币/藏（仅登录用户）
-    liked.value = false
-    coined.value = 0
-    faved.value = false
-    coinPopVisible.value = false
-    following.value = false
-    followerCnt.value = 0
-    loadRelation(detail.value.owner.id)
+    // 互动状态：赞/币/藏/关注（仅登录用户）
+    acts.reset()
+    acts.loadRelation(detail.value.owner.id)
     if (userStore.token) {
       api.interaction
         .interactionState(bvid)
@@ -527,40 +194,11 @@ watch(
   },
 )
 
-function onTimeUpdate(e: Event) {
-  const video = e.target as HTMLVideoElement
-  // 累计真实观看时长（跳转进度不计入）
-  const delta = video.currentTime - lastTime
-  if (delta > 0 && delta < 2) watchedSeconds += delta
-  lastTime = video.currentTime
-
-  if (!viewReported && watchedSeconds >= 5 && detail.value) {
-    viewReported = true
-    api.video.addView(detail.value.bvid).catch(() => {
-      viewReported = false // 上报失败允许重试
-    })
-  }
-
-  // 每 10s 上报观看进度（登录用户，跨端续播）
-  if (userStore.token && detail.value && video.currentTime > 2) {
-    const now = Date.now()
-    if (now - lastProgressSave > 10_000) {
-      lastProgressSave = now
-      api.video.saveProgress(detail.value.bvid, Math.floor(video.currentTime)).catch(() => {})
-    }
-  }
-}
-
 onBeforeUnmount(() => {
   // 离开时落盘最终进度
-  const video = videoEl.value
-  if (userStore.token && detail.value && video && video.currentTime > 2) {
-    api.video.saveProgress(detail.value.bvid, Math.floor(video.currentTime)).catch(() => {})
-  }
-  player?.destroy()
-  player = null
-  unbindKeys?.()
-  unbindKeys = null
+  report.flushProgress()
+  destroy()
+  unbindKeyListeners()
   document.title = 'DliDli - 视频社区'
 })
 </script>
