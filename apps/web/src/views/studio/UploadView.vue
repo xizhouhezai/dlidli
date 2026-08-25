@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ApiError, type CategoryItem, type VideoDetail } from '@dlidli/api-client'
-import { api } from '@/api'
+import { ApiError } from '@dlidli/api-client'
 import { uploadVideoFile, type UploadProgress } from '@/utils/uploader'
-import { captureVideoPoster } from '@/utils/poster'
+import { ACCEPT_EXTS, useUploadParts } from '@/composables/upload/useUploadParts'
+import { useUploadCover } from '@/composables/upload/useUploadCover'
+import { useUploadForm } from '@/composables/upload/useUploadForm'
 
 const router = useRouter()
 
-// 上传状态
+// 主文件上传状态
 const file = ref<File | null>(null)
 const fileId = ref('')
 const progress = ref<UploadProgress | null>(null)
@@ -17,78 +18,22 @@ const uploading = ref(false)
 const dragOver = ref(false)
 const fileInput = ref<HTMLInputElement>()
 
-// 多P投稿（PRD VID-05）：分P列表（标题 + 已上传 fileId）
-interface PartDraft {
-  title: string
-  fileId: string
-  uploading: boolean
-  progress: UploadProgress | null
+// —— 拆分出的子模块（M3-ENG-07）：分P / 封面 / 表单 ——
+const partsApi = useUploadParts()
+const coverApi = useUploadCover()
+const formApi = useUploadForm()
+const { parts, addPart, removePart, uploadPart } = partsApi
+const { coverInput, posterUrl, coverUrl, selectedCover, pickCover, onCoverChange, capturePoster, resolveCover, reset: resetCover } = coverApi
+const { categories, form, tagInput, addTag, submitting, published, loadCategories, submit, reset: resetForm } = formApi
+
+// 模板 ref 绑定：vue-tsc 对解构变量不识别模板引用，此处显式登记避免误报未使用
+void coverInput
+
+const stageText: Record<UploadProgress['stage'], string> = {
+  hash: '文件校验中',
+  upload: '上传中',
+  merge: '合并处理中',
 }
-const parts = ref<PartDraft[]>([])
-
-function addPart() {
-  if (parts.value.length >= 10) {
-    ElMessage.warning('最多 10 个分P')
-    return
-  }
-  parts.value.push({ title: '', fileId: '', uploading: false, progress: null })
-}
-
-function removePart(i: number) {
-  parts.value.splice(i, 1)
-}
-
-async function uploadPart(i: number, f: File) {
-  const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
-  if (!ACCEPT_EXTS.includes(ext)) {
-    ElMessage.warning(`仅支持 ${ACCEPT_EXTS.join(' / ')} 格式`)
-    return
-  }
-  const p = parts.value[i]
-  p.uploading = true
-  p.progress = null
-  try {
-    const res = await uploadVideoFile(f, (pr) => (p.progress = pr))
-    p.fileId = res.fileId
-    if (!p.title) p.title = f.name.slice(0, f.name.lastIndexOf('.')).slice(0, 80)
-    ElMessage.success(`分P${i + 1} 上传完成`)
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '上传失败，请重试')
-  } finally {
-    p.uploading = false
-  }
-}
-
-// 封面：优先视频首帧 poster → 用户上传 → 默认封面（展示时兜底）
-const posterBlob = ref<Blob | null>(null)
-const posterUrl = ref('')
-const coverFile = ref<File | null>(null)
-const coverUrl = ref('')
-const selectedCover = ref<'poster' | 'custom' | ''>('')
-const coverInput = ref<HTMLInputElement>()
-
-// 表单
-const categories = ref<CategoryItem[]>([])
-const form = reactive({
-  title: '',
-  description: '',
-  categoryId: undefined as number | undefined,
-  tags: [] as string[],
-  copyright: 1 as 1 | 2,
-})
-const tagInput = ref('')
-const submitting = ref(false)
-const published = ref<VideoDetail | null>(null)
-
-const ACCEPT_EXTS = ['.mp4', '.mov', '.mkv', '.flv', '.avi']
-
-onMounted(async () => {
-  try {
-    categories.value = (await api.video.categories()).filter((c) => c.parent_id === 0)
-  } catch {
-    ElMessage.error('分区加载失败')
-  }
-})
 
 function pickFile() {
   fileInput.value?.click()
@@ -117,14 +62,8 @@ async function startUpload(f: File) {
   // 标题默认取文件名（去扩展名）
   if (!form.title) form.title = f.name.slice(0, f.name.lastIndexOf('.')).slice(0, 80)
 
-  // 并行截取首帧作为封面首选（mkv/flv 等浏览器不支持的格式会失败，静默回退）
-  captureVideoPoster(f).then((blob) => {
-    if (blob) {
-      posterBlob.value = blob
-      posterUrl.value = URL.createObjectURL(blob)
-      if (!selectedCover.value) selectedCover.value = 'poster'
-    }
-  })
+  // 并行截取首帧作为封面首选（失败静默回退）
+  void capturePoster(f)
 
   try {
     const res = await uploadVideoFile(f, (p) => (progress.value = p))
@@ -140,98 +79,27 @@ async function startUpload(f: File) {
   }
 }
 
-function pickCover() {
-  coverInput.value?.click()
-}
-
-function onCoverChange(e: Event) {
-  const f = (e.target as HTMLInputElement).files?.[0]
-  if (!f) return
-  if (f.size > 5 * 1024 * 1024) {
-    ElMessage.warning('封面大小须在 5MB 以内')
-    return
-  }
-  coverFile.value = f
-  coverUrl.value = URL.createObjectURL(f)
-  selectedCover.value = 'custom'
-  if (coverInput.value) coverInput.value.value = ''
-}
-
-/** 投稿前解析封面 URL：poster 优先 → 上传封面 → 空（展示端用默认封面） */
-async function resolveCover(): Promise<string> {
-  if (selectedCover.value === 'poster' && posterBlob.value) {
-    return (await api.video.uploadCover(posterBlob.value, 'poster.jpg')).cover
-  }
-  if (selectedCover.value === 'custom' && coverFile.value) {
-    return (await api.video.uploadCover(coverFile.value)).cover
-  }
-  return ''
+async function onSubmit() {
+  const cover = await resolveCover()
+  await submit(
+    fileId.value,
+    parts.value.map((p) => ({ file_id: p.fileId, title: p.title })),
+    cover,
+  )
 }
 
 function resetAll() {
-  published.value = null
+  resetForm()
   file.value = null
   fileId.value = ''
   progress.value = null
   parts.value = []
-  posterBlob.value = null
-  posterUrl.value = ''
-  coverFile.value = null
-  coverUrl.value = ''
-  selectedCover.value = ''
+  resetCover()
 }
 
-function addTag() {
-  const t = tagInput.value.trim()
-  if (!t) return
-  if (form.tags.includes(t)) {
-    tagInput.value = ''
-    return
-  }
-  if (form.tags.length >= 10) {
-    ElMessage.warning('最多 10 个标签')
-    return
-  }
-  form.tags.push(t)
-  tagInput.value = ''
-}
-
-async function onSubmit() {
-  const validParts = parts.value.filter((p) => p.fileId)
-  if (!fileId.value && validParts.length === 0) {
-    ElMessage.warning('请先上传视频文件')
-    return
-  }
-  if (!form.title.trim() || !form.categoryId || form.tags.length === 0) {
-    ElMessage.warning('请填写标题、选择分区并至少添加 1 个标签')
-    return
-  }
-  submitting.value = true
-  try {
-    const cover = await resolveCover()
-    published.value = await api.video.submit({
-      file_id: fileId.value,
-      title: form.title.trim(),
-      description: form.description,
-      category_id: form.categoryId,
-      tags: form.tags,
-      copyright: form.copyright,
-      cover,
-      // 多P：有已上传分P时提交 parts（后端按分P建 video_part + 各自流）
-      parts: validParts.map((p) => ({ file_id: p.fileId, title: p.title })),
-    })
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '投稿失败，请重试')
-  } finally {
-    submitting.value = false
-  }
-}
-
-const stageText: Record<UploadProgress['stage'], string> = {
-  hash: '文件校验中',
-  upload: '上传中',
-  merge: '合并处理中',
-}
+onMounted(() => {
+  void loadCategories()
+})
 </script>
 
 <template>
