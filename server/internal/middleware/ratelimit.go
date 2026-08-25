@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dlidli/server/internal/pkg/jwtx"
+
 	"github.com/dlidli/server/internal/pkg/errcode"
 	"github.com/dlidli/server/internal/pkg/response"
 	"github.com/gin-gonic/gin"
@@ -71,26 +73,43 @@ func WriteLimiter(rl *RateLimiter) gin.HandlerFunc {
 	}
 }
 
-// Chain 按顺序串行执行多个 gin 中间件（先执行者在前、后执行者续接）。
-// 用于在路由组上组合"先鉴权再限流"等有依赖的中间件顺序。
-func Chain(ms ...gin.HandlerFunc) gin.HandlerFunc {
-	if len(ms) == 0 {
-		return func(c *gin.Context) { c.Next() }
-	}
+// AuthedRateLimited 组合"JWT 鉴权 + 写接口限流"为单一中间件。
+// 必须合并实现而非串联两个中间件：Auth 结尾的 c.Next() 会直接放行到业务 handler，
+// 简单串联会导致限流器在业务处理之后才执行（超限时二次写响应体）。见 v0.24.1 修复。
+func AuthedRateLimited(secret string, rl *RateLimiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		runChain(c, ms, 0)
+		token := bearerToken(c)
+		if token == "" {
+			response.Fail(c, errcode.ErrUnauthorized)
+			c.Abort()
+			return
+		}
+		uid, err := jwtx.Parse(secret, token)
+		if err != nil {
+			response.Fail(c, errcode.ErrUnauthorized)
+			c.Abort()
+			return
+		}
+		c.Set(CtxUserID, uid)
+
+		// 写接口限流（读请求与禁用态直接放行；Redis 缺失时 fail-open）
+		if rl != nil && rl.perMinute > 0 && isWriteMethod(c.Request.Method) {
+			scope := fmt.Sprintf("%d", uid)
+			if !rl.Allow(c.Request.Context(), scope, c.Request.URL.Path) {
+				response.Fail(c, errcode.ErrTooManyRequests.WithMsg("操作太频繁，请稍后再试"))
+				c.Abort()
+				return
+			}
+		}
+		c.Next()
 	}
 }
 
-func runChain(c *gin.Context, ms []gin.HandlerFunc, i int) {
-	if i >= len(ms) {
-		c.Next()
-		return
+// isWriteMethod 判断是否需要计数的写方法。
+func isWriteMethod(method string) bool {
+	switch method {
+	case "POST", "PUT", "PATCH", "DELETE":
+		return true
 	}
-	m := ms[i]
-	m(c)
-	if c.IsAborted() {
-		return
-	}
-	runChain(c, ms, i+1)
+	return false
 }
