@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache-dependency-path: server/go.sum
       - name: go vet
         run: go vet ./...
@@ -40,6 +40,38 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm web:lint
       - run: pnpm web:build
+
+  admin:
+    name: Admin 管理后台（lint + build）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm admin:lint
+      - run: pnpm admin:build
+
+  h5:
+    name: H5 端（typecheck + build）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @dlidli/h5 typecheck
+      - run: pnpm h5:build
 
   docs:
     name: 文档站构建

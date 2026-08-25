@@ -270,3 +270,70 @@ func (s *Service) uploadedParts(ctx context.Context, uploadID string) ([]int, er
 	}
 	return uploaded, nil
 }
+
+// CleanupOrphans 扫描 tmpDir 下的孤儿分片目录，删除超过 maxAge 未活动（目录 mtime 久于 maxAge）的会话残留，
+// 并同步清理其 Redis 会话/分片 key。返回删除的目录数。
+// 安全依据：目录 mtime 由每次分片写入刷新，活跃上传目录必然较新，不会误删。
+func (s *Service) CleanupOrphans(ctx context.Context, maxAge time.Duration) (int, error) {
+	if s.tmpDir == "" {
+		return 0, nil
+	}
+	entries, err := os.ReadDir(s.tmpDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil // tmpDir 尚未创建，无残留
+		}
+		return 0, err
+	}
+	cutoff := time.Now().Add(-maxAge)
+	removed := 0
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue // 跳过 merge-* 等临时文件；此类文件由 Complete 自行清理
+		}
+		uploadID := e.Name()
+		dir := filepath.Join(s.tmpDir, uploadID)
+		info, err := e.Info()
+		if err != nil {
+			s.log.Warn("读取分片目录信息失败，跳过", zap.String("dir", dir), zap.Error(err))
+			continue
+		}
+		if info.ModTime().After(cutoff) {
+			continue // 仍有活动（最近写入过分片）或较新的会话
+		}
+		// 已过期：清理磁盘目录与残留 Redis 会话
+		if err := os.RemoveAll(dir); err != nil {
+			s.log.Warn("清理过期分片目录失败", zap.String("dir", dir), zap.Error(err))
+			continue
+		}
+		s.rdb.Del(ctx, sessKey(uploadID), partsKey(uploadID))
+		s.log.Info("清理过期分片目录", zap.String("upload_id", uploadID))
+		removed++
+	}
+	if removed > 0 {
+		s.log.Info("分片孤儿清理完成", zap.Int("removed", removed))
+	}
+	return removed, nil
+}
+
+// StartCleanupWorker 周期性清理孤儿分片目录（后台 goroutine）。
+// interval 为执行间隔；进程退出（ctx 取消）时停止。默认为 30 分钟。
+func (s *Service) StartCleanupWorker(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		interval = 30 * time.Minute
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if _, err := s.CleanupOrphans(ctx, sessionTTL); err != nil {
+					s.log.Warn("孤儿分片清理失败", zap.Error(err))
+				}
+			}
+		}
+	}()
+}

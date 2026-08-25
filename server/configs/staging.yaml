@@ -28,6 +28,10 @@ jwt:
   secret: "staging-secret-do-not-use-in-prod"
   accessTtlMin: 120
 
+ratelimit:
+  enabled: true
+  perMinute: 30
+
 storage:
   driver: local
   localDir: ./uploads_staging
