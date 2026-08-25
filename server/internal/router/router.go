@@ -86,19 +86,26 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 	authMW := middleware.Auth(cfg.JWT.Secret)
 	optionalAuthMW := middleware.OptionalAuth(cfg.JWT.Secret)
 
+	// 写接口限流（仅统计 POST/PUT/PATCH/DELETE；依赖 Redis，不可用时放行）
+	rateLimiter := middleware.NewRateLimiter(res.Redis, cfg.RateLimit.PerMinute, log)
+	// 需登录路由组 = 先鉴权(写入 user_id) 再限流；GET 读请求在中间件内直接放行
+	authedRateLimited := middleware.Chain(authMW, middleware.WriteLimiter(rateLimiter))
+
 	// 业务模块路由（依赖 MySQL/Redis，缺失时跳过并告警）
 	if res.DB != nil && res.Redis != nil {
 		growthSvc := growth.NewService(growth.NewRepo(res.DB), res.Redis, log)
 
 		accountSvc := account.NewService(account.NewRepo(res.DB), res.Redis, cfg, log, growthSvc)
-		account.NewHandler(accountSvc, res.Storage).RegisterRoutes(v1, authMW)
+		account.NewHandler(accountSvc, res.Storage).RegisterRoutes(v1, authedRateLimited)
 
 		uploadTmp := filepath.Join(cfg.Storage.LocalDir, "chunks")
 		uploadSvc := upload.NewService(upload.NewRepo(res.DB), res.Redis, res.Storage, uploadTmp, log)
-		upload.NewHandler(uploadSvc).RegisterRoutes(v1, authMW)
+		upload.NewHandler(uploadSvc).RegisterRoutes(v1, authedRateLimited)
+		// 周期性清理未完成上传的孤儿分片目录（Redis 会话过期后的磁盘兜底）
+		uploadSvc.StartCleanupWorker(context.Background(), 30*time.Minute)
 
 		videoSvc := video.NewService(video.NewRepo(res.DB), uploadSvc, accountSvc, growthSvc, res.Redis, cfg, log)
-		video.NewHandler(videoSvc, res.Storage).RegisterRoutes(v1, authMW, optionalAuthMW)
+		video.NewHandler(videoSvc, res.Storage).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
 		// dev 内嵌转码 Worker（部署环境由独立 cmd/worker 承担）
 		if cfg.Transcode.Enabled {
@@ -107,21 +114,21 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 
 		danmakuHub := danmaku.NewHub(cfg.App.AllowOrigins, log)
 		danmakuSvc := danmaku.NewService(danmaku.NewRepo(res.DB), videoSvc, accountSvc, growthSvc, res.Redis, danmakuHub, cfg.JWT.Secret, log)
-		danmaku.NewHandler(danmakuSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
+		danmaku.NewHandler(danmakuSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
 		notifySvc := notify.NewService(notify.NewRepo(res.DB), accountSvc, log)
-		notify.NewHandler(notifySvc).RegisterRoutes(v1, authMW)
+		notify.NewHandler(notifySvc).RegisterRoutes(v1, authedRateLimited)
 
 		interactionSvc := interaction.NewService(interaction.NewRepo(res.DB), videoSvc, accountSvc, notifySvc, growthSvc, log)
-		interaction.NewHandler(interactionSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
+		interaction.NewHandler(interactionSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
-		growth.NewHandler(growthSvc).RegisterRoutes(v1, authMW)
+		growth.NewHandler(growthSvc).RegisterRoutes(v1, authedRateLimited)
 
 		relationSvc := relation.NewService(relation.NewRepo(res.DB), accountSvc, notifySvc)
-		relation.NewHandler(relationSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
+		relation.NewHandler(relationSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
 		dynamicSvc := dynamic.NewService(dynamic.NewRepo(res.DB), accountSvc, videoSvc, relationSvc, log)
-		dynamic.NewHandler(dynamicSvc).RegisterRoutes(v1, authMW)
+		dynamic.NewHandler(dynamicSvc).RegisterRoutes(v1, authedRateLimited)
 		// 稿件发布 → 自动生成投稿动态（旁路钩子，失败仅日志）
 		videoSvc.SetPublishHook(dynamicSvc.OnVideoPublished)
 
@@ -131,12 +138,12 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// 举报体系（M2-AUD-03）：C 端提交 + 后台队列处理
 		reportSvc := report.NewService(report.NewRepo(res.DB), videoSvc, accountSvc,
 			interactionSvc, danmakuSvc, dynamicSvc, notifySvc, log)
-		report.NewHandler(reportSvc).RegisterRoutes(v1, authMW, middleware.AdminAuth(cfg.JWT.Secret),
+		report.NewHandler(reportSvc).RegisterRoutes(v1, authedRateLimited, middleware.AdminAuth(cfg.JWT.Secret),
 			func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) })
 
 		// 推荐系统（M3-REC）：热度榜 + 混合召回 + 行为采集 + 负反馈 + 推荐开关
 		recommendSvc := recommend.NewService(recommend.NewRepo(res.DB), videoSvc, res.Redis, log)
-		recommend.NewHandler(recommendSvc).RegisterRoutes(v1, authMW, optionalAuthMW)
+		recommend.NewHandler(recommendSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
 		// A/B 实验（M3-OPS-03）：分流框架 + 推荐策略变体接入
 		abtestSvc := abtest.NewService(abtest.NewRepo(res.DB))
@@ -146,16 +153,16 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 
 		// UP 主合集（M3-CRT-05 合集部分）
 		collectionSvc := collection.NewService(collection.NewRepo(res.DB), videoSvc)
-		collection.NewHandler(collectionSvc).RegisterRoutes(v1, authMW)
+		collection.NewHandler(collectionSvc).RegisterRoutes(v1, authedRateLimited)
 
 		// 私信 IM（M3-IM）：会话/消息 + 发送限制 + 机审 + WS 实时推送
 		imHub := im.NewHub(cfg.App.AllowOrigins, log)
 		imSvc := im.NewService(im.NewRepo(res.DB), accountSvc, relationSvc, imHub, log)
-		im.NewHandler(imSvc).RegisterRoutes(v1, authMW)
+		im.NewHandler(imSvc).RegisterRoutes(v1, authedRateLimited)
 
 		// 创作者中心（M3-CRT）：数据看板 + 激励结算
 		creatorSvc := creator.NewService(creator.NewRepo(res.DB), log)
-		creator.NewHandler(creatorSvc).RegisterRoutes(v1, authMW)
+		creator.NewHandler(creatorSvc).RegisterRoutes(v1, authedRateLimited)
 
 		// 运营位（M3-OPS-01）：首页轮播 Banner
 		bannerSvc := banner.NewService(banner.NewRepo(res.DB), videoSvc)

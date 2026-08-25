@@ -16,6 +16,7 @@ type Config struct {
 	Redis     Redis
 	JWT       JWT
 	Storage   Storage
+	RateLimit RateLimit
 	Transcode Transcode
 }
 
@@ -55,6 +56,11 @@ type Storage struct {
 	BaseURL  string // 对外访问前缀，如 http://localhost:8000/static
 }
 
+type RateLimit struct {
+	Enabled   bool // 全局写接口限流开关
+	PerMinute int  // 每个 key（用户/IP）每分钟写请求上限；<=0 表示禁用
+}
+
 type Transcode struct {
 	Enabled     bool   // dev 内嵌 Worker；部署环境由独立 cmd/worker 承担
 	Workers     int    // 并发转码协程数
@@ -80,6 +86,9 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.App.Port == 0 {
 		cfg.App.Port = 8000
+	}
+	if cfg.RateLimit.PerMinute == 0 && cfg.RateLimit.Enabled {
+		cfg.RateLimit.PerMinute = 30 // 默认每个写接口 30 次/分钟
 	}
 	if cfg.Transcode.Workers <= 0 {
 		cfg.Transcode.Workers = 1

@@ -54,7 +54,11 @@ func main() {
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.App.Port),
 		Handler:           router.New(cfg, log, res),
-		ReadHeaderTimeout: 10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,  // 防 Slowloris：请求头读取上限
+		ReadTimeout:       60 * time.Second,  // 请求体整体读取上限（含大文件上传，配合分片并行）
+		WriteTimeout:      120 * time.Second, // 响应写出上限（转码/大响应留足余量）
+		IdleTimeout:       120 * time.Second, // 长连接空闲回收
+		MaxHeaderBytes:    1 << 20,           // 1MB 请求头上限
 	}
 
 	go func() {
