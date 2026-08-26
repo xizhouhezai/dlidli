@@ -19,6 +19,7 @@ import { createMessageApi } from './apis/messages'
 
 export * from './http'
 export * from './error'
+export * from './token'
 export type { TokenPair } from './apis/auth'
 export type { UploadInitResp } from './apis/upload'
 export type { CategoryItem, VideoCard, VideoDetail, StreamItem, SubmitVideoReq, PartItem } from './apis/video'

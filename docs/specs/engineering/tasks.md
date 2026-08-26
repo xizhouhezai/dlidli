@@ -57,6 +57,7 @@
 - [x] M3-ENG-10 Web 创作者中心巨型组件拆分（CreatorView 613 行 → 473 行）：script 逻辑抽为 4 个组合式（useCreatorOverview 概览/useCreatorTrend echarts 趋势图/useCreatorVideos 稿件分页/useCreatorSettles 收益明细），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
 - [x] M3-ENG-11 Web 私信页巨型组件拆分（MessagesView 588 行 → 452 行）：script 逻辑抽为 3 个组合式（useConversations 会话与消息/useBlockActions 拉黑/useMessagesWs WebSocket 实时接收与重连），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
 - [x] M3-ENG-12 Web 账号设置页巨型组件拆分（SettingsView 494 行 → 306 行）：script 逻辑抽为 5 个组合式（useProfileSettings 资料与头像/usePasswordChange 改密/useYouthMode 青少年模式计时/useDmBlocks 弹幕屏蔽/useRecommendSetting 推荐合规开关），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
+- [x] M3-ENG-13 跨端令牌逻辑收敛进 api-client（新增 token.ts：TokenStorage 抽象 + createLocalStorageTokens + refreshTokens 共享静默续期；web 改用共享实现删除自建刷新，h5 补齐此前缺失的 401 静默续期能力；admin 保持管理员会话独立无刷新设计；api-client 保持端无关不引入 uni 全局） `2026-08-25`
 
 ## M4（W49+）App
 
@@ -71,8 +72,8 @@
 | M0 | 13 | 13 |
 | M1 | 4 | 3 |
 | M2 | 6 | 3 |
-| M3 | 15 | 8 |
+| M3 | 16 | 9 |
 | M4 | 3 | 0 |
-| **合计** | **41** | **27** |
+| **合计** | **42** | **28** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
