@@ -1,199 +1,65 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import type { ConversationItem, MessageItem } from '@dlidli/api-client'
-import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
-import { readToken } from '@/utils/token'
 import defaultAvatar from '@/assets/default-avatar.png'
 import ReportDialog from '@/components/ReportDialog.vue'
+import { useBlockActions } from '@/composables/message/useBlockActions'
+import { useConversations } from '@/composables/message/useConversations'
+import { useMessagesWs } from '@/composables/message/useMessagesWs'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const convs = ref<ConversationItem[]>([])
-const activePeer = ref('')
-const messages = ref<MessageItem[]>([])
-const input = ref('')
-const sending = ref(false)
-const listBox = ref<HTMLDivElement>()
+// —— 拆分出的子模块（M3-ENG-11）：会话消息 / 拉黑 / WS 实时 ——
+const convApi = useConversations(route, router)
+const blockApi = useBlockActions(() => convApi.activePeer.value)
+const wsApi = useMessagesWs({
+  getPeer: () => convApi.activePeer.value,
+  pushMessage: (m) => convApi.messages.value.push(m),
+  scrollBottom: convApi.scrollBottom,
+  onIncomingOther: () => void convApi.loadConvs(),
+  markCurrentRead: () => void convApi.markCurrentRead(),
+})
 
-// 当前会话对方信息
-const activeConv = computed(() => convs.value.find((c) => c.peer_id === activePeer.value))
+const {
+  convs,
+  activePeer,
+  activeConv,
+  messages,
+  input,
+  sending,
+  listBox,
+  loadConvs,
+  openPeer,
+  send,
+  formatTime,
+} = convApi
+const { blockedMe, iBlocked, toggleBlock, loadBlockStatus, reset: resetBlock } = blockApi
 
-// 拉黑状态（MSG-12）
-const blockedMe = ref(false)
-const iBlocked = ref(false)
-const blockPending = ref(false)
+// 举报会话对象（target_type=5：举报用户，即私信对方）
 const reportDialog = ref<InstanceType<typeof ReportDialog>>()
-
-async function loadBlockStatus() {
-  if (!activePeer.value) return
-  try {
-    const s = await api.relation.blockStatus(activePeer.value)
-    iBlocked.value = s.i_blocked
-    blockedMe.value = s.blocked_me
-  } catch {
-    iBlocked.value = false
-    blockedMe.value = false
-  }
-}
-
-async function toggleBlock() {
-  if (!activePeer.value || blockPending.value) return
-  blockPending.value = true
-  try {
-    const r = await api.relation.block(activePeer.value)
-    iBlocked.value = r.blocked
-    ElMessage.success(r.blocked ? '已拉黑对方，TA 将无法给你发私信' : '已取消拉黑')
-  } catch {
-    // http 层已弹错误提示
-  } finally {
-    blockPending.value = false
-  }
-}
-
 function openReport() {
   reportDialog.value?.open()
 }
 
-// WS 实时接收（M3-IM-02，PRD MSG-13）
-let ws: WebSocket | null = null
-let wsRetry = 0
+// 模板 ref 绑定：vue-tsc 对解构变量不识别模板引用，此处显式登记避免误报未使用
+void listBox
 
-function connectWs() {
-  const token = readToken()
-  if (!token || ws) return
-  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  ws = new WebSocket(`${proto}://${window.location.host}${api.message.wsUrl()}?token=${encodeURIComponent(token)}`)
-  ws.onmessage = (e) => {
-    try {
-      const frame = JSON.parse(e.data)
-      if (frame.type !== 'message') return
-      const msg: MessageItem = frame.data
-      if (msg.sender_id === activePeer.value) {
-        messages.value.push(msg)
-        scrollBottom()
-        // 停留在当前会话收到新消息：立即已读并刷新角标（头部红点 + 会话列表未读）
-        markCurrentRead()
-      } else {
-        loadConvs() // 其他会话来消息：刷新会话列表未读
-      }
-      window.dispatchEvent(new CustomEvent('msg-unread-changed'))
-    } catch {
-      // 忽略非 JSON 帧
-    }
-  }
-  ws.onclose = () => {
-    ws = null
-    if (wsRetry < 5) {
-      wsRetry++
-      setTimeout(connectWs, 3000)
-    }
-  }
-  ws.onopen = () => {
-    wsRetry = 0
-  }
-}
-
-// 当前会话立即已读：复用 messages 接口（服务端 MarkRead），并刷新会话列表角标
-async function markCurrentRead() {
-  if (!activePeer.value) return
-  try {
-    await api.message.messages(activePeer.value, 1, 1)
-    loadConvs()
-  } catch {
-    // 已读失败不阻塞展示
-  }
-}
-
-async function loadConvs() {
-  try {
-    convs.value = (await api.message.conversations()).list ?? []
-  } catch {
-    convs.value = []
-  }
-}
-
-async function openPeer(peer: string) {
-  if (activePeer.value === peer) return
-  // 同步 URL（query.peer），触发 AppHeader watch 延时刷新头部未读红点
-  if (route.query.peer !== peer) {
-    await router.replace({ path: '/messages', query: { peer } })
-  }
-  activePeer.value = peer
-  messages.value = []
-  loadBlockStatus()
-  // 列表无此对象时（新会话/仅对方发过未读），用对方资料拼临时会话项
-  let conv = convs.value.find((c) => c.peer_id === peer)
-  if (!conv) {
-    try {
-      const p = await api.relation.profile(peer)
-      conv = {
-        peer_id: peer,
-        nickname: p.nickname,
-        avatar: p.avatar,
-        last_content: '',
-        last_at: new Date().toISOString(),
-        unread: 0,
-      }
-      convs.value.unshift(conv)
-    } catch {
-      // 资料获取失败不阻塞消息加载
-    }
-  }
-  if (conv && conv.unread > 0) {
-    conv.unread = 0
-  }
-  try {
-    const res = await api.message.messages(peer, 1, 50)
-    messages.value = res.list ?? []
-  } catch {
-    messages.value = []
-  }
-  await nextTick()
-  scrollBottom()
-}
-
-function scrollBottom() {
-  if (listBox.value) listBox.value.scrollTop = listBox.value.scrollHeight
-}
-
-async function send() {
-  const content = input.value.trim()
-  if (!content) return
-  if (!activePeer.value) return
-  sending.value = true
-  try {
-    const msg = await api.message.send({ to_uid: activePeer.value, content, content_type: 1 })
-    messages.value.push(msg)
-    input.value = ''
-    scrollBottom()
-    loadConvs()
-  } catch (err) {
-    ElMessage.error(err instanceof Error ? err.message : '发送失败')
-  } finally {
-    sending.value = false
-  }
-}
-
-function formatTime(t: string) {
-  const d = new Date(t)
-  const now = new Date()
-  if (d.toDateString() === now.toDateString()) {
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  }
-  return `${d.getMonth() + 1}/${d.getDate()}`
+/** 打开会话：加载拉黑状态（消息与 URL 同步由 conversations 处理）。 */
+async function selectPeer(peer: string) {
+  await openPeer(peer)
+  resetBlock()
+  void loadBlockStatus()
 }
 
 onMounted(() => {
-  loadConvs()
-  connectWs()
+  void loadConvs()
+  wsApi.connectWs()
   const peer = route.query.peer as string | undefined
   if (peer) {
-    openPeer(peer)
+    void selectPeer(peer)
   }
 })
 
@@ -201,13 +67,12 @@ onMounted(() => {
 watch(
   () => route.query.peer,
   (p) => {
-    if (p && String(p) !== activePeer.value) openPeer(String(p))
+    if (p && String(p) !== activePeer.value) void selectPeer(String(p))
   },
 )
 
 onBeforeUnmount(() => {
-  ws?.close()
-  ws = null
+  wsApi.closeWs()
 })
 </script>
 
