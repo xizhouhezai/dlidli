@@ -1,175 +1,50 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
-import type { CategoryItem, VideoCard } from '@dlidli/api-client'
-import { api } from '@/api'
+import type { VideoCard } from '@dlidli/api-client'
 import { useUserStore } from '@/stores/user'
 import defaultCover from '@/assets/default-cover.svg'
 import defaultAvatar from '@/assets/default-avatar.png'
+import { useHomeFeed } from '@/composables/home/useHomeFeed'
+import { useHomeBanners } from '@/composables/home/useHomeBanners'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const PAGE_SIZE = 24
+// —— 拆分出的子模块（M3-ENG-08）：视频流 / 推荐区 ——
+const feed = useHomeFeed()
+const { banners, sideRecos, loadBanners } = useHomeBanners()
 
-const categories = ref<CategoryItem[]>([])
-const activeCategory = ref(0) // 0 = 全部
-const sort = ref<'recommend' | 'new' | 'hot'>('recommend')
-const videos = ref<VideoCard[]>([])
-const banners = ref<VideoCard[]>([]) // 首页推荐轮播（左侧大图）
-const sideRecos = ref<VideoCard[]>([]) // 右侧 2×2 推荐网格
-const page = ref(1)
-const hasMore = ref(false)
-const loading = ref(true)
-const loadingMore = ref(false)
-// 无限滚动状态
-const backendDown = ref(false)
-
-// 无限滚动：监听窗口滚动，距底 <400px 自动加载下一页
-function onScroll() {
-  const doc = document.documentElement
-  if (doc.scrollTop + window.innerHeight >= doc.scrollHeight - 400) loadMore()
-}
-
-async function loadList(reset = true) {
-  if (reset) {
-    page.value = 1
-    loading.value = true
-  } else {
-    loadingMore.value = true
-  }
-  try {
-    let list: VideoCard[]
-    if (sort.value === 'recommend') {
-      const res = await api.recommend.recommend(page.value, PAGE_SIZE)
-      list = res.list
-    } else {
-      const res = await api.video.list({
-        category_id: activeCategory.value || undefined,
-        sort: sort.value,
-        page: page.value,
-        page_size: PAGE_SIZE,
-      })
-      list = res.list
-    }
-    videos.value = reset ? list : [...videos.value, ...list]
-    hasMore.value = list.length === PAGE_SIZE
-    // 推荐 Tab：曝光上报（登录用户，节流到每次加载）
-    if (sort.value === 'recommend' && reset) reportExpose(list)
-  } catch {
-    backendDown.value = true
-  } finally {
-    loading.value = false
-    loadingMore.value = false
-  }
-}
-
-// 曝光上报（旁路，失败静默）
-function reportExpose(list: VideoCard[]) {
-  if (!userStore.token || list.length === 0) return
-  api.recommend
-    .reportBehavior(list.map((v) => ({ video_id: v.id, action: 1 as const })))
-    .catch(() => {})
-}
-
-// 触底自动加载下一页（防并发：加载中/无更多时不触发）
-function loadMore() {
-  if (!hasMore.value || loading.value || loadingMore.value) return
-  page.value++
-  loadList(false)
-}
-
-function switchSort(s: 'recommend' | 'new' | 'hot') {
-  if (sort.value === s) return
-  sort.value = s
-  loadList()
-}
-
-// 不感兴趣（推荐 Tab 卡片更多菜单）
-const dislikePending = ref(false)
-function onCardMenu(cmd: string, v: VideoCard) {
-  if (cmd === 'dislike') void onDislike(v)
-}
-
-async function onDislike(v: VideoCard) {
-  if (!userStore.token) {
-    router.push('/login')
-    return
-  }
-  if (dislikePending.value) return
-  dislikePending.value = true
-  try {
-    await api.recommend.addDislike(1, v.id)
-    videos.value = videos.value.filter((x) => x.bvid !== v.bvid)
-    ElMessage.success('已减少此类推荐')
-  } catch (err) {
-    ElMessage.error(err instanceof Error ? err.message : '操作失败')
-  } finally {
-    dislikePending.value = false
-  }
-}
-
-onMounted(async () => {
-  try {
-    categories.value = (await api.video.categories()).filter((c) => c.parent_id === 0)
-  } catch {
-    backendDown.value = true
-  }
-  loadBanners()
-  await loadList()
-
-  // 监听滚动实现无限加载（passive 不阻塞滚动）
-  window.addEventListener('scroll', onScroll, { passive: true })
-})
-
-// 推荐区：优先用运营位配置 Banner（M3-OPS-01），无配置回退最热前 8
-async function loadBanners() {
-  try {
-    const configured = await api.video.banners()
-    if (configured.list.length > 0) {
-      banners.value = configured.list.slice(0, 4).map((b) => ({
-        id: b.id, bvid: b.bvid, title: b.title, cover: b.image,
-        duration: 0, status: 4, published_at: null, created_at: '',
-        owner: { id: '', nickname: '', avatar: '' },
-        stat: { view: 0, like: 0, coin: 0, fav: 0, danmaku: 0, comment: 0, share: 0 },
-      }))
-      // 右侧 2×2 网格用最热前 4 填充（不空白）
-      try {
-        const res = await api.video.list({ sort: 'hot', page: 1, page_size: 4 })
-        sideRecos.value = res.list
-      } catch {
-        sideRecos.value = []
-      }
-      return
-    }
-  } catch {
-    // 接口失败回退最热
-  }
-  try {
-    const res = await api.video.list({ sort: 'hot', page: 1, page_size: 8 })
-    banners.value = res.list.slice(0, 4)
-    sideRecos.value = res.list.slice(4, 8)
-  } catch {
-    banners.value = []
-    sideRecos.value = []
-  }
-}
-
-onBeforeUnmount(() => {
-  window.removeEventListener('scroll', onScroll)
-})
-
-function onCategoryClick(id: number) {
-  activeCategory.value = id
-  loadList()
-}
+const {
+  categories,
+  activeCategory,
+  sort,
+  videos,
+  hasMore,
+  loading,
+  loadingMore,
+  backendDown,
+  switchSort,
+  onCategoryClick,
+  onCardMenu,
+  start,
+  stop,
+} = feed
 
 function onCardClick(v: VideoCard) {
   if (!v.bvid) return // 配置 Banner 未设跳转稿件时不跳转
   router.push(`/video/${v.bvid}`)
 }
+
+onMounted(async () => {
+  void loadBanners()
+  await start()
+})
+
+onBeforeUnmount(() => {
+  stop()
+})
 </script>
 
 <template>
