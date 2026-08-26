@@ -1,242 +1,54 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { ApiError, type DanmakuBlockItem } from '@dlidli/api-client'
-import { api } from '@/api'
+import { onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import AccountStatusAlert from '@/components/AccountStatusAlert.vue'
 import defaultAvatar from '@/assets/default-avatar.png'
+import { useProfileSettings } from '@/composables/settings/useProfileSettings'
+import { usePasswordChange } from '@/composables/settings/usePasswordChange'
+import { useYouthMode } from '@/composables/settings/useYouthMode'
+import { useDmBlocks } from '@/composables/settings/useDmBlocks'
+import { useRecommendSetting } from '@/composables/settings/useRecommendSetting'
 
 const userStore = useUserStore()
 
-const form = reactive({
-  nickname: '',
-  signature: '',
-  gender: 0 as 0 | 1 | 2,
-})
-const saving = ref(false)
-const uploading = ref(false)
-const fileInput = ref<HTMLInputElement>()
+// —— 拆分出的子模块（M3-ENG-12）：资料 / 密码 / 青少年模式 / 弹幕屏蔽 / 推荐开关 ——
+const profileApi = useProfileSettings()
+const pwdApi = usePasswordChange()
+const youthApi = useYouthMode()
+const dmApi = useDmBlocks()
+const recApi = useRecommendSetting()
 
-// 资料就绪后回填表单（页面刷新时 profile 异步加载）
-watch(
-  () => userStore.profile,
-  (p) => {
-    if (!p) return
-    form.nickname = p.nickname
-    form.signature = p.signature
-    form.gender = p.gender
-  },
-  { immediate: true },
-)
+const {
+  form,
+  saving,
+  uploading,
+  fileInput,
+  pickAvatar,
+  onAvatarChange,
+  onSave,
+} = profileApi
+const { pwdForm, pwdSaving, onChangePassword } = pwdApi
+const { youthMode, youthSaving, loadYouthMode, toggleYouthMode } = youthApi
+const {
+  dmBlocks,
+  dmBlockLoading,
+  dmBlockInput,
+  dmBlockAdding,
+  loadDmBlocks,
+  addDmBlock,
+  removeDmBlock,
+  clearDmBlockHash,
+} = dmApi
+const { recEnabled, recSaving, loadRecommendSetting, toggleRecommend } = recApi
 
-function pickAvatar() {
-  fileInput.value?.click()
-}
-
-async function onAvatarChange(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  if (file.size > 2 * 1024 * 1024) {
-    ElMessage.warning('头像大小须在 2MB 以内')
-    return
-  }
-  uploading.value = true
-  try {
-    const { avatar } = await api.auth.uploadAvatar(file)
-    if (userStore.profile) userStore.profile.avatar = avatar
-    ElMessage.success('头像已更新')
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '上传失败，请稍后再试')
-  } finally {
-    uploading.value = false
-    if (fileInput.value) fileInput.value.value = ''
-  }
-}
-
-async function onSave() {
-  saving.value = true
-  try {
-    const updated = await api.auth.updateProfile({
-      nickname: form.nickname,
-      signature: form.signature,
-      gender: form.gender,
-    })
-    userStore.profile = updated
-    ElMessage.success('资料已保存')
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '保存失败，请稍后再试')
-  } finally {
-    saving.value = false
-  }
-}
-
-// 修改密码
-const pwdForm = reactive({ old: '', next: '', confirm: '' })
-const pwdSaving = ref(false)
-
-async function onChangePassword() {
-  if (pwdForm.next.length < 8 || pwdForm.next.length > 32) {
-    ElMessage.warning('新密码长度需 8~32 位')
-    return
-  }
-  if (pwdForm.next !== pwdForm.confirm) {
-    ElMessage.warning('两次输入的新密码不一致')
-    return
-  }
-  pwdSaving.value = true
-  try {
-    await api.auth.changePassword(pwdForm.old, pwdForm.next)
-    pwdForm.old = ''
-    pwdForm.next = ''
-    pwdForm.confirm = ''
-    ElMessage.success('密码已更新，下次登录请使用新密码')
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '修改失败，请稍后再试')
-  } finally {
-    pwdSaving.value = false
-  }
-}
-
-// 青少年模式（M2-AUD-04）：开关 + 每日 40 分钟使用提醒（本地计时）
-const YOUTH_LIMIT_MIN = 40
-const youthMode = ref(false)
-const youthSaving = ref(false)
-let youthTimer: ReturnType<typeof setInterval> | null = null
-
-function youthUsageKey() {
-  return `youth_usage_${new Date().toISOString().slice(0, 10)}`
-}
-
-async function loadYouthMode() {
-  try {
-    youthMode.value = (await api.auth.youthMode()).enabled
-    if (youthMode.value) startYouthTimer()
-  } catch {
-    // 静默失败，保持关闭态
-  }
-}
-
-async function toggleYouthMode() {
-  youthSaving.value = true
-  try {
-    await api.auth.setYouthMode(youthMode.value)
-    if (youthMode.value) {
-      localStorage.setItem(youthUsageKey(), '0') // 开启当日重新计时
-      startYouthTimer()
-    } else {
-      stopYouthTimer()
-    }
-    ElMessage.success(youthMode.value ? '已开启青少年模式' : '已关闭青少年模式')
-  } catch (err) {
-    youthMode.value = !youthMode.value
-    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
-  } finally {
-    youthSaving.value = false
-  }
-}
-
-function startYouthTimer() {
-  stopYouthTimer()
-  youthTimer = setInterval(() => {
-    const key = youthUsageKey()
-    const used = Number(localStorage.getItem(key) ?? '0')
-    const next = used + 1
-    localStorage.setItem(key, String(next))
-    if (next >= YOUTH_LIMIT_MIN) {
-      stopYouthTimer()
-      ElMessage.warning('今日青少年模式使用时长已达 40 分钟，请注意休息')
-    }
-  }, 60_000)
-}
-
-function stopYouthTimer() {
-  if (youthTimer) {
-    clearInterval(youthTimer)
-    youthTimer = null
-  }
-}
+// 模板 ref 绑定：vue-tsc 对解构变量不识别模板引用，此处显式登记避免误报未使用
+void fileInput
 
 onMounted(() => {
-  loadYouthMode()
-  loadDmBlocks()
-  loadRecommendSetting()
+  void loadYouthMode()
+  void loadDmBlocks()
+  void loadRecommendSetting()
 })
-onUnmounted(stopYouthTimer)
-
-// 弹幕屏蔽管理（M2-DM-02）：关键词 + 屏蔽用户
-const dmBlocks = ref<DanmakuBlockItem[]>([])
-const dmBlockLoading = ref(false)
-const dmBlockInput = ref('')
-const dmBlockAdding = ref(false)
-
-async function loadDmBlocks() {
-  dmBlockLoading.value = true
-  try {
-    dmBlocks.value = (await api.danmaku.blocks()).list
-  } catch {
-    // 静默失败
-  } finally {
-    dmBlockLoading.value = false
-  }
-}
-
-async function addDmBlock() {
-  const kw = dmBlockInput.value.trim()
-  if (!kw) return
-  dmBlockAdding.value = true
-  try {
-    await api.danmaku.addBlock({ block_type: 1, keyword: kw })
-    dmBlockInput.value = ''
-    ElMessage.success('已添加屏蔽词')
-    await loadDmBlocks()
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
-  } finally {
-    dmBlockAdding.value = false
-  }
-}
-
-async function removeDmBlock(b: DanmakuBlockItem) {
-  try {
-    await api.danmaku.deleteBlock(b.id)
-    dmBlocks.value = dmBlocks.value.filter((x) => x.id !== b.id)
-    ElMessage.success('已删除')
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '删除失败')
-  }
-}
-
-async function clearDmBlockHash(hash: string) {
-  await ElMessageBox.confirm('确定解除对该用户的弹幕屏蔽吗？', '解除屏蔽', { type: 'warning' })
-  const b = dmBlocks.value.find((x) => x.block_type === 2 && x.block_hash === hash)
-  if (b) await removeDmBlock(b)
-}
-
-// 个性化推荐开关（M3-REC-07 合规）
-const recEnabled = ref(true)
-const recSaving = ref(false)
-
-async function loadRecommendSetting() {
-  try {
-    recEnabled.value = (await api.recommend.recommendSetting()).enabled
-  } catch {
-    // 静默失败
-  }
-}
-
-async function toggleRecommend() {
-  recSaving.value = true
-  try {
-    await api.recommend.setRecommendSetting(recEnabled.value)
-    ElMessage.success(recEnabled.value ? '已开启个性化推荐' : '已关闭个性化推荐（首页推荐将展示热门内容）')
-  } catch (err) {
-    recEnabled.value = !recEnabled.value
-    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
-  } finally {
-    recSaving.value = false
-  }
-}
 </script>
 
 <template>
