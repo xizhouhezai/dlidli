@@ -1,117 +1,35 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import * as echarts from 'echarts'
 import { formatCount } from '@dlidli/shared'
-import type { CreatorOverview, CreatorVideoStat, SettlementItem, TrendPoint } from '@dlidli/api-client'
-import { api } from '@/api'
 import defaultCover from '@/assets/default-cover.png'
+import { useCreatorOverview } from '@/composables/creator/useCreatorOverview'
+import { useCreatorTrend } from '@/composables/creator/useCreatorTrend'
+import { useCreatorVideos } from '@/composables/creator/useCreatorVideos'
+import { useCreatorSettles } from '@/composables/creator/useCreatorSettles'
 
 const router = useRouter()
 
-const overview = ref<CreatorOverview | null>(null)
-const trend = ref<TrendPoint[]>([])
-const loading = ref(true)
+// —— 拆分出的子模块（M3-ENG-10）：概览 / 趋势图 / 稿件数据 / 收益明细 ——
+const overviewApi = useCreatorOverview()
+const trendApi = useCreatorTrend()
+const videosApi = useCreatorVideos()
+const settlesApi = useCreatorSettles()
 
-// 稿件数据
-const videos = ref<CreatorVideoStat[]>([])
-const videosTotal = ref(0)
-const videosPage = ref(1)
-const videosLoading = ref(false)
-const videosLoaded = ref(false)
+const { overview, loading, earningsYuan } = overviewApi
+const {
+  trendChartEl,
+  trendMetric,
+  trendDays,
+  METRIC_OPTIONS,
+  onStatCardClick,
+  start: startTrend,
+  stop: stopTrend,
+} = trendApi
+const { videos, videosTotal, videosPage, videosLoading, loadVideos, onVideosPage } = videosApi
+const { settles, settlesTotal, settlesPage, settlesLoading, loadSettles, onSettlesPage } = settlesApi
 
-// 收益明细
-const settles = ref<SettlementItem[]>([])
-const settlesTotal = ref(0)
-const settlesPage = ref(1)
-const settlesLoading = ref(false)
-const settlesLoaded = ref(false)
-
-// 趋势图（echarts）：指标 + 天数切换
-const trendChartEl = ref<HTMLDivElement>()
-let trendChart: echarts.ECharts | null = null
-const trendMetric = ref<'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'>('play')
-const trendDays = ref<7 | 30>(7)
-const METRIC_OPTIONS: Array<{ value: 'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'; label: string }> = [
-  { value: 'play', label: '有效播放' },
-  { value: 'like', label: '点赞' },
-  { value: 'coin', label: '投币' },
-  { value: 'fav', label: '收藏' },
-  { value: 'fans', label: '涨粉' },
-  { value: 'earning', label: '收益' },
-  { value: 'interact', label: '互动' },
-  { value: 'click', label: '点击' },
-  { value: 'expose', label: '曝光' },
-]
-const metricLabel = computed(
-  () => METRIC_OPTIONS.find((m) => m.value === trendMetric.value)?.label ?? '',
-)
-
-// 统计卡点击联动趋势指标：总播放→有效播放（近似）、总点赞→点赞、总投币→投币、粉丝→涨粉、累计收益→收益
-function onStatCardClick(metric: 'play' | 'like' | 'coin' | 'fans' | 'earning') {
-  trendMetric.value = metric
-  trendDays.value = 7
-}
-
-async function loadTrend() {
-  const tr = await api.creator.trend(trendDays.value, trendMetric.value)
-  trend.value = tr.list
-  await nextTick()
-  renderTrend()
-}
-
-function renderTrend() {
-  const el = trendChartEl.value
-  if (!el) return
-  if (!trendChart) trendChart = echarts.init(el)
-  trendChart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params: unknown) => {
-        const p = (params as Array<{ name?: string; value?: number }>)[0]
-        const v = p?.value ?? 0
-        // 收益为分，tooltip 统一显示为 ¥ 元（与累计收益卡片同单位，避免歧义）
-        const text = trendMetric.value === 'earning' ? `¥${(v / 100).toFixed(2)}` : String(v)
-        return `${p?.name ?? ''}<br/>${metricLabel.value}：${text}`
-      },
-    },
-    grid: { left: 40, right: 16, top: 28, bottom: 28 },
-    xAxis: {
-      type: 'category',
-      data: trend.value.map((t) => t.date),
-      axisLine: { lineStyle: { color: '#e3e5e7' } },
-      axisTick: { show: false },
-      axisLabel: { color: '#9499a0', fontSize: 11 },
-    },
-    yAxis: {
-      type: 'value',
-      minInterval: 1,
-      splitLine: { lineStyle: { color: '#f1f2f3' } },
-      axisLabel: { color: '#9499a0', fontSize: 11 },
-    },
-    series: [
-      {
-        name: metricLabel.value,
-        type: 'bar',
-        data: trend.value.map((t) => t.views),
-        barMaxWidth: 32,
-        itemStyle: {
-          borderRadius: [4, 4, 0, 0],
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#fb7299' },
-            { offset: 1, color: '#ffb3c9' },
-          ]),
-        },
-        emphasis: { itemStyle: { color: '#fb7299' } },
-      },
-    ],
-  })
-}
-
-function onResize() {
-  trendChart?.resize()
-}
-
+// 稿件状态标签映射
 const STATUS_MAP: Record<number, { text: string; type: 'info' | 'warning' | 'success' | 'danger' }> = {
   0: { text: '草稿', type: 'info' },
   2: { text: '转码中', type: 'info' },
@@ -121,84 +39,26 @@ const STATUS_MAP: Record<number, { text: string; type: 'info' | 'warning' | 'suc
   6: { text: '已锁定', type: 'danger' },
 }
 
-// 收益展示：分 → 元
-const earningsYuan = computed(() => ((overview.value?.earnings ?? 0) / 100).toFixed(2))
-
-async function load() {
-  loading.value = true
-  try {
-    const [ov] = await Promise.all([api.creator.overview()])
-    overview.value = ov
-  } finally {
-    loading.value = false
-  }
-}
-
-async function loadVideos(reset = false) {
-  if (reset) {
-    videosPage.value = 1
-    videos.value = []
-  }
-  videosLoading.value = true
-  try {
-    const res = await api.creator.videos(videosPage.value, 10)
-    videos.value = res.list ?? []
-    videosTotal.value = res.total
-  } finally {
-    videosLoading.value = false
-    if (reset) videosLoaded.value = true
-  }
-}
-
-function onVideosPage(page: number) {
-  videosPage.value = page
-  loadVideos()
-}
-
-async function loadSettles(reset = false) {
-  if (reset) {
-    settlesPage.value = 1
-    settles.value = []
-  }
-  settlesLoading.value = true
-  try {
-    const res = await api.creator.settlements(settlesPage.value, 10)
-    settles.value = res.list ?? []
-    settlesTotal.value = res.total
-  } finally {
-    settlesLoading.value = false
-    if (reset) settlesLoaded.value = true
-  }
-}
-
-function onSettlesPage(page: number) {
-  settlesPage.value = page
-  loadSettles()
-}
-
 type TabKey = 'videos' | 'settlements'
 const activeTab = ref<TabKey>('videos')
 
 function switchTab(t: TabKey) {
   activeTab.value = t
-  if (t === 'videos' && !videosLoaded.value) loadVideos(true)
-  if (t === 'settlements' && !settlesLoaded.value) loadSettles(true)
+  if (t === 'videos' && !videosApi.videosLoaded.value) void loadVideos(true)
+  if (t === 'settlements' && !settlesApi.settlesLoaded.value) void loadSettles(true)
 }
 
-// 趋势图：指标/天数切换时重新加载
-watch([trendMetric, trendDays], loadTrend)
+// 模板 ref 绑定：vue-tsc 对解构变量不识别模板引用，此处显式登记避免误报未使用
+void trendChartEl
 
 onMounted(async () => {
-  await load()
-  loadTrend() // overview 就绪后图表容器已挂载，避免初始渲染竞态
-  loadVideos(true)
-  window.addEventListener('resize', onResize)
+  await overviewApi.load()
+  void startTrend() // overview 就绪后图表容器已挂载，避免初始渲染竞态
+  void loadVideos(true)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', onResize)
-  trendChart?.dispose()
-  trendChart = null
+  stopTrend()
 })
 </script>
 
