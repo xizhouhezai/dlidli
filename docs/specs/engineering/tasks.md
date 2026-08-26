@@ -55,6 +55,7 @@
 - [x] M3-ENG-08 Web 首页巨型组件拆分（HomeView 720 行 → 595 行）：script 逻辑抽为 2 个组合式（useHomeFeed 视频流/无限滚动/曝光上报/useHomeBanners 推荐区轮播），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
 - [x] M3-ENG-09 Web 个人空间巨型组件拆分（SpaceView 642 行 → 535 行）：script 逻辑抽为 3 个组合式（useSpaceProfile 头部资料与关注/useSpaceCollections 合集管理/useSpaceTabs 五 Tab 内容加载），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
 - [x] M3-ENG-10 Web 创作者中心巨型组件拆分（CreatorView 613 行 → 473 行）：script 逻辑抽为 4 个组合式（useCreatorOverview 概览/useCreatorTrend echarts 趋势图/useCreatorVideos 稿件分页/useCreatorSettles 收益明细），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
+- [x] M3-ENG-11 Web 私信页巨型组件拆分（MessagesView 588 行 → 452 行）：script 逻辑抽为 3 个组合式（useConversations 会话与消息/useBlockActions 拉黑/useMessagesWs WebSocket 实时接收与重连），模板与样式零改动、行为不变；vue-tsc + vite build + eslint 全绿） `2026-08-25`
 
 ## M4（W49+）App
 
@@ -69,8 +70,8 @@
 | M0 | 13 | 13 |
 | M1 | 4 | 3 |
 | M2 | 6 | 3 |
-| M3 | 13 | 6 |
+| M3 | 14 | 7 |
 | M4 | 3 | 0 |
-| **合计** | **39** | **25** |
+| **合计** | **40** | **26** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
