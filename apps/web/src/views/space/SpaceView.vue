@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { formatCount } from '@dlidli/shared'
-import { ApiError, type CollectionCard, type UserBrief, type VideoCard as VideoCardData } from '@dlidli/api-client'
-import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
 import defaultAvatar from '@/assets/default-avatar.png'
 import defaultCover from '@/assets/default-cover.png'
 import VideoCard from '@/components/VideoCard.vue'
 import AccountStatusAlert from '@/components/AccountStatusAlert.vue'
 import ReportDialog from '@/components/ReportDialog.vue'
+import { useSpaceProfile } from '@/composables/space/useSpaceProfile'
+import { useSpaceCollections } from '@/composables/space/useSpaceCollections'
+import { useSpaceTabs } from '@/composables/space/useSpaceTabs'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,12 +19,29 @@ const userStore = useUserStore()
 const uid = computed(() => String(route.params.uid ?? ''))
 const isSelf = computed(() => userStore.profile?.id === uid.value)
 
-const profile = ref<UserBrief | null>(null)
-const notFound = ref(false)
-const following = ref(false)
-const followerCnt = ref(0)
-const followingCnt = ref(0)
-const followPending = ref(false)
+// —— 拆分出的子模块（M3-ENG-09）：头部资料 / 合集 / Tab 内容 ——
+const space = useSpaceProfile(uid)
+const cols = useSpaceCollections(uid)
+const tabs = useSpaceTabs(uid, { onCollectionsTab: cols.loadCollections })
+
+const {
+  profile,
+  notFound,
+  following,
+  followerCnt,
+  followingCnt,
+  followPending,
+  loadHead,
+  toggleFollow,
+} = space
+const {
+  collections,
+  createColVisible,
+  createColForm,
+  createColSaving,
+  createCollection,
+} = cols
+const { activeTab, videos, users, tabLoading, loadTab } = tabs
 
 // 举报用户
 const reportDialog = ref<InstanceType<typeof ReportDialog> | null>(null)
@@ -36,138 +53,14 @@ function openReport() {
   reportDialog.value?.open()
 }
 
-type TabKey = 'videos' | 'collections' | 'followings' | 'followers' | 'favorites'
-const activeTab = ref<TabKey>('videos')
-
-const videos = ref<VideoCardData[]>([])
-const users = ref<UserBrief[]>([])
-const usersTotal = ref(0)
-const tabLoading = ref(false)
-
-// 合集（M3-CRT-05）：本人可创建，展示合集卡片
-const collections = ref<CollectionCard[]>([])
-const collectionsLoaded = ref(false)
-const createColVisible = ref(false)
-const createColForm = ref({ title: '', description: '' })
-const createColSaving = ref(false)
-
-async function loadCollections() {
-  try {
-    collections.value = (await api.collection.list(uid.value)).list ?? []
-    collectionsLoaded.value = true
-  } catch {
-    collections.value = []
-  }
-}
-
-async function createCollection() {
-  if (!createColForm.value.title.trim()) {
-    ElMessage.warning('请填写合集标题')
-    return
-  }
-  createColSaving.value = true
-  try {
-    await api.collection.create({
-      title: createColForm.value.title.trim(),
-      description: createColForm.value.description.trim(),
-    })
-    createColVisible.value = false
-    createColForm.value = { title: '', description: '' }
-    ElMessage.success('合集已创建')
-    loadCollections()
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '创建失败')
-  } finally {
-    createColSaving.value = false
-  }
-}
-
-async function loadHead() {
-  notFound.value = false
-  profile.value = null
-  try {
-    profile.value = await api.relation.profile(uid.value)
-    document.title = `${profile.value.nickname} 的个人空间 - DliDli`
-  } catch {
-    notFound.value = true
-    return
-  }
-  api.relation
-    .stat(uid.value)
-    .then((st) => {
-      following.value = st.following
-      followerCnt.value = st.follower_cnt
-      followingCnt.value = st.following_cnt
-    })
-    .catch(() => {})
-}
-
-async function loadTab() {
-  tabLoading.value = true
-  videos.value = []
-  users.value = []
-  usersTotal.value = 0
-  try {
-    switch (activeTab.value) {
-      case 'videos': {
-        const res = await api.video.list({ uid: uid.value, sort: 'new', page_size: 24 })
-        videos.value = res.list
-        break
-      }
-      case 'collections': {
-        await loadCollections()
-        break
-      }
-      case 'followings': {
-        const res = await api.relation.followings(uid.value, 1, 50)
-        users.value = res.list
-        usersTotal.value = res.total
-        break
-      }
-      case 'followers': {
-        const res = await api.relation.followers(uid.value, 1, 50)
-        users.value = res.list
-        usersTotal.value = res.total
-        break
-      }
-      case 'favorites': {
-        const res = await api.interaction.favorites(1, 24)
-        videos.value = res.list
-        break
-      }
-    }
-  } finally {
-    tabLoading.value = false
-  }
-}
-
-async function toggleFollow() {
-  if (!userStore.token) {
-    router.push('/login')
-    return
-  }
-  if (followPending.value) return
-  followPending.value = true
-  try {
-    const res = await api.relation.follow(uid.value)
-    following.value = res.following
-    followerCnt.value += res.following ? 1 : -1
-  } catch (err) {
-    ElMessage.error(err instanceof ApiError ? err.message : '操作失败')
-  } finally {
-    followPending.value = false
-  }
-}
-
 function reload() {
   activeTab.value = 'videos'
-  loadHead()
-  loadTab()
+  void loadHead()
+  void loadTab()
 }
 
 onMounted(reload)
 watch(uid, reload)
-watch(activeTab, loadTab)
 </script>
 
 <template>
