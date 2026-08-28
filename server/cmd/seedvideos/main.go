@@ -386,5 +386,3 @@ func mustSize(path string) int64 {
 	}
 	return fi.Size()
 }
-
-var _ = strings.TrimSpace // 保留 strings 引用（后续扩展源列表解析用）
