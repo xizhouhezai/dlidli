@@ -27,6 +27,8 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth gin.HandlerFunc) {
 	g := v1.Group("/auth")
 	{
 		g.POST("/sms-code", h.sendSmsCode)
+		g.POST("/register/email", h.registerByEmail)
+		g.POST("/activate", h.activateEmail)
 		g.POST("/login/sms", h.loginBySms)
 		g.POST("/login/password", h.loginByPassword)
 		g.GET("/captcha", h.captcha)
@@ -73,6 +75,58 @@ func (h *Handler) sendSmsCode(c *gin.Context) {
 		data["debug_code"] = debugCode // 仅 dev 环境返回
 	}
 	response.OK(c, data)
+}
+
+// registerByEmail 邮箱注册（ACC-02）
+// @Summary  邮箱注册
+// @Tags     账号-认证
+// @Accept   json
+// @Produce  json
+// @Param    body body object true \"email; password\"
+// @Success  200 {object} response.Body
+// @Router   /auth/register/email [post]
+func (h *Handler) registerByEmail(c *gin.Context) {
+	var req struct {
+		Email    string `json:"email" binding:"required"`
+		Password string `json:"password" binding:"required,min=6,max=64"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	debugURL, err := h.svc.RegisterByEmail(c.Request.Context(), req.Email, req.Password)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	data := gin.H{"activated": false}
+	if debugURL != "" {
+		data["debug_activate_url"] = debugURL // 仅 dev 环境返回（mock 邮件）
+	}
+	response.OK(c, data)
+}
+
+// activateEmail 激活邮箱账号（ACC-02）
+// @Summary  激活邮箱账号
+// @Tags     账号-认证
+// @Accept   json
+// @Produce  json
+// @Param    body body object true \"token\"
+// @Success  200 {object} response.Body
+// @Router   /auth/activate [post]
+func (h *Handler) activateEmail(c *gin.Context) {
+	var req struct {
+		Token string `json:"token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	if err := h.svc.ActivateEmail(c.Request.Context(), req.Token); err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"activated": true})
 }
 
 // loginBySms 验证码登录（未注册自动注册）
