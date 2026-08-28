@@ -1,9 +1,6 @@
-import { createApiClient, createLocalStorageTokens, refreshTokens } from '@dlidli/api-client'
-import { clearTokens, readToken } from '@/utils/token'
+import { createApiClient, refreshTokens } from '@dlidli/api-client'
+import { clearTokens, readToken, tokens } from '@/utils/token'
 import router from '@/router'
-
-/** C 端令牌存取（key 与既有 localStorage 约定保持一致） */
-const tokens = createLocalStorageTokens('dlidli')
 
 /**
  * access token 过期时用 refresh_token 静默续期（api-client 共享实现：

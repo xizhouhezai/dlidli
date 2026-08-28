@@ -14,7 +14,9 @@
     "admin:build": "pnpm --filter @dlidli/admin build",
     "admin:lint": "pnpm --filter @dlidli/admin lint",
     "h5:dev": "pnpm --filter @dlidli/h5 dev",
-    "h5:build": "pnpm --filter @dlidli/h5 build"
+    "h5:build": "pnpm --filter @dlidli/h5 build",
+    "format": "prettier --write apps packages --ignore-unknown",
+    "format:check": "prettier --check apps packages --ignore-unknown"
   },
   "engines": {
     "node": ">=20",
@@ -22,6 +24,7 @@
   },
   "packageManager": "pnpm@10.18.3",
   "devDependencies": {
+    "prettier": "^3.6.2",
     "sharp": "^0.35.3"
   }
 }

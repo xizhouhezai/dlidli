@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { type AuditLogItem } from '@dlidli/api-client'
+import { formatDateTime } from '@dlidli/shared'
 import { adminApi } from '@/api'
-import { readAdminToken } from '@/utils/token'
 import { usePagedList } from '@/composables/usePagedList'
+import { useApiAction } from '@/composables/useApiAction'
+import { saveBlob } from '@/utils/download'
 import PageHead from '@/components/PageHead.vue'
 
 const adminId = ref('')
@@ -66,49 +67,42 @@ function buildParams(p: number, size: number) {
   }
 }
 
-const { list: logs, total, loading, page, pageSize, search, onPageChange } = usePagedList<AuditLogItem>(
-  (p, size) => adminApi.admin.auditLogs(buildParams(p, size)),
-)
+const {
+  list: logs,
+  total,
+  loading,
+  page,
+  pageSize,
+  search,
+  onPageChange,
+} = usePagedList<AuditLogItem>((p, size) => adminApi.admin.auditLogs(buildParams(p, size)))
+const { run } = useApiAction()
 
-function fmtDate(s: string): string {
-  return new Date(s).toLocaleString()
-}
-
+// 导出 CSV（当前筛选，SYS-06）
 async function exportCsv() {
   const p = buildParams(1, 20)
-  const qs = new URLSearchParams()
-  Object.entries(p).forEach(([k, v]) => {
-    if (v !== undefined && v !== '') qs.set(k, String(v))
-  })
-  try {
-    const res = await fetch(`/api/v1/admin/audit-logs/export?${qs.toString()}`, {
-      headers: { Authorization: `Bearer ${readAdminToken() ?? ''}` },
-    })
-    if (!res.ok) {
-      ElMessage.error('导出失败')
-      return
-    }
-    const blob = await res.blob()
-    const disposition = res.headers.get('Content-Disposition') ?? ''
-    const match = disposition.match(/filename="?([^";]+)"?/)
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = match?.[1] ?? `audit-log-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    ElMessage.success('导出成功')
-  } catch {
-    ElMessage.error('导出失败，请稍后再试')
-  }
+  await run(
+    () =>
+      adminApi.http
+        .download('/api/v1/admin/audit-logs/export', {
+          params: {
+            admin_id: p.admin_id,
+            action: p.action,
+            obj_type: p.obj_type,
+            from: p.from,
+            to: p.to,
+          },
+          fallbackName: `audit-log-${Date.now()}.csv`,
+        })
+        .then(saveBlob),
+    { success: '导出成功', fallback: '导出失败，请稍后再试' },
+  )
 }
 </script>
 
 <template>
   <div>
-    <PageHead
-      title="审计日志"
-      :sub="`共 ${total} 条操作记录`"
-    />
+    <PageHead title="审计日志" :sub="`共 ${total} 条操作记录`" />
 
     <div class="page-card">
       <!-- 筛选栏 -->
@@ -120,31 +114,11 @@ async function exportCsv() {
           clearable
           @keyup.enter="search"
         />
-        <el-select
-          v-model="action"
-          class="w-36"
-          placeholder="动作"
-          clearable
-        >
-          <el-option
-            v-for="a in ACTIONS"
-            :key="a.value"
-            :value="a.value"
-            :label="a.label"
-          />
+        <el-select v-model="action" class="w-36" placeholder="动作" clearable>
+          <el-option v-for="a in ACTIONS" :key="a.value" :value="a.value" :label="a.label" />
         </el-select>
-        <el-select
-          v-model="objType"
-          class="w-32"
-          placeholder="对象类型"
-          clearable
-        >
-          <el-option
-            v-for="o in OBJ_TYPES"
-            :key="o.value"
-            :value="o.value"
-            :label="o.label"
-          />
+        <el-select v-model="objType" class="w-32" placeholder="对象类型" clearable>
+          <el-option v-for="o in OBJ_TYPES" :key="o.value" :value="o.value" :label="o.label" />
         </el-select>
         <el-date-picker
           v-model="dateRange"
@@ -155,78 +129,37 @@ async function exportCsv() {
           end-placeholder="结束日期"
           class="w-64"
         />
-        <el-button
-          type="primary"
-          class="pink-btn"
-          @click="search"
-        >
-          查询
-        </el-button>
-        <el-button
-          v-perm="'audit:export'"
-          class="ml-auto"
-          @click="exportCsv"
-        >
-          导出 CSV
-        </el-button>
+        <el-button type="primary" class="pink-btn" @click="search"> 查询 </el-button>
+        <el-button v-perm="'audit:export'" class="ml-auto" @click="exportCsv"> 导出 CSV </el-button>
       </div>
 
-      <el-table
-        v-loading="loading"
-        :data="logs"
-        stripe
-      >
-        <el-table-column
-          prop="id"
-          label="ID"
-          width="90"
-        />
-        <el-table-column
-          label="操作者"
-          width="120"
-        >
+      <el-table v-loading="loading" :data="logs" stripe>
+        <el-table-column prop="id" label="ID" width="90" />
+        <el-table-column label="操作者" width="120">
           <template #default="{ row }">
-            <span :class="row.admin_name ? '' : 'text-text-3'">{{ row.admin_name || row.admin_id }}</span>
+            <span :class="row.admin_name ? '' : 'text-text-3'">{{
+              row.admin_name || row.admin_id
+            }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="动作"
-          width="120"
-        >
+        <el-table-column label="动作" width="120">
           <template #default="{ row }">
-            <el-tag
-              size="small"
-              effect="plain"
-            >
+            <el-tag size="small" effect="plain">
               {{ row.action_name }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column
-          label="对象"
-          width="140"
-        >
+        <el-table-column label="对象" width="140">
+          <template #default="{ row }"> {{ row.obj_name }} #{{ row.oid }} </template>
+        </el-table-column>
+        <el-table-column label="详情" min-width="220">
           <template #default="{ row }">
-            {{ row.obj_name }} #{{ row.oid }}
+            <span class="truncate block" :title="row.detail">{{ row.detail || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="详情"
-          min-width="220"
-        >
+        <el-table-column label="时间" width="170">
           <template #default="{ row }">
-            <span
-              class="truncate block"
-              :title="row.detail"
-            >{{ row.detail || '—' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="时间"
-          width="170"
-        >
-          <template #default="{ row }">
-            {{ fmtDate(row.created_at) }}
+            {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
       </el-table>

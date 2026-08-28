@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { User } from '@dlidli/shared'
+import { formatDateTime, type User } from '@dlidli/shared'
 
 const props = defineProps<{ user: User | null }>()
 
@@ -8,19 +8,23 @@ const props = defineProps<{ user: User | null }>()
 const meta = computed(() => {
   const u = props.user
   if (!u) return null
-  const fmt = (s?: string) => (s ? new Date(s).toLocaleString() : '')
+  const fmt = (s?: string) => (s ? formatDateTime(s) : '')
   switch (u.status) {
     case 1:
       return {
         type: 'warning' as const,
         title: '账号禁言中',
-        desc: u.muted_until ? `禁言至 ${fmt(u.muted_until)}，期间无法发布弹幕/评论/动态/投稿。` : '期间无法发布弹幕/评论/动态/投稿。',
+        desc: u.muted_until
+          ? `禁言至 ${fmt(u.muted_until)}，期间无法发布弹幕/评论/动态/投稿。`
+          : '期间无法发布弹幕/评论/动态/投稿。',
       }
     case 2:
       return {
         type: 'error' as const,
         title: '账号封禁中',
-        desc: u.banned_until ? `封禁至 ${fmt(u.banned_until)}，期间无法进行任何发布与互动操作。` : '账号已被永久封禁，无法进行任何发布与互动操作。',
+        desc: u.banned_until
+          ? `封禁至 ${fmt(u.banned_until)}，期间无法进行任何发布与互动操作。`
+          : '账号已被永久封禁，无法进行任何发布与互动操作。',
       }
     case 3:
       return { type: 'info' as const, title: '账号已注销', desc: '该账号已注销。' }
