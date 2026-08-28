@@ -26,7 +26,12 @@ export function createAuthApi(http: HttpClient) {
       http.post<TokenPair>('/api/v1/auth/login/sms', { phone, code }),
 
     loginByPassword: (account: string, password: string, captchaId: string, captchaCode: string) =>
-      http.post<TokenPair>('/api/v1/auth/login/password', { account, password, captcha_id: captchaId, captcha_code: captchaCode }),
+      http.post<TokenPair>('/api/v1/auth/login/password', {
+        account,
+        password,
+        captcha_id: captchaId,
+        captcha_code: captchaCode,
+      }),
 
     /** 获取图形验证码（返回 id + 内联 SVG） */
     captcha: () => http.get<{ id: string; svg: string }>('/api/v1/auth/captcha'),
@@ -66,7 +71,6 @@ export function createAuthApi(http: HttpClient) {
     youthMode: () => http.get<{ enabled: boolean }>('/api/v1/users/me/youth-mode'),
 
     /** 开关青少年模式 */
-    setYouthMode: (enabled: boolean) =>
-      http.put<null>('/api/v1/users/me/youth-mode', { enabled }),
+    setYouthMode: (enabled: boolean) => http.put<null>('/api/v1/users/me/youth-mode', { enabled }),
   }
 }

@@ -19,7 +19,10 @@ async function hashFile(file: File, onProgress: (p: UploadProgress) => void): Pr
   for (let offset = 0; offset < file.size; offset += HASH_SLICE) {
     const buf = await file.slice(offset, offset + HASH_SLICE).arrayBuffer()
     hasher.update(new Uint8Array(buf))
-    onProgress({ stage: 'hash', percent: Math.min(100, Math.round(((offset + HASH_SLICE) / file.size) * 100)) })
+    onProgress({
+      stage: 'hash',
+      percent: Math.min(100, Math.round(((offset + HASH_SLICE) / file.size) * 100)),
+    })
   }
   return hasher.digest('hex')
 }

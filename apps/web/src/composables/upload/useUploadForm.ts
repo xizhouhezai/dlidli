@@ -89,5 +89,15 @@ export function useUploadForm() {
     tagInput.value = ''
   }
 
-  return { categories, form, tagInput, submitting, published, loadCategories, addTag, submit, reset }
+  return {
+    categories,
+    form,
+    tagInput,
+    submitting,
+    published,
+    loadCategories,
+    addTag,
+    submit,
+    reset,
+  }
 }

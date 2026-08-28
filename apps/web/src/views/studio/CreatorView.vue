@@ -27,10 +27,14 @@ const {
   stop: stopTrend,
 } = trendApi
 const { videos, videosTotal, videosPage, videosLoading, loadVideos, onVideosPage } = videosApi
-const { settles, settlesTotal, settlesPage, settlesLoading, loadSettles, onSettlesPage } = settlesApi
+const { settles, settlesTotal, settlesPage, settlesLoading, loadSettles, onSettlesPage } =
+  settlesApi
 
 // 稿件状态标签映射
-const STATUS_MAP: Record<number, { text: string; type: 'info' | 'warning' | 'success' | 'danger' }> = {
+const STATUS_MAP: Record<
+  number,
+  { text: string; type: 'info' | 'warning' | 'success' | 'danger' }
+> = {
   0: { text: '草稿', type: 'info' },
   2: { text: '转码中', type: 'info' },
   3: { text: '审核中', type: 'warning' },
@@ -64,11 +68,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mx-auto max-w-1100px">
-    <el-skeleton
-      v-if="loading"
-      :rows="8"
-      animated
-    />
+    <el-skeleton v-if="loading" :rows="8" animated />
 
     <template v-else-if="overview">
       <!-- 概览统计卡（点击联动下方趋势图指标） -->
@@ -82,9 +82,7 @@ onBeforeUnmount(() => {
           <p class="cr-card__num">
             {{ formatCount(overview.total_view) }}
           </p>
-          <p class="cr-card__label">
-            总有效播放
-          </p>
+          <p class="cr-card__label">总有效播放</p>
         </div>
         <div
           class="cr-card"
@@ -95,9 +93,7 @@ onBeforeUnmount(() => {
           <p class="cr-card__num">
             {{ formatCount(overview.total_like) }}
           </p>
-          <p class="cr-card__label">
-            总点赞
-          </p>
+          <p class="cr-card__label">总点赞</p>
         </div>
         <div
           class="cr-card"
@@ -108,9 +104,7 @@ onBeforeUnmount(() => {
           <p class="cr-card__num">
             {{ formatCount(overview.total_coin) }}
           </p>
-          <p class="cr-card__label">
-            总投币
-          </p>
+          <p class="cr-card__label">总投币</p>
         </div>
         <div
           class="cr-card"
@@ -121,9 +115,7 @@ onBeforeUnmount(() => {
           <p class="cr-card__num">
             {{ formatCount(overview.fans) }}
           </p>
-          <p class="cr-card__label">
-            粉丝
-          </p>
+          <p class="cr-card__label">粉丝</p>
         </div>
         <div
           class="cr-card"
@@ -131,12 +123,8 @@ onBeforeUnmount(() => {
           title="查看收益趋势"
           @click="onStatCardClick('earning')"
         >
-          <p class="cr-card__num cr-card__num--money">
-            ¥{{ earningsYuan }}
-          </p>
-          <p class="cr-card__label">
-            累计收益
-          </p>
+          <p class="cr-card__num cr-card__num--money">¥{{ earningsYuan }}</p>
+          <p class="cr-card__label">累计收益</p>
         </div>
       </div>
 
@@ -156,7 +144,8 @@ onBeforeUnmount(() => {
                   class="cr-chip"
                   :class="{ 'is-active': trendMetric === m.value }"
                   @click="trendMetric = m.value"
-                >{{ m.label }}</span>
+                  >{{ m.label }}</span
+                >
               </div>
               <div class="flex gap-1">
                 <span
@@ -165,14 +154,12 @@ onBeforeUnmount(() => {
                   class="cr-chip"
                   :class="{ 'is-active': trendDays === d }"
                   @click="trendDays = d as 7 | 30"
-                >近{{ d }}日</span>
+                  >近{{ d }}日</span
+                >
               </div>
             </div>
           </div>
-          <div
-            ref="trendChartEl"
-            class="cr-trend-chart"
-          />
+          <div ref="trendChartEl" class="cr-trend-chart" />
         </div>
 
         <!-- 数据明细 -->
@@ -182,32 +169,27 @@ onBeforeUnmount(() => {
               class="cr-tab"
               :class="{ 'is-active': activeTab === 'videos' }"
               @click="switchTab('videos')"
-            >稿件数据</span>
+              >稿件数据</span
+            >
             <span
               class="cr-tab"
               :class="{ 'is-active': activeTab === 'settlements' }"
               @click="switchTab('settlements')"
-            >收益明细</span>
+              >收益明细</span
+            >
           </div>
 
           <!-- 稿件数据 -->
           <div v-if="activeTab === 'videos'">
-            <el-table
-              v-loading="videosLoading"
-              :data="videos"
-              stripe
-            >
-              <el-table-column
-                label="稿件"
-                min-width="180"
-              >
+            <el-table v-loading="videosLoading" :data="videos" stripe>
+              <el-table-column label="稿件" min-width="180">
                 <template #default="{ row }">
                   <div class="flex items-center gap-2">
                     <img
                       :src="row.cover || defaultCover"
                       alt=""
                       class="w-16 aspect-video object-cover rounded-4px bg-#f1f2f3"
-                    >
+                    />
                     <div class="min-w-0">
                       <p
                         class="m-0 text-3.5 font-600 truncate cursor-pointer hover:text-primary"
@@ -227,43 +209,26 @@ onBeforeUnmount(() => {
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column
-                label="播放"
-                width="80"
-              >
+              <el-table-column label="播放" width="80">
                 <template #default="{ row }">
                   {{ formatCount(row.view) }}
                 </template>
               </el-table-column>
-              <el-table-column
-                label="赞/币/藏"
-                width="110"
-              >
+              <el-table-column label="赞/币/藏" width="110">
                 <template #default="{ row }">
                   {{ row.like }} / {{ row.coin }} / {{ row.fav }}
                 </template>
               </el-table-column>
-              <el-table-column
-                label="有效播放"
-                width="90"
-              >
+              <el-table-column label="有效播放" width="90">
                 <template #default="{ row }">
                   {{ row.valid_views }}
                 </template>
               </el-table-column>
-              <el-table-column
-                label="收益"
-                width="80"
-              >
-                <template #default="{ row }">
-                  ¥{{ (row.earnings / 100).toFixed(2) }}
-                </template>
+              <el-table-column label="收益" width="80">
+                <template #default="{ row }"> ¥{{ (row.earnings / 100).toFixed(2) }} </template>
               </el-table-column>
             </el-table>
-            <div
-              v-if="videosTotal > 10"
-              class="text-center py-2"
-            >
+            <div v-if="videosTotal > 10" class="text-center py-2">
               <el-pagination
                 background
                 layout="prev, pager, next, total"
@@ -277,48 +242,27 @@ onBeforeUnmount(() => {
 
           <!-- 收益明细 -->
           <div v-else>
-            <el-table
-              v-loading="settlesLoading"
-              :data="settles"
-              stripe
-            >
-              <el-table-column
-                prop="date"
-                label="日期"
-                width="110"
-              />
-              <el-table-column
-                label="稿件"
-                min-width="180"
-              >
+            <el-table v-loading="settlesLoading" :data="settles" stripe>
+              <el-table-column prop="date" label="日期" width="110" />
+              <el-table-column label="稿件" min-width="180">
                 <template #default="{ row }">
                   <span
                     class="truncate block cursor-pointer hover:text-primary"
                     @click="router.push(`/video/${row.bvid}`)"
-                  >{{ row.title }}</span>
+                    >{{ row.title }}</span
+                  >
                 </template>
               </el-table-column>
-              <el-table-column
-                label="有效播放"
-                width="100"
-              >
+              <el-table-column label="有效播放" width="100">
                 <template #default="{ row }">
                   {{ row.valid_views }}
                 </template>
               </el-table-column>
-              <el-table-column
-                label="收益"
-                width="90"
-              >
-                <template #default="{ row }">
-                  ¥{{ (row.amount / 100).toFixed(2) }}
-                </template>
+              <el-table-column label="收益" width="90">
+                <template #default="{ row }"> ¥{{ (row.amount / 100).toFixed(2) }} </template>
               </el-table-column>
             </el-table>
-            <div
-              v-if="settlesTotal > 10"
-              class="text-center py-2"
-            >
+            <div v-if="settlesTotal > 10" class="text-center py-2">
               <el-pagination
                 background
                 layout="prev, pager, next, total"

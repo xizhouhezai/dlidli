@@ -13,7 +13,7 @@ export function useApiAction() {
    */
   async function run(
     fn: () => Promise<unknown>,
-    opts: { success?: string, fallback?: string } = {},
+    opts: { success?: string; fallback?: string } = {},
   ): Promise<boolean> {
     loading.value = true
     try {

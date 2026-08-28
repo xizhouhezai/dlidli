@@ -25,26 +25,19 @@ const metaSuffix = computed(() => {
 </script>
 
 <template>
-  <RouterLink
-    :to="`/video/${video.bvid}`"
-    class="video-card"
-  >
+  <RouterLink :to="`/video/${video.bvid}`" class="video-card">
     <div class="video-card__cover">
-      <img
-        :src="video.cover || defaultCover"
-        :alt="video.title"
-        loading="lazy"
-      >
-      <span
-        v-if="video.duration > 0"
-        class="video-card__dur"
-      >{{ formatDuration(video.duration) }}</span>
+      <img :src="video.cover || defaultCover" :alt="video.title" loading="lazy" />
+      <span v-if="video.duration > 0" class="video-card__dur">{{
+        formatDuration(video.duration)
+      }}</span>
     </div>
     <p class="video-card__title">
       {{ video.title }}
     </p>
     <p class="video-card__meta">
-      <span class="i-mingcute-play-circle-line mr-1" />{{ formatCount(video.stat.view) }}{{ metaSuffix }}
+      <span class="i-mingcute-play-circle-line mr-1" />{{ formatCount(video.stat.view)
+      }}{{ metaSuffix }}
     </p>
   </RouterLink>
 </template>

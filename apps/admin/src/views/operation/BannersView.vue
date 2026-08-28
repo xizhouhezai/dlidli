@@ -68,8 +68,15 @@ async function save() {
 }
 
 async function remove(item: BannerItem) {
-  await ElMessageBox.confirm(`确定删除 Banner「${item.title || '#' + item.id}」吗？`, '删除 Banner', { type: 'warning' })
-  const ok = await run(() => adminApi.admin.deleteBanner(item.id), { success: '已删除', fallback: '删除失败' })
+  await ElMessageBox.confirm(
+    `确定删除 Banner「${item.title || '#' + item.id}」吗？`,
+    '删除 Banner',
+    { type: 'warning' },
+  )
+  const ok = await run(() => adminApi.admin.deleteBanner(item.id), {
+    success: '已删除',
+    fallback: '删除失败',
+  })
   if (ok) load()
 }
 
@@ -86,110 +93,54 @@ onMounted(load)
 
 <template>
   <div>
-    <PageHead
-      title="Banner 配置"
-      :sub="`共 ${list.length} 个 Banner（首页推荐轮播）`"
-    />
+    <PageHead title="Banner 配置" :sub="`共 ${list.length} 个 Banner（首页推荐轮播）`" />
 
     <div class="page-card">
       <div class="flex justify-end mb-4">
-        <el-button
-          v-perm="'banner:edit'"
-          type="primary"
-          class="pink-btn"
-          @click="openCreate"
-        >
+        <el-button v-perm="'banner:edit'" type="primary" class="pink-btn" @click="openCreate">
           新增 Banner
         </el-button>
       </div>
 
-      <el-table
-        v-loading="loading"
-        :data="list"
-        stripe
-      >
-        <el-table-column
-          label="预览"
-          width="150"
-        >
+      <el-table v-loading="loading" :data="list" stripe>
+        <el-table-column label="预览" width="150">
           <template #default="{ row }">
             <img
               v-if="row.image"
               :src="row.image"
               alt=""
               class="w-120px aspect-video object-cover rounded-6px bg-#f1f2f3"
-            >
-            <span
-              v-else
-              class="text-3 text-text-3"
-            >
-              无图片
-            </span>
+            />
+            <span v-else class="text-3 text-text-3"> 无图片 </span>
           </template>
         </el-table-column>
-        <el-table-column
-          prop="title"
-          label="标题"
-          min-width="140"
-        >
+        <el-table-column prop="title" label="标题" min-width="140">
           <template #default="{ row }">
             <span :class="row.title ? '' : 'text-text-3'">{{ row.title || '（未命名）' }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          prop="bvid"
-          label="跳转稿件"
-          width="150"
-        >
+        <el-table-column prop="bvid" label="跳转稿件" width="150">
           <template #default="{ row }">
             <span :class="row.bvid ? '' : 'text-text-3'">{{ row.bvid || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          prop="sort"
-          label="排序"
-          width="80"
-        />
-        <el-table-column
-          label="状态"
-          width="90"
-        >
+        <el-table-column prop="sort" label="排序" width="80" />
+        <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag
-              :type="row.status === 0 ? 'success' : 'info'"
-              size="small"
-            >
+            <el-tag :type="row.status === 0 ? 'success' : 'info'" size="small">
               {{ row.status === 0 ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column
-          label="操作"
-          width="160"
-          fixed="right"
-        >
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button
-              v-perm="'banner:edit'"
-              link
-              type="primary"
-              @click="openEdit(row)"
-            >
+            <el-button v-perm="'banner:edit'" link type="primary" @click="openEdit(row)">
               编辑
             </el-button>
-            <el-button
-              v-perm="'banner:edit'"
-              link
-              @click="toggleStatus(row)"
-            >
+            <el-button v-perm="'banner:edit'" link @click="toggleStatus(row)">
               {{ row.status === 0 ? '停用' : '启用' }}
             </el-button>
-            <el-button
-              v-perm="'banner:edit'"
-              link
-              type="danger"
-              @click="remove(row)"
-            >
+            <el-button v-perm="'banner:edit'" link type="danger" @click="remove(row)">
               删除
             </el-button>
           </template>
@@ -203,58 +154,29 @@ onMounted(load)
       :title="editingId ? '编辑 Banner' : '新增 Banner'"
       width="480px"
     >
-      <el-form
-        label-width="80px"
-        class="max-w-440px"
-      >
+      <el-form label-width="80px" class="max-w-440px">
         <el-form-item label="标题">
-          <el-input
-            v-model="form.title"
-            placeholder="轮播展示标题（选填）"
-            maxlength="64"
-          />
+          <el-input v-model="form.title" placeholder="轮播展示标题（选填）" maxlength="64" />
         </el-form-item>
         <el-form-item label="图片 URL">
-          <el-input
-            v-model="form.image"
-            placeholder="留空则自动使用稿件封面"
-            maxlength="255"
-          />
+          <el-input v-model="form.image" placeholder="留空则自动使用稿件封面" maxlength="255" />
         </el-form-item>
         <el-form-item label="跳转稿件">
-          <el-input
-            v-model="form.bvid"
-            placeholder="如 DV2TqnH0737WC（选填）"
-            maxlength="16"
-          />
+          <el-input v-model="form.bvid" placeholder="如 DV2TqnH0737WC（选填）" maxlength="16" />
         </el-form-item>
         <el-form-item label="排序">
-          <el-input-number
-            v-model="form.sort"
-            :min="0"
-          />
+          <el-input-number v-model="form.sort" :min="0" />
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
-            <el-radio :value="0">
-              启用
-            </el-radio>
-            <el-radio :value="1">
-              停用
-            </el-radio>
+            <el-radio :value="0"> 启用 </el-radio>
+            <el-radio :value="1"> 停用 </el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          class="pink-btn"
-          :loading="saving"
-          @click="save"
-        >
+        <el-button @click="dialogVisible = false"> 取消 </el-button>
+        <el-button type="primary" class="pink-btn" :loading="saving" @click="save">
           保存
         </el-button>
       </template>

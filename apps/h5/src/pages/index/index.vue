@@ -83,91 +83,54 @@ function goSearch() {
 <template>
   <view class="home">
     <!-- 搜索入口 -->
-    <view
-      class="search-entry"
-      @tap="goSearch"
-    >
+    <view class="search-entry" @tap="goSearch">
       <text class="search-entry__icon i-mingcute-search-2-line" />
       <text class="search-entry__text">搜索视频、UP 主</text>
     </view>
 
     <!-- 分区 + 排序 -->
-    <scroll-view
-      class="cat-bar"
-      scroll-x
-      :show-scrollbar="false"
-    >
-      <text
-        class="cat-chip"
-        :class="{ active: activeCategory === 0 }"
-        @tap="pickCategory(0)"
-      >推荐</text>
+    <scroll-view class="cat-bar" scroll-x :show-scrollbar="false">
+      <text class="cat-chip" :class="{ active: activeCategory === 0 }" @tap="pickCategory(0)"
+        >推荐</text
+      >
       <text
         v-for="c in categories"
         :key="c.id"
         class="cat-chip"
         :class="{ active: activeCategory === c.id }"
         @tap="pickCategory(c.id)"
-      >{{ c.name }}</text>
+        >{{ c.name }}</text
+      >
     </scroll-view>
 
     <view class="sort-bar">
-      <text
-        class="sort-tab"
-        :class="{ active: sort === 'new' }"
-        @tap="switchSort('new')"
-      >最新</text>
-      <text
-        class="sort-tab"
-        :class="{ active: sort === 'hot' }"
-        @tap="switchSort('hot')"
-      >最热</text>
+      <text class="sort-tab" :class="{ active: sort === 'new' }" @tap="switchSort('new')"
+        >最新</text
+      >
+      <text class="sort-tab" :class="{ active: sort === 'hot' }" @tap="switchSort('hot')"
+        >最热</text
+      >
     </view>
 
     <!-- 视频双列网格 -->
     <view class="grid">
-      <view
-        v-for="v in videos"
-        :key="v.bvid"
-        class="card"
-        @tap="openVideo(v.bvid)"
-      >
+      <view v-for="v in videos" :key="v.bvid" class="card" @tap="openVideo(v.bvid)">
         <view class="card__cover">
-          <image
-            class="card__img"
-            :src="v.cover || DEFAULT_COVER"
-            mode="aspectFill"
-          />
-          <text
-            v-if="v.duration > 0"
-            class="card__dur"
-          >{{ formatDuration(v.duration) }}</text>
+          <image class="card__img" :src="v.cover || DEFAULT_COVER" mode="aspectFill" />
+          <text v-if="v.duration > 0" class="card__dur">{{ formatDuration(v.duration) }}</text>
         </view>
         <text class="card__title">{{ v.title }}</text>
         <view class="card__meta">
-          <image
-            class="card__avatar"
-            :src="v.owner.avatar || DEFAULT_AVATAR"
-            mode="aspectFill"
-          />
+          <image class="card__avatar" :src="v.owner.avatar || DEFAULT_AVATAR" mode="aspectFill" />
           <text class="card__up">{{ v.owner.nickname }}</text>
           <text class="card__views">{{ formatCount(v.stat.view) }}观看</text>
         </view>
       </view>
     </view>
 
-    <view
-      v-if="loading"
-      class="tip"
-    >加载中…</view>
-    <view
-      v-else-if="videos.length === 0"
-      class="tip"
-    >这里还没有视频</view>
-    <view
-      v-else-if="!hasMore"
-      class="tip"
-    >没有更多了</view>
+    <view v-if="loading" class="tip">加载中…</view>
+    <view v-else-if="videos.length === 0" class="tip">这里还没有视频</view>
+    <view v-else-if="!hasMore" class="tip">没有更多了</view>
   </view>
 </template>
 

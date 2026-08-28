@@ -54,7 +54,9 @@ async function doLike() {
     const res = await api.interaction.likeVideo(detail.value.bvid)
     liked.value = res.liked
     detail.value.stat.like += res.liked ? 1 : -1
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 }
 
 async function doCoin() {
@@ -63,7 +65,9 @@ async function doCoin() {
     await api.interaction.coinVideo(detail.value.bvid, 1)
     detail.value.stat.coin += 1
     uni.showToast({ title: '投币成功', icon: 'success' })
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 }
 
 async function doFav() {
@@ -72,7 +76,9 @@ async function doFav() {
     const res = await api.interaction.toggleFavorite(detail.value.bvid)
     faved.value = res.faved
     detail.value.stat.fav += res.faved ? 1 : -1
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 }
 
 function doShare() {
@@ -105,10 +111,7 @@ async function sendDanmaku() {
 
 <template>
   <view class="page">
-    <view
-      v-if="notFound"
-      class="tip"
-    >视频不存在或已下架</view>
+    <view v-if="notFound" class="tip">视频不存在或已下架</view>
 
     <template v-else-if="detail">
       <!-- 播放器：uni video 原生支持 HLS -->
@@ -122,10 +125,7 @@ async function sendDanmaku() {
         object-fit="contain"
         @timeupdate="(e: any) => onTimeUpdate(e)"
       />
-      <view
-        v-else
-        class="player player--empty"
-      >
+      <view v-else class="player player--empty">
         <text>转码中，稍后再来～</text>
       </view>
 
@@ -133,7 +133,11 @@ async function sendDanmaku() {
       <view class="info">
         <text class="info__title">{{ detail.title }}</text>
         <view class="info__stat">
-          <text><text class="i-mingcute-play-circle-line align-middle mr-1" />{{ formatCount(detail.stat.view) }}</text>
+          <text
+            ><text class="i-mingcute-play-circle-line align-middle mr-1" />{{
+              formatCount(detail.stat.view)
+            }}</text
+          >
           <text>· 弹幕 {{ formatCount(detail.stat.danmaku) }}</text>
           <text>· {{ formatPubdate(detail.published_at || detail.created_at) }}</text>
         </view>
@@ -141,11 +145,7 @@ async function sendDanmaku() {
 
       <!-- UP 主 -->
       <view class="up">
-        <image
-          class="up__avatar"
-          :src="detail.owner.avatar || DEFAULT_AVATAR"
-          mode="aspectFill"
-        />
+        <image class="up__avatar" :src="detail.owner.avatar || DEFAULT_AVATAR" mode="aspectFill" />
         <view class="up__info">
           <text class="up__name">{{ detail.owner.nickname }}</text>
         </view>
@@ -153,43 +153,35 @@ async function sendDanmaku() {
 
       <!-- 三连数据 + 互动操作栏 -->
       <view class="stats">
-        <view
-          class="stat-item"
-          @tap="doLike"
-        >
+        <view class="stat-item" @tap="doLike">
           <text
             class="stat-item__icon"
-            :class="[liked ? 'i-mingcute-thumb-up-2-fill' : 'i-mingcute-thumb-up-2-line', { active: liked }]"
+            :class="[
+              liked ? 'i-mingcute-thumb-up-2-fill' : 'i-mingcute-thumb-up-2-line',
+              { active: liked },
+            ]"
           />
-          <text
-            class="stat-item__label"
-            :class="{ active: liked }"
-          >{{ formatCount(detail.stat.like) }}</text>
+          <text class="stat-item__label" :class="{ active: liked }">{{
+            formatCount(detail.stat.like)
+          }}</text>
         </view>
-        <view
-          class="stat-item"
-          @tap="doCoin"
-        >
+        <view class="stat-item" @tap="doCoin">
           <text class="stat-item__icon i-mingcute-coin-2-line" />
           <text class="stat-item__label">{{ formatCount(detail.stat.coin) }}</text>
         </view>
-        <view
-          class="stat-item"
-          @tap="doFav"
-        >
+        <view class="stat-item" @tap="doFav">
           <text
             class="stat-item__icon"
-            :class="[faved ? 'i-mingcute-star-2-fill' : 'i-mingcute-star-2-line', { active: faved }]"
+            :class="[
+              faved ? 'i-mingcute-star-2-fill' : 'i-mingcute-star-2-line',
+              { active: faved },
+            ]"
           />
-          <text
-            class="stat-item__label"
-            :class="{ active: faved }"
-          >{{ formatCount(detail.stat.fav) }}</text>
+          <text class="stat-item__label" :class="{ active: faved }">{{
+            formatCount(detail.stat.fav)
+          }}</text>
         </view>
-        <view
-          class="stat-item"
-          @tap="doShare"
-        >
+        <view class="stat-item" @tap="doShare">
           <text class="stat-item__icon i-mingcute-share-forward-line" />
           <text class="stat-item__label">{{ formatCount(detail.stat.share) }}</text>
         </view>
@@ -204,27 +196,22 @@ async function sendDanmaku() {
           maxlength="100"
           confirm-type="send"
           @confirm="sendDanmaku"
-        >
+        />
         <view
           class="danmaku-bar__btn"
           :class="{ disabled: !danmakuText.trim() || danmakuSending }"
           @tap="sendDanmaku"
-        >发送</view>
+          >发送</view
+        >
       </view>
 
       <!-- 简介 -->
-      <view
-        v-if="detail.description"
-        class="desc"
-      >
+      <view v-if="detail.description" class="desc">
         <text>{{ detail.description }}</text>
       </view>
     </template>
 
-    <view
-      v-else-if="loading"
-      class="tip"
-    >加载中…</view>
+    <view v-else-if="loading" class="tip">加载中…</view>
   </view>
 </template>
 

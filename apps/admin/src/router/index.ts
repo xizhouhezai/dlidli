@@ -129,7 +129,9 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to) => {
-  document.title = to.meta.title ? `${to.meta.title as string} - DliDli 管理后台` : 'DliDli 管理后台'
+  document.title = to.meta.title
+    ? `${to.meta.title as string} - DliDli 管理后台`
+    : 'DliDli 管理后台'
 })
 
 export default router

@@ -27,7 +27,9 @@ export function useMessagesWs(deps: WsDeps) {
     const token = readToken()
     if (!token || ws) return
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    ws = new WebSocket(`${proto}://${window.location.host}${api.message.wsUrl()}?token=${encodeURIComponent(token)}`)
+    ws = new WebSocket(
+      `${proto}://${window.location.host}${api.message.wsUrl()}?token=${encodeURIComponent(token)}`,
+    )
     ws.onmessage = (e) => {
       try {
         const frame = JSON.parse(e.data)

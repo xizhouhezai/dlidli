@@ -1,4 +1,10 @@
-import { defineConfig, presetUno, presetAttributify, presetIcons, transformerDirectives } from 'unocss'
+import {
+  defineConfig,
+  presetUno,
+  presetAttributify,
+  presetIcons,
+  transformerDirectives,
+} from 'unocss'
 
 // DliDli 管理后台 UnoCSS 配置。
 // 品牌 token 与 C 端 web 保持一致（apps/web/uno.config.ts）；后台自身深色科技风色板另加。

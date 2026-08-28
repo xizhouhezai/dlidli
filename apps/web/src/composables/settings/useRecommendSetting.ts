@@ -22,7 +22,9 @@ export function useRecommendSetting() {
     recSaving.value = true
     try {
       await api.recommend.setRecommendSetting(recEnabled.value)
-      ElMessage.success(recEnabled.value ? '已开启个性化推荐' : '已关闭个性化推荐（首页推荐将展示热门内容）')
+      ElMessage.success(
+        recEnabled.value ? '已开启个性化推荐' : '已关闭个性化推荐（首页推荐将展示热门内容）',
+      )
     } catch (err) {
       recEnabled.value = !recEnabled.value
       ElMessage.error(err instanceof ApiError ? err.message : '操作失败')

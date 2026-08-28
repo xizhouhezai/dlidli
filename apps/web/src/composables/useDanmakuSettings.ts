@@ -32,10 +32,6 @@ function load(): DanmakuSettings {
 /** 弹幕展示设置：localStorage 持久化，播放页与设置面板共享同一实例 */
 export function useDanmakuSettings() {
   const settings = ref<DanmakuSettings>(load())
-  watch(
-    settings,
-    (v) => localStorage.setItem(STORAGE_KEY, JSON.stringify(v)),
-    { deep: true },
-  )
+  watch(settings, (v) => localStorage.setItem(STORAGE_KEY, JSON.stringify(v)), { deep: true })
   return { settings }
 }

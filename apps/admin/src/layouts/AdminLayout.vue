@@ -23,15 +23,25 @@ const roleLabel = computed(() => {
 })
 
 // 菜单分组：按权限码前缀归组，菜单项来自后端下发（已按权限过滤）
-interface MenuItem { name: string, path: string, title: string, icon: string }
-interface MenuGroup { title: string, items: MenuItem[] }
+interface MenuItem {
+  name: string
+  path: string
+  title: string
+  icon: string
+}
+interface MenuGroup {
+  title: string
+  items: MenuItem[]
+}
 
 // 权限码 → 分组标题 映射
 function groupOf(code: string): string {
   if (code.startsWith('dashboard')) return '概览'
-  if (code.startsWith('review') || code.startsWith('sensitive') || code.startsWith('video')) return '内容审核'
+  if (code.startsWith('review') || code.startsWith('sensitive') || code.startsWith('video'))
+    return '内容审核'
   if (code.startsWith('user')) return '用户治理'
-  if (code.startsWith('category') || code.startsWith('banner') || code.startsWith('experiment')) return '运营管理'
+  if (code.startsWith('category') || code.startsWith('banner') || code.startsWith('experiment'))
+    return '运营管理'
   if (code.startsWith('admin') || code.startsWith('role')) return '系统管理'
   if (code.startsWith('permission')) return '系统管理'
   return '其他'
@@ -62,21 +72,21 @@ const menuGroups = computed<MenuGroup[]>(() => {
   for (const m of permissionStore.state.menus) {
     const g = groupOf(m.code)
     if (!map.has(g)) map.set(g, [])
-    map.get(g)!.push({ name: pathToName[m.path] ?? m.path, path: m.path, title: m.name, icon: m.icon })
+    map
+      .get(g)!
+      .push({ name: pathToName[m.path] ?? m.path, path: m.path, title: m.name, icon: m.icon })
   }
-  return groupOrder
-    .filter(g => map.has(g))
-    .map(g => ({ title: g, items: map.get(g)! }))
+  return groupOrder.filter((g) => map.has(g)).map((g) => ({ title: g, items: map.get(g)! }))
 })
 
 const activeName = computed(() => route.name as string)
 
 const breadcrumb = computed(() => {
   for (const g of menuGroups.value) {
-    const hit = g.items.find(i => i.name === activeName.value)
+    const hit = g.items.find((i) => i.name === activeName.value)
     if (hit) return [g.title, hit.title]
   }
-  return [route.meta.title as string ?? '']
+  return [(route.meta.title as string) ?? '']
 })
 
 const ready = ref(false)
@@ -108,11 +118,7 @@ function logout() {
         <span class="admin-sider__logo-text">DliDli 管理后台</span>
       </div>
       <nav class="admin-sider__nav">
-        <div
-          v-for="group in menuGroups"
-          :key="group.title"
-          class="admin-menu-group"
-        >
+        <div v-for="group in menuGroups" :key="group.title" class="admin-menu-group">
           <div class="admin-menu-group__title">
             {{ group.title }}
           </div>
@@ -123,10 +129,7 @@ function logout() {
             class="admin-menu-item"
             :class="{ 'is-active': activeName === item.name }"
           >
-            <span
-              class="admin-menu-item__icon"
-              :class="item.icon"
-            />
+            <span class="admin-menu-item__icon" :class="item.icon" />
             <span>{{ item.title }}</span>
           </RouterLink>
         </div>
@@ -143,26 +146,17 @@ function logout() {
             class="admin-breadcrumb__item"
             :class="{ 'is-last': i === breadcrumb.length - 1 }"
           >
-            <span
-              v-if="i > 0"
-              class="admin-breadcrumb__sep"
-            >/</span>
+            <span v-if="i > 0" class="admin-breadcrumb__sep">/</span>
             {{ crumb }}
           </span>
         </div>
         <el-dropdown @command="(c: string) => c === 'logout' && logout()">
           <span class="admin-user">
-            <el-avatar
-              :size="30"
-              class="admin-user__avatar"
-            >
+            <el-avatar :size="30" class="admin-user__avatar">
               {{ username.charAt(0).toUpperCase() }}
             </el-avatar>
             <span class="admin-user__name">{{ username }}</span>
-            <span
-              v-if="roleLabel"
-              class="admin-user__role"
-            >{{ roleLabel }}</span>
+            <span v-if="roleLabel" class="admin-user__role">{{ roleLabel }}</span>
             <span class="i-mingcute-down-line text-3.5" />
           </span>
           <template #dropdown>

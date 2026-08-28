@@ -3,7 +3,8 @@ import * as echarts from 'echarts'
 import type { TrendPoint } from '@dlidli/api-client'
 import { api } from '@/api'
 
-export type CreatorTrendMetric = 'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'
+export type CreatorTrendMetric =
+  'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'
 
 const METRIC_OPTIONS: Array<{ value: CreatorTrendMetric; label: string }> = [
   { value: 'play', label: '有效播放' },

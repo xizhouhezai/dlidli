@@ -12,11 +12,11 @@ export function createRecommendApi(http: HttpClient) {
       }),
 
     /** 全站/分区热度榜（加权分） */
-    hot: (params: { category_id?: number, page?: number, page_size?: number }) =>
+    hot: (params: { category_id?: number; page?: number; page_size?: number }) =>
       http.get<{ list: VideoCard[] }>('/api/v1/videos/hot', params),
 
     /** 行为上报（1曝光 2点击 3播放 4互动，批量） */
-    reportBehavior: (items: Array<{ video_id: string, action: 1 | 2 | 3 | 4 }>) =>
+    reportBehavior: (items: Array<{ video_id: string; action: 1 | 2 | 3 | 4 }>) =>
       http.post<null>('/api/v1/behaviors', { items }),
 
     /** 负反馈（1内容 2UP主 3分区） */
@@ -24,8 +24,7 @@ export function createRecommendApi(http: HttpClient) {
       http.post<null>('/api/v1/dislikes', { target_type: targetType, target_id: targetId }),
 
     /** 个性化推荐开关状态 */
-    recommendSetting: () =>
-      http.get<{ enabled: boolean }>('/api/v1/users/me/recommend-settings'),
+    recommendSetting: () => http.get<{ enabled: boolean }>('/api/v1/users/me/recommend-settings'),
 
     /** 开关个性化推荐（关闭后退化为热度榜，合规） */
     setRecommendSetting: (enabled: boolean) =>

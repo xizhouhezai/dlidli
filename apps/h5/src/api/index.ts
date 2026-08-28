@@ -1,5 +1,10 @@
 // DliDli H5 端 API 客户端：复用 @dlidli/api-client，注入 uni.request 适配器
-import { createApiClient, refreshTokens, type RequestAdapter, type TokenStorage } from '@dlidli/api-client'
+import {
+  createApiClient,
+  refreshTokens,
+  type RequestAdapter,
+  type TokenStorage,
+} from '@dlidli/api-client'
 import type { ApiBody } from '@dlidli/shared'
 
 const TOKEN_KEY = 'dlidli_token'
