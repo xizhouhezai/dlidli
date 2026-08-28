@@ -15,8 +15,14 @@ export function useHomeBanners() {
       const configured = await api.video.banners()
       if (configured.list.length > 0) {
         banners.value = configured.list.slice(0, 4).map((b) => ({
-          id: b.id, bvid: b.bvid, title: b.title, cover: b.image,
-          duration: 0, status: 4, published_at: null, created_at: '',
+          id: b.id,
+          bvid: b.bvid,
+          title: b.title,
+          cover: b.image,
+          duration: 0,
+          status: 4,
+          published_at: null,
+          created_at: '',
           owner: { id: '', nickname: '', avatar: '' },
           stat: { view: 0, like: 0, coin: 0, fav: 0, danmaku: 0, comment: 0, share: 0 },
         }))

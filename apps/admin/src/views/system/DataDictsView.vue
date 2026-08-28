@@ -68,8 +68,13 @@ async function save() {
 }
 
 async function remove(item: DataDictItem) {
-  await ElMessageBox.confirm(`确定删除字典项「${item.label}」吗？`, '删除字典项', { type: 'warning' })
-  const ok = await run(() => adminApi.admin.deleteDict(item.id), { success: '已删除', fallback: '删除失败' })
+  await ElMessageBox.confirm(`确定删除字典项「${item.label}」吗？`, '删除字典项', {
+    type: 'warning',
+  })
+  const ok = await run(() => adminApi.admin.deleteDict(item.id), {
+    success: '已删除',
+    fallback: '删除失败',
+  })
   if (ok) load()
 }
 
@@ -78,39 +83,20 @@ onMounted(load)
 
 <template>
   <div>
-    <PageHead
-      title="数据字典"
-      :sub="`共 ${Object.keys(groups).length} 个字典类型`"
-    />
+    <PageHead title="数据字典" :sub="`共 ${Object.keys(groups).length} 个字典类型`" />
 
     <div class="page-card">
       <div class="flex justify-end mb-4">
-        <el-button
-          v-perm="'dict:edit'"
-          type="primary"
-          class="pink-btn"
-          @click="openCreate()"
-        >
+        <el-button v-perm="'dict:edit'" type="primary" class="pink-btn" @click="openCreate()">
           新增字典项
         </el-button>
       </div>
 
-      <el-skeleton
-        v-if="loading"
-        :rows="6"
-        animated
-      />
+      <el-skeleton v-if="loading" :rows="6" animated />
 
       <template v-else>
-        <el-empty
-          v-if="Object.keys(groups).length === 0"
-          description="暂无字典数据"
-        />
-        <div
-          v-for="(items, type) in groups"
-          :key="type"
-          class="mb-6"
-        >
+        <el-empty v-if="Object.keys(groups).length === 0" description="暂无字典数据" />
+        <div v-for="(items, type) in groups" :key="type" class="mb-6">
           <div class="flex items-center gap-2 mb-2">
             <h3 class="m-0 text-3.75 font-600">
               {{ type }}
@@ -135,10 +121,7 @@ onMounted(load)
               @click="openEdit(item)"
             >
               {{ item.label }} = {{ item.value }}
-              <span
-                v-if="item.remark"
-                class="ml-1 opacity-60"
-              >{{ item.remark }}</span>
+              <span v-if="item.remark" class="ml-1 opacity-60">{{ item.remark }}</span>
             </el-tag>
           </div>
         </div>
@@ -151,52 +134,26 @@ onMounted(load)
       :title="editingId ? '编辑字典项' : '新增字典项'"
       width="460px"
     >
-      <el-form
-        label-width="72px"
-        class="max-w-420px"
-      >
+      <el-form label-width="72px" class="max-w-420px">
         <el-form-item label="类型">
-          <el-input
-            v-model="form.dict_type"
-            placeholder="如 report_reason"
-            maxlength="32"
-          />
+          <el-input v-model="form.dict_type" placeholder="如 report_reason" maxlength="32" />
         </el-form-item>
         <el-form-item label="展示名">
-          <el-input
-            v-model="form.label"
-            maxlength="64"
-          />
+          <el-input v-model="form.label" maxlength="64" />
         </el-form-item>
         <el-form-item label="值">
-          <el-input
-            v-model="form.value"
-            maxlength="64"
-          />
+          <el-input v-model="form.value" maxlength="64" />
         </el-form-item>
         <el-form-item label="排序">
-          <el-input-number
-            v-model="form.sort"
-            :min="0"
-          />
+          <el-input-number v-model="form.sort" :min="0" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input
-            v-model="form.remark"
-            maxlength="200"
-          />
+          <el-input v-model="form.remark" maxlength="200" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          class="pink-btn"
-          :loading="saving"
-          @click="save"
-        >
+        <el-button @click="dialogVisible = false"> 取消 </el-button>
+        <el-button type="primary" class="pink-btn" :loading="saving" @click="save">
           保存
         </el-button>
       </template>

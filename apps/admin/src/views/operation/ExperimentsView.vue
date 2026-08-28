@@ -22,7 +22,15 @@ async function load() {
 // 编辑弹窗
 const dialogVisible = ref(false)
 const editingId = ref('')
-const form = reactive({ name: '', target: 'recommend', variant_a: '', variant_b: '', ratio: 50, status: 0, remark: '' })
+const form = reactive({
+  name: '',
+  target: 'recommend',
+  variant_a: '',
+  variant_b: '',
+  ratio: 50,
+  status: 0,
+  remark: '',
+})
 const saving = ref(false)
 
 const TARGET_HINT: Record<string, string> = {
@@ -76,8 +84,15 @@ async function save() {
 }
 
 async function remove(item: ExperimentItem) {
-  await ElMessageBox.confirm(`确定删除实验「${item.name}」吗？删除后流量恢复默认策略。`, '删除实验', { type: 'warning' })
-  const ok = await run(() => adminApi.admin.deleteExperiment(item.id), { success: '已删除', fallback: '删除失败' })
+  await ElMessageBox.confirm(
+    `确定删除实验「${item.name}」吗？删除后流量恢复默认策略。`,
+    '删除实验',
+    { type: 'warning' },
+  )
+  const ok = await run(() => adminApi.admin.deleteExperiment(item.id), {
+    success: '已删除',
+    fallback: '删除失败',
+  })
   if (ok) load()
 }
 
@@ -94,119 +109,58 @@ onMounted(load)
 
 <template>
   <div>
-    <PageHead
-      title="A/B 实验"
-      :sub="`共 ${list.length} 个实验（按用户哈希稳定分流）`"
-    />
+    <PageHead title="A/B 实验" :sub="`共 ${list.length} 个实验（按用户哈希稳定分流）`" />
 
     <div class="page-card">
       <div class="flex justify-end mb-4">
-        <el-button
-          v-perm="'experiment:edit'"
-          type="primary"
-          class="pink-btn"
-          @click="openCreate"
-        >
+        <el-button v-perm="'experiment:edit'" type="primary" class="pink-btn" @click="openCreate">
           新建实验
         </el-button>
       </div>
 
-      <el-table
-        v-loading="loading"
-        :data="list"
-        stripe
-      >
-        <el-table-column
-          prop="name"
-          label="实验名称"
-          min-width="140"
-        />
-        <el-table-column
-          label="应用场景"
-          width="110"
-        >
+      <el-table v-loading="loading" :data="list" stripe>
+        <el-table-column prop="name" label="实验名称" min-width="140" />
+        <el-table-column label="应用场景" width="110">
           <template #default="{ row }">
-            <el-tag
-              size="small"
-              effect="plain"
-            >
+            <el-tag size="small" effect="plain">
               {{ row.target }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column
-          label="A 组策略"
-          width="120"
-        >
+        <el-table-column label="A 组策略" width="120">
           <template #default="{ row }">
             {{ row.variant_a }}
           </template>
         </el-table-column>
-        <el-table-column
-          label="B 组策略"
-          width="120"
-        >
+        <el-table-column label="B 组策略" width="120">
           <template #default="{ row }">
             {{ row.variant_b }}
           </template>
         </el-table-column>
-        <el-table-column
-          label="B 组占比"
-          width="100"
-        >
-          <template #default="{ row }">
-            {{ row.ratio }}%
-          </template>
+        <el-table-column label="B 组占比" width="100">
+          <template #default="{ row }"> {{ row.ratio }}% </template>
         </el-table-column>
-        <el-table-column
-          label="状态"
-          width="80"
-        >
+        <el-table-column label="状态" width="80">
           <template #default="{ row }">
-            <el-tag
-              :type="row.status === 0 ? 'success' : 'info'"
-              size="small"
-            >
+            <el-tag :type="row.status === 0 ? 'success' : 'info'" size="small">
               {{ row.status === 0 ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column
-          prop="remark"
-          label="说明"
-          min-width="140"
-        >
+        <el-table-column prop="remark" label="说明" min-width="140">
           <template #default="{ row }">
             <span :class="row.remark ? '' : 'text-text-3'">{{ row.remark || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="操作"
-          width="160"
-          fixed="right"
-        >
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button
-              v-perm="'experiment:edit'"
-              link
-              type="primary"
-              @click="openEdit(row)"
-            >
+            <el-button v-perm="'experiment:edit'" link type="primary" @click="openEdit(row)">
               编辑
             </el-button>
-            <el-button
-              v-perm="'experiment:edit'"
-              link
-              @click="toggleStatus(row)"
-            >
+            <el-button v-perm="'experiment:edit'" link @click="toggleStatus(row)">
               {{ row.status === 0 ? '停用' : '启用' }}
             </el-button>
-            <el-button
-              v-perm="'experiment:edit'"
-              link
-              type="danger"
-              @click="remove(row)"
-            >
+            <el-button v-perm="'experiment:edit'" link type="danger" @click="remove(row)">
               删除
             </el-button>
           </template>
@@ -215,86 +169,41 @@ onMounted(load)
     </div>
 
     <!-- 编辑弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="editingId ? '编辑实验' : '新建实验'"
-      width="480px"
-    >
-      <el-form
-        label-width="80px"
-        class="max-w-440px"
-      >
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑实验' : '新建实验'" width="480px">
+      <el-form label-width="80px" class="max-w-440px">
         <el-form-item label="实验名称">
-          <el-input
-            v-model="form.name"
-            placeholder="如：推荐策略 A/B 测试"
-            maxlength="64"
-          />
+          <el-input v-model="form.name" placeholder="如：推荐策略 A/B 测试" maxlength="64" />
         </el-form-item>
         <el-form-item label="应用场景">
-          <el-select
-            v-model="form.target"
-            class="w-full"
-          >
-            <el-option
-              label="首页推荐（recommend）"
-              value="recommend"
-            />
+          <el-select v-model="form.target" class="w-full">
+            <el-option label="首页推荐（recommend）" value="recommend" />
           </el-select>
           <div class="text-3 text-text-3 mt-1">
             {{ TARGET_HINT[form.target] }}
           </div>
         </el-form-item>
         <el-form-item label="A 组策略">
-          <el-input
-            v-model="form.variant_a"
-            placeholder="如 hybrid（混合召回）"
-            maxlength="64"
-          />
+          <el-input v-model="form.variant_a" placeholder="如 hybrid（混合召回）" maxlength="64" />
         </el-form-item>
         <el-form-item label="B 组策略">
-          <el-input
-            v-model="form.variant_b"
-            placeholder="如 hot_only（纯热度榜）"
-            maxlength="64"
-          />
+          <el-input v-model="form.variant_b" placeholder="如 hot_only（纯热度榜）" maxlength="64" />
         </el-form-item>
         <el-form-item label="B 组占比">
-          <el-slider
-            v-model="form.ratio"
-            :min="0"
-            :max="100"
-            show-input
-          />
+          <el-slider v-model="form.ratio" :min="0" :max="100" show-input />
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
-            <el-radio :value="0">
-              启用
-            </el-radio>
-            <el-radio :value="1">
-              停用
-            </el-radio>
+            <el-radio :value="0"> 启用 </el-radio>
+            <el-radio :value="1"> 停用 </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="说明">
-          <el-input
-            v-model="form.remark"
-            placeholder="实验目的/上线计划（选填）"
-            maxlength="200"
-          />
+          <el-input v-model="form.remark" placeholder="实验目的/上线计划（选填）" maxlength="200" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          class="pink-btn"
-          :loading="saving"
-          @click="save"
-        >
+        <el-button @click="dialogVisible = false"> 取消 </el-button>
+        <el-button type="primary" class="pink-btn" :loading="saving" @click="save">
           保存
         </el-button>
       </template>

@@ -1,4 +1,10 @@
-import { defineConfig, presetUno, presetAttributify, presetIcons, transformerDirectives } from 'unocss'
+import {
+  defineConfig,
+  presetUno,
+  presetAttributify,
+  presetIcons,
+  transformerDirectives,
+} from 'unocss'
 
 // DliDli web 端 UnoCSS 配置。
 // 品牌 token 单一真源：这里的 theme 与 styles/_variables.scss、styles/main.scss 的 CSS 变量保持一致。
@@ -33,7 +39,8 @@ export default defineConfig({
   },
   shortcuts: {
     // 常用组合：品牌主按钮、卡片、居中
-    'btn-primary': 'bg-primary text-white rounded-lg px-4 py-2 cursor-pointer transition-colors hover:bg-primary-hover',
+    'btn-primary':
+      'bg-primary text-white rounded-lg px-4 py-2 cursor-pointer transition-colors hover:bg-primary-hover',
     'card-surface': 'bg-white rounded-xl',
     'flex-center': 'flex items-center justify-center',
   },

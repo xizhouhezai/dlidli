@@ -113,6 +113,12 @@ void playerBox
 void dmLayer
 void dmReportDialog
 
+// 弹幕列表加载更多（多语句逻辑收敛为具名方法，避免内联多语句 handler）
+function loadMoreDm() {
+  dmListPage.value++
+  loadDmList()
+}
+
 function switchQuality(stream: StreamItem) {
   switchTo(stream)
   report.notePosition()
@@ -146,14 +152,15 @@ async function load(bvid: string) {
     currentPart.value = 0
     const p = ensurePlayer()
     // 多P：默认播第一 P 的流；单P：详情 streams
-    const sources = partList.value[0]?.streams?.length ? partList.value[0].streams : detail.value.streams
+    const sources = partList.value[0]?.streams?.length
+      ? partList.value[0].streams
+      : detail.value.streams
     p?.setSources(sources) // 默认最高画质（streams 按 quality 降序，HLS 优先）
     // 右侧弹幕面板：进入即加载最近弹幕（失败不影响播放）
     loadDmList(true).catch(() => {})
     bindKeys()
     tryResume(bvid)
     void tryAutoplay()
-
     // 互动状态：赞/币/藏/关注（仅登录用户）
     acts.reset()
     acts.loadRelation(detail.value.owner.id)
@@ -204,31 +211,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <el-skeleton
-    v-if="loading"
-    :rows="8"
-    animated
-  />
+  <el-skeleton v-if="loading" :rows="8" animated />
 
-  <el-result
-    v-else-if="notFound || !detail"
-    icon="warning"
-    title="稿件不存在或未发布"
-  >
+  <el-result v-else-if="notFound || !detail" icon="warning" title="稿件不存在或未发布">
     <template #extra>
-      <el-button
-        type="primary"
-        @click="router.push('/')"
-      >
-        回首页
-      </el-button>
+      <el-button type="primary" @click="router.push('/')"> 回首页 </el-button>
     </template>
   </el-result>
 
-  <div
-    v-else
-    class="play-layout"
-  >
+  <div v-else class="play-layout">
     <!-- 左：播放器与信息 -->
     <div class="play-main">
       <h1 class="play-title">
@@ -240,20 +231,11 @@ onBeforeUnmount(() => {
         <span class="i-mingcute-danmaku-line mr-1" />{{ formatCount(detail.stat.danmaku) }}
         <span class="gap" />
         {{ detail.published_at ? formatPubdate(detail.published_at) : '' }}
-        <el-tag
-          v-if="detail.copyright === 1"
-          size="small"
-          class="copyright-tag"
-        >
-          自制
-        </el-tag>
+        <el-tag v-if="detail.copyright === 1" size="small" class="copyright-tag"> 自制 </el-tag>
       </p>
 
       <!-- 播放器：HLS 多清晰度（hls.js）+ 弹幕层 -->
-      <div
-        ref="playerBox"
-        class="player-box"
-      >
+      <div ref="playerBox" class="player-box">
         <video
           ref="videoEl"
           class="play-video"
@@ -284,19 +266,12 @@ onBeforeUnmount(() => {
           <span :class="dmEnabled ? 'i-mingcute-danmaku-on-line' : 'i-mingcute-danmaku-off-line'" />
           <span class="dm-toggle__text">弹幕</span>
         </span>
-        <span
-          class="dm-tool"
-          title="弹幕设置"
-          @click="dmSettingsVisible = true"
-        >
+        <span class="dm-tool" title="弹幕设置" @click="dmSettingsVisible = true">
           <span class="i-mingcute-settings-3-line" />
         </span>
         <span class="play-controls__spacer" />
         <!-- 倍速 -->
-        <el-dropdown
-          trigger="click"
-          @command="setRate"
-        >
+        <el-dropdown trigger="click" @command="setRate">
           <span class="play-toolbar__rate">
             {{ playbackRate === 1 ? '倍速' : playbackRate + 'x' }}
             <span class="i-mingcute-down-line" />
@@ -337,47 +312,44 @@ onBeforeUnmount(() => {
           :disabled="!userStore.token"
           @keyup.enter="sendDanmaku"
         />
-        <el-button
-          type="primary"
-          class="dm-send-btn"
-          :loading="dmSending"
-          @click="sendDanmaku"
-        >
+        <el-button type="primary" class="dm-send-btn" :loading="dmSending" @click="sendDanmaku">
           发送
         </el-button>
       </div>
 
       <!-- 发送工具条（模式 + 色板） -->
-      <div
-        v-if="userStore.token"
-        class="dm-toolbar"
-      >
+      <div v-if="userStore.token" class="dm-toolbar">
         <div class="flex items-center gap-1">
           <span
-            v-for="m in [{ v: 1, t: '滚动' }, { v: 2, t: '顶部' }, { v: 3, t: '底部' }]"
+            v-for="m in [
+              { v: 1, t: '滚动' },
+              { v: 2, t: '顶部' },
+              { v: 3, t: '底部' },
+            ]"
             :key="m.v"
             class="dm-toolbar__mode"
             :class="{ 'is-active': dmMode === m.v, 'is-locked': m.v !== 1 && !isDmLevel3() }"
             :title="m.v !== 1 && !isDmLevel3() ? 'Lv3 解锁顶部/底部弹幕' : ''"
             @click="dmMode = isDmLevel3() || m.v === 1 ? (m.v as 1 | 2 | 3) : dmMode"
-          >{{ m.t }}</span>
+            >{{ m.t }}</span
+          >
         </div>
         <div class="flex items-center gap-1">
           <span
             v-for="c in DM_COLORS"
             :key="c.value"
             class="dm-toolbar__color"
-            :class="{ 'is-active': dmColor === c.value, 'is-locked': c.value !== 0xffffff && !isDmLevel3() }"
+            :class="{
+              'is-active': dmColor === c.value,
+              'is-locked': c.value !== 0xffffff && !isDmLevel3(),
+            }"
             :style="{ background: '#' + c.value.toString(16).padStart(6, '0') }"
             :title="c.value !== 0xffffff && !isDmLevel3() ? 'Lv3 解锁彩色弹幕' : c.name"
             @click="dmColor = isDmLevel3() || c.value === 0xffffff ? c.value : dmColor"
           />
         </div>
       </div>
-      <p
-        v-if="userStore.token && (userStore.profile?.level ?? 0) < 3"
-        class="dm-privilege-tip"
-      >
+      <p v-if="userStore.token && (userStore.profile?.level ?? 0) < 3" class="dm-privilege-tip">
         <span class="i-mingcute-lock-line" />Lv3 解锁彩色弹幕与顶部/底部弹幕
       </p>
 
@@ -398,30 +370,19 @@ onBeforeUnmount(() => {
           <span class="act-btn__num">{{ formatCount(detail.stat.like) }}</span>
         </span>
         <span class="coin-wrap">
-          <span
-            class="act-btn"
-            :class="{ 'is-active': coined > 0 }"
-            @click="openCoinPop"
-          >
+          <span class="act-btn" :class="{ 'is-active': coined > 0 }" @click="openCoinPop">
             <span
               class="act-btn__icon"
               :class="coined > 0 ? 'i-mingcute-coin-2-fill' : 'i-mingcute-coin-2-line'"
             />
             <span class="act-btn__num">{{ formatCount(detail.stat.coin) }}</span>
           </span>
-          <span
-            v-if="coinPopVisible"
-            class="coin-pop"
-          >
-            <span class="coin-pop__title">投给 UP 主（余额 {{ userStore.profile?.coin ?? 0 }}）</span>
+          <span v-if="coinPopVisible" class="coin-pop">
+            <span class="coin-pop__title"
+              >投给 UP 主（余额 {{ userStore.profile?.coin ?? 0 }}）</span
+            >
             <span class="coin-pop__btns">
-              <el-button
-                size="small"
-                type="primary"
-                @click="doCoin(1)"
-              >
-                投 1 枚
-              </el-button>
+              <el-button size="small" type="primary" @click="doCoin(1)"> 投 1 枚 </el-button>
               <el-button
                 v-if="detail.copyright === 1"
                 size="small"
@@ -434,28 +395,16 @@ onBeforeUnmount(() => {
           </span>
         </span>
         <span class="fav-wrap">
-          <span
-            class="act-btn"
-            :class="{ 'is-active': faved }"
-            @click="toggleFav"
-          >
+          <span class="act-btn" :class="{ 'is-active': faved }" @click="toggleFav">
             <span
               class="act-btn__icon"
               :class="faved ? 'i-mingcute-star-2-fill' : 'i-mingcute-star-2-line'"
             />
             <span class="act-btn__num">{{ formatCount(detail.stat.fav) }}</span>
           </span>
-          <span
-            v-if="favPopVisible"
-            class="fav-pop"
-          >
+          <span v-if="favPopVisible" class="fav-pop">
             <span class="fav-pop__title">收藏到</span>
-            <el-button
-              v-for="col in collections"
-              :key="col.id"
-              size="small"
-              @click="doFav(col.id)"
-            >
+            <el-button v-for="col in collections" :key="col.id" size="small" @click="doFav(col.id)">
               {{ col.name }}
             </el-button>
             <el-button
@@ -474,30 +423,18 @@ onBeforeUnmount(() => {
                 placeholder="新建收藏夹"
                 @keyup.enter="createCollection"
               />
-              <el-button
-                size="small"
-                @click="createCollection"
-              >
-                +
-              </el-button>
+              <el-button size="small" @click="createCollection"> + </el-button>
             </span>
           </span>
         </span>
-        <span
-          class="act-btn"
-          @click="openShare"
-        >
+        <span class="act-btn" @click="openShare">
           <span class="act-btn__icon i-mingcute-share-forward-line" />
           <span class="act-btn__num">{{ formatCount(detail.stat.share) }}</span>
         </span>
       </div>
 
       <!-- 简介与标签 -->
-      <div
-        v-if="detail.description"
-        class="play-desc"
-        :class="{ 'is-expanded': descExpanded }"
-      >
+      <div v-if="detail.description" class="play-desc" :class="{ 'is-expanded': descExpanded }">
         {{ detail.description }}
       </div>
       <el-button
@@ -509,25 +446,14 @@ onBeforeUnmount(() => {
         {{ descExpanded ? '收起' : '展开更多' }}
       </el-button>
       <div class="play-tags">
-        <el-tag
-          v-for="t in detail.tags"
-          :key="t"
-          size="small"
-          effect="plain"
-        >
+        <el-tag v-for="t in detail.tags" :key="t" size="small" effect="plain">
           {{ t }}
         </el-tag>
       </div>
-      <span
-        class="play-report"
-        @click="openReport"
-      >举报</span>
+      <span class="play-report" @click="openReport">举报</span>
 
       <el-divider />
-      <CommentSection
-        :key="detail.bvid"
-        :bvid="detail.bvid"
-      />
+      <CommentSection :key="detail.bvid" :bvid="detail.bvid" />
     </div>
 
     <!-- 右：UP 主信息 / 分P / 弹幕列表 / 相关推荐（B 站风格侧栏） -->
@@ -543,15 +469,10 @@ onBeforeUnmount(() => {
           {{ detail.owner.nickname?.slice(0, 1) ?? 'U' }}
         </el-avatar>
         <div class="up-card__info">
-          <p
-            class="up-card__name is-clickable"
-            @click="$router.push(`/space/${detail.owner.id}`)"
-          >
+          <p class="up-card__name is-clickable" @click="$router.push(`/space/${detail.owner.id}`)">
             {{ detail.owner.nickname }}
           </p>
-          <p class="up-card__sign">
-            {{ formatCount(followerCnt) }} 粉丝
-          </p>
+          <p class="up-card__sign">{{ formatCount(followerCnt) }} 粉丝</p>
         </div>
         <el-button
           v-if="userStore.profile?.id !== detail.owner.id"
@@ -566,13 +487,8 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 分P列表（竖排，多P投稿 PRD VID-05） -->
-      <div
-        v-if="partList.length > 0"
-        class="side-block"
-      >
-        <p class="side-block__title">
-          分P列表
-        </p>
+      <div v-if="partList.length > 0" class="side-block">
+        <p class="side-block__title">分P列表</p>
         <div
           v-for="(p, i) in partList"
           :key="p.index"
@@ -592,38 +508,16 @@ onBeforeUnmount(() => {
           弹幕列表
           <span class="side-block__count">{{ dmListTotal }}</span>
         </p>
-        <div
-          v-if="dmList.length === 0"
-          class="dm-panel__empty"
-        >
-          还没有弹幕，来发第一条吧
-        </div>
-        <div
-          v-else
-          class="dm-panel"
-        >
-          <div
-            v-for="d in dmList"
-            :key="d.id"
-            class="dm-panel__item"
-            @click="dmSeekTo(d.time_ms)"
-          >
+        <div v-if="dmList.length === 0" class="dm-panel__empty">还没有弹幕，来发第一条吧</div>
+        <div v-else class="dm-panel">
+          <div v-for="d in dmList" :key="d.id" class="dm-panel__item" @click="dmSeekTo(d.time_ms)">
             <span class="dm-panel__time">{{ formatDuration(d.time_ms / 1000) }}</span>
-            <span
-              class="dm-panel__text"
-              :style="{ color: dmTextColor(d.color) }"
-            >{{ d.content }}</span>
+            <span class="dm-panel__text" :style="{ color: dmTextColor(d.color) }">{{
+              d.content
+            }}</span>
           </div>
-          <div
-            v-if="dmList.length < dmListTotal"
-            class="text-center py-1"
-          >
-            <el-button
-              link
-              size="small"
-              :loading="dmListLoading"
-              @click="dmListPage++; loadDmList()"
-            >
+          <div v-if="dmList.length < dmListTotal" class="text-center py-1">
+            <el-button link size="small" :loading="dmListLoading" @click="loadMoreDm">
               加载更多（{{ dmList.length }}/{{ dmListTotal }}）
             </el-button>
           </div>
@@ -631,14 +525,8 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 相关推荐 -->
-      <p class="side-title">
-        相关推荐
-      </p>
-      <el-empty
-        v-if="related.length === 0"
-        description="暂无相关视频"
-        :image-size="64"
-      />
+      <p class="side-title">相关推荐</p>
+      <el-empty v-if="related.length === 0" description="暂无相关视频" :image-size="64" />
       <div
         v-for="v in related"
         :key="v.bvid"
@@ -646,15 +534,10 @@ onBeforeUnmount(() => {
         @click="router.push(`/video/${v.bvid}`)"
       >
         <div class="side-card__cover">
-          <img
-            :src="v.cover || defaultCover"
-            :alt="v.title"
-            loading="lazy"
-          >
-          <span
-            v-if="v.duration > 0"
-            class="side-card__duration"
-          >{{ formatDuration(v.duration) }}</span>
+          <img :src="v.cover || defaultCover" :alt="v.title" loading="lazy" />
+          <span v-if="v.duration > 0" class="side-card__duration">{{
+            formatDuration(v.duration)
+          }}</span>
         </div>
         <div class="side-card__info">
           <p class="side-card__title">
@@ -688,22 +571,11 @@ onBeforeUnmount(() => {
   />
 
   <!-- 弹幕设置面板 -->
-  <el-dialog
-    v-model="dmSettingsVisible"
-    title="弹幕设置"
-    width="420px"
-    top="18vh"
-  >
+  <el-dialog v-model="dmSettingsVisible" title="弹幕设置" width="420px" top="18vh">
     <div class="dm-settings">
       <div class="dm-settings__row">
         <span class="dm-settings__label">不透明度</span>
-        <el-slider
-          v-model="dmSettings.opacity"
-          :min="0.2"
-          :max="1"
-          :step="0.05"
-          class="flex-1"
-        />
+        <el-slider v-model="dmSettings.opacity" :min="0.2" :max="1" :step="0.05" class="flex-1" />
       </div>
       <div class="dm-settings__row">
         <span class="dm-settings__label">字号</span>
@@ -718,11 +590,7 @@ onBeforeUnmount(() => {
       <div class="dm-settings__row">
         <span class="dm-settings__label">显示区域</span>
         <el-radio-group v-model="dmSettings.area">
-          <el-radio-button
-            v-for="o in AREA_OPTIONS"
-            :key="o.value"
-            :value="o.value"
-          >
+          <el-radio-button v-for="o in AREA_OPTIONS" :key="o.value" :value="o.value">
             {{ o.label }}
           </el-radio-button>
         </el-radio-group>
@@ -730,11 +598,7 @@ onBeforeUnmount(() => {
       <div class="dm-settings__row">
         <span class="dm-settings__label">滚动速度</span>
         <el-radio-group v-model="dmSettings.speed">
-          <el-radio-button
-            v-for="o in SPEED_OPTIONS"
-            :key="o.value"
-            :value="o.value"
-          >
+          <el-radio-button v-for="o in SPEED_OPTIONS" :key="o.value" :value="o.value">
             {{ o.label }}
           </el-radio-button>
         </el-radio-group>
@@ -742,11 +606,7 @@ onBeforeUnmount(() => {
       <div class="dm-settings__row">
         <span class="dm-settings__label">同屏密度</span>
         <el-radio-group v-model="dmSettings.density">
-          <el-radio-button
-            v-for="o in DENSITY_OPTIONS"
-            :key="o.value"
-            :value="o.value"
-          >
+          <el-radio-button v-for="o in DENSITY_OPTIONS" :key="o.value" :value="o.value">
             {{ o.label }}
           </el-radio-button>
         </el-radio-group>
@@ -1001,7 +861,9 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: var(--dli-text-2);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 
   &:hover {
     color: var(--dli-primary);

@@ -60,7 +60,7 @@ export interface SubmitVideoReq {
   copyright: 1 | 2
   cover?: string
   /** 多P投稿（PRD VID-05）：每项为分P（file_id + 标题）；空则单P */
-  parts?: Array<{ file_id: string, title?: string }>
+  parts?: Array<{ file_id: string; title?: string }>
 }
 
 /** 分P播放项 */
@@ -98,7 +98,8 @@ export function createVideoApi(http: HttpClient) {
     addView: (bvid: string) => http.post<null>(`/api/v1/videos/${bvid}/view`),
 
     /** 观看进度（登录用户跨端续播） */
-    getProgress: (bvid: string) => http.get<{ position: number }>(`/api/v1/videos/${bvid}/progress`),
+    getProgress: (bvid: string) =>
+      http.get<{ position: number }>(`/api/v1/videos/${bvid}/progress`),
     saveProgress: (bvid: string, position: number) =>
       http.post<null>(`/api/v1/videos/${bvid}/progress`, { position }),
 

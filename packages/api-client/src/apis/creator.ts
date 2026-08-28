@@ -46,7 +46,8 @@ export interface SettlementItem {
 }
 
 /** 趋势指标：play 有效播放 / like 点赞 / coin 投币 / fav 收藏 / fans 涨粉 / earning 收益 / interact 互动 / click 点击 / expose 曝光 */
-export type TrendMetric = 'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'
+export type TrendMetric =
+  'play' | 'like' | 'coin' | 'fav' | 'fans' | 'earning' | 'interact' | 'click' | 'expose'
 
 /** 创作者中心接口（对应后端 creator 模块）。 */
 export function createCreatorApi(http: HttpClient) {

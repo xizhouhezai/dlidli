@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 后台页面通用标题栏：标题 + 副标题 + 右侧操作插槽（配合全局 .page-head 样式）
-defineProps<{ title: string, sub?: string }>()
+defineProps<{ title: string; sub?: string }>()
 </script>
 
 <template>
@@ -9,10 +9,7 @@ defineProps<{ title: string, sub?: string }>()
       <h2 class="page-head__title">
         {{ title }}
       </h2>
-      <p
-        v-if="sub"
-        class="page-head__sub"
-      >
+      <p v-if="sub" class="page-head__sub">
         {{ sub }}
       </p>
     </div>

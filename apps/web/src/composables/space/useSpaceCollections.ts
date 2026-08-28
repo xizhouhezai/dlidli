@@ -44,5 +44,13 @@ export function useSpaceCollections(uid: ComputedRef<string> | Ref<string>) {
     }
   }
 
-  return { collections, collectionsLoaded, createColVisible, createColForm, createColSaving, loadCollections, createCollection }
+  return {
+    collections,
+    collectionsLoaded,
+    createColVisible,
+    createColForm,
+    createColSaving,
+    loadCollections,
+    createCollection,
+  }
 }

@@ -75,24 +75,12 @@ async function onLogout() {
 <template>
   <header class="dli-header">
     <div class="mx-auto max-w-1440px h-15 flex items-center gap-6 px-6">
-      <RouterLink
-        to="/"
-        class="dli-logo shrink-0 text-6 font-800"
-      >
-        DliDli
-      </RouterLink>
+      <RouterLink to="/" class="dli-logo shrink-0 text-6 font-800"> DliDli </RouterLink>
 
       <nav class="dli-nav flex gap-5 text-3.5 shrink-0">
-        <RouterLink to="/">
-          首页
-        </RouterLink>
-        <RouterLink to="/feed">
-          动态
-        </RouterLink>
-        <span
-          class="text-#c0c4cc cursor-not-allowed"
-          title="M1 开发中"
-        >分区</span>
+        <RouterLink to="/"> 首页 </RouterLink>
+        <RouterLink to="/feed"> 动态 </RouterLink>
+        <span class="text-#c0c4cc cursor-not-allowed" title="M1 开发中">分区</span>
       </nav>
 
       <div class="flex-1 max-w-500px mx-auto">
@@ -103,37 +91,24 @@ async function onLogout() {
           @keyup.enter="onSearch"
         >
           <template #suffix>
-            <span
-              class="i-mingcute-search-2-line text-4.5 cursor-pointer"
-              @click="onSearch"
-            />
+            <span class="i-mingcute-search-2-line text-4.5 cursor-pointer" @click="onSearch" />
           </template>
         </el-input>
       </div>
 
       <div class="flex items-center gap-4 shrink-0 ml-auto">
         <template v-if="userStore.token">
-          <RouterLink
-            to="/notifications"
-            class="dli-bell"
-            title="消息通知"
-          >
+          <RouterLink to="/notifications" class="dli-bell" title="消息通知">
             <span class="i-mingcute-notification-line text-5.5" />
-            <span
-              v-if="unread > 0"
-              class="dli-bell__badge"
-            >{{ unread > 99 ? '99+' : unread }}</span>
+            <span v-if="unread > 0" class="dli-bell__badge">{{
+              unread > 99 ? '99+' : unread
+            }}</span>
           </RouterLink>
-          <RouterLink
-            to="/messages"
-            class="dli-bell"
-            title="私信"
-          >
+          <RouterLink to="/messages" class="dli-bell" title="私信">
             <span class="i-mingcute-chat-3-line text-5.5" />
-            <span
-              v-if="msgUnread > 0"
-              class="dli-bell__badge"
-            >{{ msgUnread > 99 ? '99+' : msgUnread }}</span>
+            <span v-if="msgUnread > 0" class="dli-bell__badge">{{
+              msgUnread > 99 ? '99+' : msgUnread
+            }}</span>
           </RouterLink>
           <el-dropdown>
             <div class="dli-user flex items-center gap-2 cursor-pointer outline-none">
@@ -149,55 +124,26 @@ async function onLogout() {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="$router.push('/growth')">
-                  Lv{{ userStore.profile?.level ?? 0 }} · 硬币 {{ userStore.profile?.coin ?? 0 }} · 成长中心
+                  Lv{{ userStore.profile?.level ?? 0 }} · 硬币 {{ userStore.profile?.coin ?? 0 }} ·
+                  成长中心
                 </el-dropdown-item>
-                <el-dropdown-item
-                  divided
-                  @click="$router.push(`/space/${userStore.profile?.id}`)"
-                >
+                <el-dropdown-item divided @click="$router.push(`/space/${userStore.profile?.id}`)">
                   个人空间
                 </el-dropdown-item>
-                <el-dropdown-item
-                  @click="$router.push('/mine/videos')"
-                >
+                <el-dropdown-item @click="$router.push('/mine/videos')">
                   稿件管理
                 </el-dropdown-item>
-                <el-dropdown-item
-                  @click="$router.push('/creator')"
-                >
-                  创作者中心
-                </el-dropdown-item>
-                <el-dropdown-item
-                  @click="$router.push('/settings')"
-                >
-                  账号设置
-                </el-dropdown-item>
-                <el-dropdown-item
-                  divided
-                  @click="onLogout"
-                >
-                  退出登录
-                </el-dropdown-item>
+                <el-dropdown-item @click="$router.push('/creator')"> 创作者中心 </el-dropdown-item>
+                <el-dropdown-item @click="$router.push('/settings')"> 账号设置 </el-dropdown-item>
+                <el-dropdown-item divided @click="onLogout"> 退出登录 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button
-            type="primary"
-            round
-            class="dli-upload-btn"
-            @click="router.push('/upload')"
-          >
+          <el-button type="primary" round class="dli-upload-btn" @click="router.push('/upload')">
             投稿
           </el-button>
         </template>
-        <el-button
-          v-else
-          type="primary"
-          round
-          @click="$router.push('/login')"
-        >
-          登录
-        </el-button>
+        <el-button v-else type="primary" round @click="$router.push('/login')"> 登录 </el-button>
       </div>
     </div>
   </header>

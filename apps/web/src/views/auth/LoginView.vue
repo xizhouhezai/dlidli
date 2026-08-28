@@ -34,7 +34,9 @@ async function loadCaptcha() {
 }
 
 onMounted(loadCaptcha)
-watch(tab, (t) => { if (t === 'password') loadCaptcha() })
+watch(tab, (t) => {
+  if (t === 'password') loadCaptcha()
+})
 
 // 验证码倒计时
 const { count: countdown, start: startCountdown } = useCountdown(60)
@@ -81,7 +83,12 @@ async function onSubmit() {
         ElMessage.warning('请输入验证码')
         return
       }
-      await userStore.loginByPassword(pwdForm.account, pwdForm.password, captchaId.value, captchaCode.value)
+      await userStore.loginByPassword(
+        pwdForm.account,
+        pwdForm.password,
+        captchaId.value,
+        captchaCode.value,
+      )
     } else {
       if (!smsForm.phone || !smsForm.code) {
         ElMessage.warning('请输入手机号和验证码')
@@ -122,44 +129,20 @@ async function onSubmit() {
     </div>
 
     <!-- 返回首页 -->
-    <RouterLink
-      to="/"
-      class="back-home"
-    >
-      ← 返回首页
-    </RouterLink>
+    <RouterLink to="/" class="back-home"> ← 返回首页 </RouterLink>
 
     <!-- 登录卡片 -->
-    <el-card
-      class="login-card"
-      shadow="always"
-    >
+    <el-card class="login-card" shadow="always">
       <div class="login-brand">
         <span class="login-logo">DliDli</span>
-        <p class="login-slogan">
-          你感兴趣的视频都在 DliDli
-        </p>
+        <p class="login-slogan">你感兴趣的视频都在 DliDli</p>
       </div>
 
-      <el-tabs
-        v-model="tab"
-        class="login-tabs"
-        stretch
-      >
-        <el-tab-pane
-          label="密码登录"
-          name="password"
-        >
-          <el-form
-            label-position="top"
-            @submit.prevent="onSubmit"
-          >
+      <el-tabs v-model="tab" class="login-tabs" stretch>
+        <el-tab-pane label="密码登录" name="password">
+          <el-form label-position="top" @submit.prevent="onSubmit">
             <el-form-item>
-              <el-input
-                v-model="pwdForm.account"
-                placeholder="手机号 / 邮箱"
-                size="large"
-              />
+              <el-input v-model="pwdForm.account" placeholder="手机号 / 邮箱" size="large" />
             </el-form-item>
             <el-form-item>
               <el-input
@@ -172,12 +155,7 @@ async function onSubmit() {
             </el-form-item>
             <el-form-item>
               <div class="captcha-row">
-                <el-input
-                  v-model="captchaCode"
-                  placeholder="验证码"
-                  size="large"
-                  maxlength="4"
-                />
+                <el-input v-model="captchaCode" placeholder="验证码" size="large" maxlength="4" />
                 <!-- eslint-disable vue/no-v-html -- 内联自家后端生成的验证码 SVG，可控 -->
                 <span
                   class="captcha-img"
@@ -191,14 +169,8 @@ async function onSubmit() {
           </el-form>
         </el-tab-pane>
 
-        <el-tab-pane
-          label="短信登录"
-          name="sms"
-        >
-          <el-form
-            label-position="top"
-            @submit.prevent="onSubmit"
-          >
+        <el-tab-pane label="短信登录" name="sms">
+          <el-form label-position="top" @submit.prevent="onSubmit">
             <el-form-item>
               <el-input
                 v-model="smsForm.phone"
@@ -215,11 +187,7 @@ async function onSubmit() {
                   size="large"
                   maxlength="6"
                 />
-                <el-button
-                  size="large"
-                  :disabled="countdown > 0"
-                  @click="sendCode"
-                >
+                <el-button size="large" :disabled="countdown > 0" @click="sendCode">
                   {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
                 </el-button>
               </div>
@@ -228,23 +196,12 @@ async function onSubmit() {
         </el-tab-pane>
       </el-tabs>
 
-      <el-button
-        type="primary"
-        size="large"
-        class="login-btn"
-        :loading="loading"
-        @click="onSubmit"
-      >
+      <el-button type="primary" size="large" class="login-btn" :loading="loading" @click="onSubmit">
         登录
       </el-button>
       <p class="login-tip">
         首次使用推荐「短信登录」，未注册手机号将自动创建账号
-        <RouterLink
-          to="/reset-password"
-          class="login-forgot"
-        >
-          忘记密码？
-        </RouterLink>
+        <RouterLink to="/reset-password" class="login-forgot"> 忘记密码？ </RouterLink>
       </p>
     </el-card>
   </div>

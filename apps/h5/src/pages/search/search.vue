@@ -62,82 +62,50 @@ function openSpace(_id: string) {
         placeholder="搜索视频、UP 主"
         confirm-type="search"
         @confirm="doSearch"
-      >
-      <view
-        class="search-bar__btn"
-        @tap="doSearch"
-      >
+      />
+      <view class="search-bar__btn" @tap="doSearch">
         <text class="i-mingcute-search-2-line" />
       </view>
     </view>
 
     <!-- Tab -->
     <view class="tabs">
-      <text
-        class="tab"
-        :class="{ active: activeTab === 'video' }"
-        @tap="switchTab('video')"
-      >视频</text>
-      <text
-        class="tab"
-        :class="{ active: activeTab === 'user' }"
-        @tap="switchTab('user')"
-      >用户</text>
+      <text class="tab" :class="{ active: activeTab === 'video' }" @tap="switchTab('video')"
+        >视频</text
+      >
+      <text class="tab" :class="{ active: activeTab === 'user' }" @tap="switchTab('user')"
+        >用户</text
+      >
     </view>
 
     <!-- 加载中 -->
-    <view
-      v-if="loading"
-      class="tip"
-    >搜索中…</view>
+    <view v-if="loading" class="tip">搜索中…</view>
 
     <!-- 视频结果 -->
     <template v-else-if="activeTab === 'video'">
-      <view
-        v-if="searched && videos.length === 0"
-        class="tip"
-      >没有找到相关视频</view>
-      <view
-        v-for="v in videos"
-        :key="v.bvid"
-        class="v-card"
-        @tap="openVideo(v.bvid)"
-      >
+      <view v-if="searched && videos.length === 0" class="tip">没有找到相关视频</view>
+      <view v-for="v in videos" :key="v.bvid" class="v-card" @tap="openVideo(v.bvid)">
         <view class="v-card__cover">
-          <image
-            class="v-card__img"
-            :src="v.cover || DEFAULT_COVER"
-            mode="aspectFill"
-          />
-          <text
-            v-if="v.duration > 0"
-            class="v-card__dur"
-          >{{ formatDuration(v.duration) }}</text>
+          <image class="v-card__img" :src="v.cover || DEFAULT_COVER" mode="aspectFill" />
+          <text v-if="v.duration > 0" class="v-card__dur">{{ formatDuration(v.duration) }}</text>
         </view>
         <view class="v-card__info">
           <text class="v-card__title">{{ v.title }}</text>
-          <text class="v-card__meta"><text class="i-mingcute-play-circle-line align-middle mr-1" />{{ formatCount(v.stat.view) }} · {{ v.owner.nickname }}</text>
+          <text class="v-card__meta"
+            ><text class="i-mingcute-play-circle-line align-middle mr-1" />{{
+              formatCount(v.stat.view)
+            }}
+            · {{ v.owner.nickname }}</text
+          >
         </view>
       </view>
     </template>
 
     <!-- 用户结果 -->
     <template v-else>
-      <view
-        v-if="searched && users.length === 0"
-        class="tip"
-      >没有找到相关用户</view>
-      <view
-        v-for="u in users"
-        :key="u.id"
-        class="u-card"
-        @tap="openSpace(u.id)"
-      >
-        <image
-          class="u-card__avatar"
-          :src="u.avatar || DEFAULT_AVATAR"
-          mode="aspectFill"
-        />
+      <view v-if="searched && users.length === 0" class="tip">没有找到相关用户</view>
+      <view v-for="u in users" :key="u.id" class="u-card" @tap="openSpace(u.id)">
+        <image class="u-card__avatar" :src="u.avatar || DEFAULT_AVATAR" mode="aspectFill" />
         <view class="u-card__info">
           <text class="u-card__name">{{ u.nickname }}</text>
           <text class="u-card__sign">{{ u.signature || 'TA 还没有签名' }}</text>

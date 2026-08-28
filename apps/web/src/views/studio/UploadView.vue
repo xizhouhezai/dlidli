@@ -23,8 +23,28 @@ const partsApi = useUploadParts()
 const coverApi = useUploadCover()
 const formApi = useUploadForm()
 const { parts, addPart, removePart, uploadPart } = partsApi
-const { coverInput, posterUrl, coverUrl, selectedCover, pickCover, onCoverChange, capturePoster, resolveCover, reset: resetCover } = coverApi
-const { categories, form, tagInput, addTag, submitting, published, loadCategories, submit, reset: resetForm } = formApi
+const {
+  coverInput,
+  posterUrl,
+  coverUrl,
+  selectedCover,
+  pickCover,
+  onCoverChange,
+  capturePoster,
+  resolveCover,
+  reset: resetCover,
+} = coverApi
+const {
+  categories,
+  form,
+  tagInput,
+  addTag,
+  submitting,
+  published,
+  loadCategories,
+  submit,
+  reset: resetForm,
+} = formApi
 
 // 模板 ref 绑定：vue-tsc 对解构变量不识别模板引用，此处显式登记避免误报未使用
 void coverInput
@@ -112,22 +132,12 @@ onMounted(() => {
       :sub-title="`稿件号 ${published.bvid} · ${published.status === 4 ? '已发布' : '审核中，通过后自动发布'}`"
     >
       <template #extra>
-        <el-button
-          type="primary"
-          @click="router.push('/')"
-        >
-          回首页看看
-        </el-button>
-        <el-button @click="resetAll">
-          再投一稿
-        </el-button>
+        <el-button type="primary" @click="router.push('/')"> 回首页看看 </el-button>
+        <el-button @click="resetAll"> 再投一稿 </el-button>
       </template>
     </el-result>
 
-    <el-card
-      v-else
-      shadow="never"
-    >
+    <el-card v-else shadow="never">
       <template #header>
         <span>视频投稿</span>
       </template>
@@ -142,12 +152,8 @@ onMounted(() => {
         @dragleave="dragOver = false"
         @drop.prevent="onDrop"
       >
-        <p class="drop-zone__icon">
-          📤
-        </p>
-        <p class="drop-zone__text">
-          点击或拖拽视频到此处上传
-        </p>
+        <p class="drop-zone__icon">📤</p>
+        <p class="drop-zone__text">点击或拖拽视频到此处上传</p>
         <p class="drop-zone__tip">
           支持 mp4 / mov / mkv / flv / avi，单文件 ≤ 8GB，支持断点续传与秒传
         </p>
@@ -157,19 +163,14 @@ onMounted(() => {
           :accept="ACCEPT_EXTS.join(',')"
           hidden
           @change="onFileChange"
-        >
+        />
       </div>
 
       <!-- 上传进度 -->
-      <div
-        v-else
-        class="file-status"
-      >
+      <div v-else class="file-status">
         <span class="file-status__name">🎬 {{ file.name }}</span>
         <template v-if="fileId">
-          <el-tag type="success">
-            上传完成
-          </el-tag>
+          <el-tag type="success"> 上传完成 </el-tag>
         </template>
         <template v-else-if="progress">
           <el-progress
@@ -188,68 +189,37 @@ onMounted(() => {
         <div class="parts-block__head">
           <span class="parts-block__title">分P管理</span>
           <span class="parts-block__tip">可选：添加多个视频组成合集式稿件（最多 10 P）</span>
-          <el-button
-            link
-            type="primary"
-            class="ml-auto"
-            @click="addPart"
-          >
-            + 添加分P
-          </el-button>
+          <el-button link type="primary" class="ml-auto" @click="addPart"> + 添加分P </el-button>
         </div>
-        <div
-          v-for="(p, i) in parts"
-          :key="i"
-          class="part-row"
-        >
+        <div v-for="(p, i) in parts" :key="i" class="part-row">
           <el-input
             v-model="p.title"
             :placeholder="`分P${i + 1} 标题（默认取文件名）`"
             maxlength="80"
             class="part-row__title"
           />
-          <span
-            v-if="p.fileId"
-            class="part-row__done"
-          >已上传 ✓</span>
-          <span
-            v-else-if="p.progress"
-            class="part-row__progress"
-          >{{ p.progress.percent }}% {{ stageText[p.progress.stage] }}</span>
-          <label
-            v-else
-            class="part-row__pick"
+          <span v-if="p.fileId" class="part-row__done">已上传 ✓</span>
+          <span v-else-if="p.progress" class="part-row__progress"
+            >{{ p.progress.percent }}% {{ stageText[p.progress.stage] }}</span
           >
+          <label v-else class="part-row__pick">
             选择视频
             <input
               type="file"
               :accept="ACCEPT_EXTS.join(',')"
               hidden
               @change="(e) => uploadPart(i, (e.target as HTMLInputElement).files?.[0] as File)"
-            >
+            />
           </label>
-          <el-button
-            link
-            type="danger"
-            @click="removePart(i)"
-          >
-            删除
-          </el-button>
+          <el-button link type="danger" @click="removePart(i)"> 删除 </el-button>
         </div>
       </div>
 
       <el-divider />
 
       <!-- 第二步：稿件信息 -->
-      <el-form
-        label-width="80px"
-        class="submit-form"
-        :disabled="uploading"
-      >
-        <el-form-item
-          label="标题"
-          required
-        >
+      <el-form label-width="80px" class="submit-form" :disabled="uploading">
+        <el-form-item label="标题" required>
           <el-input
             v-model="form.title"
             maxlength="80"
@@ -258,28 +228,13 @@ onMounted(() => {
           />
         </el-form-item>
 
-        <el-form-item
-          label="分区"
-          required
-        >
-          <el-select
-            v-model="form.categoryId"
-            placeholder="选择分区"
-            style="width: 240px"
-          >
-            <el-option
-              v-for="c in categories"
-              :key="c.id"
-              :label="c.name"
-              :value="c.id"
-            />
+        <el-form-item label="分区" required>
+          <el-select v-model="form.categoryId" placeholder="选择分区" style="width: 240px">
+            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
 
-        <el-form-item
-          label="标签"
-          required
-        >
+        <el-form-item label="标签" required>
           <div class="tags-row">
             <el-tag
               v-for="t in form.tags"
@@ -307,10 +262,7 @@ onMounted(() => {
               :class="{ 'is-selected': selectedCover === 'poster' }"
               @click="selectedCover = 'poster'"
             >
-              <img
-                :src="posterUrl"
-                alt="视频首帧"
-              >
+              <img :src="posterUrl" alt="视频首帧" />
               <span class="cover-option__label">视频首帧</span>
             </div>
 
@@ -321,18 +273,12 @@ onMounted(() => {
               :class="{ 'is-selected': selectedCover === 'custom' }"
               @click="selectedCover = 'custom'"
             >
-              <img
-                :src="coverUrl"
-                alt="自定义封面"
-              >
+              <img :src="coverUrl" alt="自定义封面" />
               <span class="cover-option__label">自定义</span>
             </div>
 
             <!-- 上传入口 -->
-            <div
-              class="cover-option cover-option--add"
-              @click="pickCover"
-            >
+            <div class="cover-option cover-option--add" @click="pickCover">
               <span>＋</span>
               <span class="cover-option__label">上传封面</span>
             </div>
@@ -342,7 +288,7 @@ onMounted(() => {
               accept="image/jpeg,image/png,image/webp"
               hidden
               @change="onCoverChange"
-            >
+            />
           </div>
           <p class="cover-tip">
             选填：默认优先使用视频首帧，可上传自定义封面替换；都没有时展示 DliDli 默认封面
@@ -351,12 +297,8 @@ onMounted(() => {
 
         <el-form-item label="类型">
           <el-radio-group v-model="form.copyright">
-            <el-radio :value="1">
-              自制
-            </el-radio>
-            <el-radio :value="2">
-              转载
-            </el-radio>
+            <el-radio :value="1"> 自制 </el-radio>
+            <el-radio :value="2"> 转载 </el-radio>
           </el-radio-group>
         </el-form-item>
 

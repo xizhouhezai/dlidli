@@ -12,22 +12,30 @@ const loading = ref(false)
 const { loading: saving, run } = useApiAction()
 
 // 权限树：menu 作为父节点，button 挂到 parent 下
-interface TreeNode { code: string, name: string, children?: TreeNode[] }
+interface TreeNode {
+  code: string
+  name: string
+  children?: TreeNode[]
+}
 const permTree = computed<TreeNode[]>(() => {
-  const menus = permissions.value.filter(p => p.type === 'menu')
-  return menus.map(m => ({
+  const menus = permissions.value.filter((p) => p.type === 'menu')
+  return menus.map((m) => ({
     code: m.code,
     name: m.name,
-    children: permissions.value.filter(p => p.parent === m.code).map(b => ({ code: b.code, name: b.name })),
+    children: permissions.value
+      .filter((p) => p.parent === m.code)
+      .map((b) => ({ code: b.code, name: b.name })),
   }))
 })
 
 // 所有叶子权限码（button，以及无子节点的 menu）——用于 super 全选
 const allLeafCodes = computed<string[]>(() => {
   const menuWithChildren = new Set(
-    permissions.value.filter(p => p.type === 'menu' && permissions.value.some(x => x.parent === p.code)).map(p => p.code),
+    permissions.value
+      .filter((p) => p.type === 'menu' && permissions.value.some((x) => x.parent === p.code))
+      .map((p) => p.code),
   )
-  return permissions.value.filter(p => !menuWithChildren.has(p.code)).map(p => p.code)
+  return permissions.value.filter((p) => !menuWithChildren.has(p.code)).map((p) => p.code)
 })
 
 async function load() {
@@ -60,7 +68,7 @@ function checkedCodesOf(role: AdminRole | null): string[] {
   if (role?.code === 'super') return allLeafCodes.value
   const codes = role?.perms ?? []
   // 只勾选叶子（button）与无子的 menu，避免父级半选逻辑干扰
-  return codes.filter(c => !permTree.value.some(m => m.code === c && m.children?.length))
+  return codes.filter((c) => !permTree.value.some((m) => m.code === c && m.children?.length))
 }
 
 // el-dialog 打开前先设好 pendingChecked，配合 destroy-on-close + default-checked-keys 回填勾选
@@ -105,13 +113,25 @@ async function save() {
   const checked: string[] = treeRef.value?.getCheckedKeys() ?? []
   const halfChecked: string[] = treeRef.value?.getHalfCheckedKeys() ?? []
   const perms = [...checked, ...halfChecked]
-  const ok = await run(async () => {
-    if (editing.value) {
-      await adminApi.admin.updateRole(editing.value.id, { name: form.value.name, remark: form.value.remark, perms })
-    } else {
-      await adminApi.admin.createRole({ name: form.value.name, code: form.value.code, remark: form.value.remark, perms })
-    }
-  }, { success: editing.value ? '已保存' : '已创建', fallback: '保存失败' })
+  const ok = await run(
+    async () => {
+      if (editing.value) {
+        await adminApi.admin.updateRole(editing.value.id, {
+          name: form.value.name,
+          remark: form.value.remark,
+          perms,
+        })
+      } else {
+        await adminApi.admin.createRole({
+          name: form.value.name,
+          code: form.value.code,
+          remark: form.value.remark,
+          perms,
+        })
+      }
+    },
+    { success: editing.value ? '已保存' : '已创建', fallback: '保存失败' },
+  )
   if (ok) {
     dialogVisible.value = false
     load()
@@ -119,91 +139,54 @@ async function save() {
 }
 
 async function remove(role: AdminRole) {
-  const ok = await run(async () => {
-    await ElMessageBox.confirm(`确定删除角色「${role.name}」吗？`, '删除', { type: 'warning' })
-    await adminApi.admin.deleteRole(role.id)
-  }, { success: '已删除', fallback: '删除失败' })
+  const ok = await run(
+    async () => {
+      await ElMessageBox.confirm(`确定删除角色「${role.name}」吗？`, '删除', { type: 'warning' })
+      await adminApi.admin.deleteRole(role.id)
+    },
+    { success: '已删除', fallback: '删除失败' },
+  )
   if (ok) load()
 }
 </script>
 
 <template>
   <div>
-    <PageHead
-      title="角色管理"
-      :sub="`共 ${roles.length} 个角色（内置角色权限固定，不可删除）`"
-    >
+    <PageHead title="角色管理" :sub="`共 ${roles.length} 个角色（内置角色权限固定，不可删除）`">
       <template #actions>
-        <el-button
-          v-perm="'role:edit'"
-          type="primary"
-          class="pink-btn"
-          @click="openCreate"
-        >
+        <el-button v-perm="'role:edit'" type="primary" class="pink-btn" @click="openCreate">
           <span class="i-mingcute-add-line mr-1" />新建角色
         </el-button>
       </template>
     </PageHead>
 
     <div class="page-card">
-      <el-table
-        v-loading="loading"
-        :data="roles"
-        stripe
-      >
-        <el-table-column
-          label="角色"
-          min-width="180"
-        >
+      <el-table v-loading="loading" :data="roles" stripe>
+        <el-table-column label="角色" min-width="180">
           <template #default="{ row }">
             <div class="flex items-center gap-2">
               <span class="font-600">{{ row.name }}</span>
-              <el-tag
-                v-if="row.is_builtin"
-                size="small"
-                type="info"
-              >
-                内置
-              </el-tag>
+              <el-tag v-if="row.is_builtin" size="small" type="info"> 内置 </el-tag>
             </div>
             <div class="text-3 text-text-3">
               {{ row.code }}
             </div>
           </template>
         </el-table-column>
-        <el-table-column
-          prop="remark"
-          label="说明"
-          min-width="180"
-        />
-        <el-table-column
-          label="成员"
-          width="80"
-        >
+        <el-table-column prop="remark" label="说明" min-width="180" />
+        <el-table-column label="成员" width="80">
           <template #default="{ row }">
             {{ row.members }}
           </template>
         </el-table-column>
-        <el-table-column
-          label="权限数"
-          width="90"
-        >
+        <el-table-column label="权限数" width="90">
           <template #default="{ row }">
             {{ row.code === 'super' ? '全部' : row.perms.length }}
           </template>
         </el-table-column>
-        <el-table-column
-          label="操作"
-          width="180"
-          fixed="right"
-        >
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button
-              size="small"
-              @click="openView(row)"
-            >
-              查看
-            </el-button>
+            <el-button size="small" @click="openView(row)"> 查看 </el-button>
             <el-button
               v-if="row.code !== 'super'"
               v-perm="'role:edit'"
@@ -230,7 +213,7 @@ async function remove(role: AdminRole) {
     <!-- 新建/编辑/查看对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="dialogMode === 'view' ? '查看角色' : (dialogMode === 'edit' ? '编辑角色' : '新建角色')"
+      :title="dialogMode === 'view' ? '查看角色' : dialogMode === 'edit' ? '编辑角色' : '新建角色'"
       width="560px"
       destroy-on-close
     >
@@ -270,10 +253,7 @@ async function remove(role: AdminRole) {
             class="w-full"
             :class="{ 'tree-readonly': readonly }"
           />
-          <div
-            v-if="editing?.code === 'super'"
-            class="text-3 text-text-3 mt-1"
-          >
+          <div v-if="editing?.code === 'super'" class="text-3 text-text-3 mt-1">
             超级管理员拥有全部权限，不可编辑
           </div>
         </el-form-item>
@@ -282,13 +262,7 @@ async function remove(role: AdminRole) {
         <el-button @click="dialogVisible = false">
           {{ readonly ? '关闭' : '取消' }}
         </el-button>
-        <el-button
-          v-if="!readonly"
-          type="primary"
-          class="pink-btn"
-          :loading="saving"
-          @click="save"
-        >
+        <el-button v-if="!readonly" type="primary" class="pink-btn" :loading="saving" @click="save">
           保存
         </el-button>
       </template>

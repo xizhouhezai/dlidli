@@ -44,8 +44,10 @@ const blockHashes = ref(new Set<string>())
 
 function trackCount() {
   const h = layerEl.value?.clientHeight ?? 300
-  const areaRatio = props.settings.area === 'quarter' ? 0.25 : props.settings.area === 'half' ? 0.5 : 0.85
-  const densityRatio = props.settings.density === 'low' ? 0.7 : props.settings.density === 'high' ? 1.3 : 1
+  const areaRatio =
+    props.settings.area === 'quarter' ? 0.25 : props.settings.area === 'half' ? 0.5 : 0.85
+  const densityRatio =
+    props.settings.density === 'low' ? 0.7 : props.settings.density === 'high' ? 1.3 : 1
   return Math.max(3, Math.floor((h * areaRatio * densityRatio) / LINE_HEIGHT))
 }
 
@@ -73,7 +75,9 @@ async function loadBlocks() {
   try {
     const res = await api.danmaku.blocks()
     blockWords.value = res.list.filter((b) => b.block_type === 1).map((b) => b.keyword ?? '')
-    blockHashes.value = new Set(res.list.filter((b) => b.block_type === 2).map((b) => b.block_hash ?? ''))
+    blockHashes.value = new Set(
+      res.list.filter((b) => b.block_type === 2).map((b) => b.block_hash ?? ''),
+    )
   } catch {
     // 游客/失败：保持空列表，不阻塞渲染
   }

@@ -52,7 +52,8 @@ watch(activeTab, reset)
 <template>
   <div class="mx-auto max-w-1100px">
     <p class="m-0 mb-3 text-4">
-      「<span class="text-primary font-600">{{ keyword }}</span>」的搜索结果
+      「<span class="text-primary font-600">{{ keyword }}</span
+      >」的搜索结果
       <span class="ml-2.5 text-3.25 text-text-2">共 {{ total }} 条</span>
     </p>
 
@@ -61,50 +62,30 @@ watch(activeTab, reset)
         class="search__tab"
         :class="{ 'is-active': activeTab === 'video' }"
         @click="activeTab = 'video'"
-      >视频</span>
+        >视频</span
+      >
       <span
         class="search__tab"
         :class="{ 'is-active': activeTab === 'user' }"
         @click="activeTab = 'user'"
-      >用户</span>
+        >用户</span
+      >
     </div>
 
-    <el-skeleton
-      v-if="loading"
-      :rows="5"
-      animated
-    />
+    <el-skeleton v-if="loading" :rows="5" animated />
 
     <!-- 视频结果 -->
     <template v-else-if="activeTab === 'video'">
-      <el-empty
-        v-if="videos.length === 0"
-        description="没有找到相关视频，换个关键词试试"
-      />
-      <div
-        v-else
-        class="search-grid"
-      >
-        <VideoCard
-          v-for="v in videos"
-          :key="v.bvid"
-          :video="v"
-          show-owner
-          show-date
-        />
+      <el-empty v-if="videos.length === 0" description="没有找到相关视频，换个关键词试试" />
+      <div v-else class="search-grid">
+        <VideoCard v-for="v in videos" :key="v.bvid" :video="v" show-owner show-date />
       </div>
     </template>
 
     <!-- 用户结果 -->
     <template v-else>
-      <el-empty
-        v-if="users.length === 0"
-        description="没有找到相关用户"
-      />
-      <div
-        v-else
-        class="search-users"
-      >
+      <el-empty v-if="users.length === 0" description="没有找到相关用户" />
+      <div v-else class="search-users">
         <div
           v-for="u in users"
           :key="u.id"
@@ -126,20 +107,12 @@ watch(activeTab, reset)
               {{ u.signature || 'TA 还没有签名' }}
             </p>
           </div>
-          <el-tag
-            size="small"
-            effect="plain"
-          >
-            Lv{{ u.level }}
-          </el-tag>
+          <el-tag size="small" effect="plain"> Lv{{ u.level }} </el-tag>
         </div>
       </div>
     </template>
 
-    <div
-      v-if="total > PAGE_SIZE"
-      class="flex justify-center py-3.5"
-    >
+    <div v-if="total > PAGE_SIZE" class="flex justify-center py-3.5">
       <el-pagination
         v-model:current-page="page"
         layout="prev, pager, next"

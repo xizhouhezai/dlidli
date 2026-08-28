@@ -18,15 +18,7 @@ const youthApi = useYouthMode()
 const dmApi = useDmBlocks()
 const recApi = useRecommendSetting()
 
-const {
-  form,
-  saving,
-  uploading,
-  fileInput,
-  pickAvatar,
-  onAvatarChange,
-  onSave,
-} = profileApi
+const { form, saving, uploading, fileInput, pickAvatar, onAvatarChange, onSave } = profileApi
 const { pwdForm, pwdSaving, onChangePassword } = pwdApi
 const { youthMode, youthSaving, loadYouthMode, toggleYouthMode } = youthApi
 const {
@@ -71,32 +63,22 @@ onMounted(() => {
           {{ userStore.profile?.nickname?.slice(0, 1) ?? 'U' }}
         </el-avatar>
         <div>
-          <el-button
-            :loading="uploading"
-            @click="pickAvatar"
-          >
-            更换头像
-          </el-button>
-          <p class="mt-2 mb-0 text-3 text-text-2">
-            支持 jpg / png / webp，2MB 以内
-          </p>
+          <el-button :loading="uploading" @click="pickAvatar"> 更换头像 </el-button>
+          <p class="mt-2 mb-0 text-3 text-text-2">支持 jpg / png / webp，2MB 以内</p>
           <input
             ref="fileInput"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             hidden
             @change="onAvatarChange"
-          >
+          />
         </div>
       </div>
 
       <el-divider />
 
       <!-- 基本资料 -->
-      <el-form
-        label-width="72px"
-        class="max-w-480px"
-      >
+      <el-form label-width="72px" class="max-w-480px">
         <el-form-item label="昵称">
           <el-input
             v-model="form.nickname"
@@ -117,24 +99,13 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="性别">
           <el-radio-group v-model="form.gender">
-            <el-radio :value="0">
-              保密
-            </el-radio>
-            <el-radio :value="1">
-              男
-            </el-radio>
-            <el-radio :value="2">
-              女
-            </el-radio>
+            <el-radio :value="0"> 保密 </el-radio>
+            <el-radio :value="1"> 男 </el-radio>
+            <el-radio :value="2"> 女 </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item>
-          <el-button
-            type="primary"
-            class="save-btn"
-            :loading="saving"
-            @click="onSave"
-          >
+          <el-button type="primary" class="save-btn" :loading="saving" @click="onSave">
             保存修改
           </el-button>
         </el-form-item>
@@ -143,10 +114,7 @@ onMounted(() => {
       <el-divider />
 
       <!-- 修改密码 -->
-      <el-form
-        label-width="72px"
-        class="max-w-480px"
-      >
+      <el-form label-width="72px" class="max-w-480px">
         <el-form-item label="旧密码">
           <el-input
             v-model="pwdForm.old"
@@ -192,30 +160,20 @@ onMounted(() => {
       <!-- 青少年模式 -->
       <div class="flex items-center justify-between max-w-480px">
         <div>
-          <p class="m-0 font-600">
-            青少年模式
-          </p>
+          <p class="m-0 font-600">青少年模式</p>
           <p class="mt-1 mb-0 text-3 text-text-2">
             开启后每日累计使用 40 分钟将收到提醒，请合理安排上网时间
           </p>
         </div>
-        <el-switch
-          v-model="youthMode"
-          :loading="youthSaving"
-          @change="toggleYouthMode"
-        />
+        <el-switch v-model="youthMode" :loading="youthSaving" @change="toggleYouthMode" />
       </div>
 
       <el-divider />
 
       <!-- 弹幕屏蔽 -->
       <div class="max-w-480px">
-        <p class="m-0 font-600">
-          弹幕屏蔽
-        </p>
-        <p class="mt-1 mb-2 text-3 text-text-2">
-          屏蔽词与屏蔽用户的弹幕将不再显示（跨设备生效）
-        </p>
+        <p class="m-0 font-600">弹幕屏蔽</p>
+        <p class="mt-1 mb-2 text-3 text-text-2">屏蔽词与屏蔽用户的弹幕将不再显示（跨设备生效）</p>
         <div class="flex gap-2 mb-3">
           <el-input
             v-model="dmBlockInput"
@@ -234,10 +192,7 @@ onMounted(() => {
             添加
           </el-button>
         </div>
-        <div
-          v-loading="dmBlockLoading"
-          class="flex flex-wrap gap-1.5 min-h-8"
-        >
+        <div v-loading="dmBlockLoading" class="flex flex-wrap gap-1.5 min-h-8">
           <el-tag
             v-for="b in dmBlocks.filter((x) => x.block_type === 1)"
             :key="b.id"
@@ -250,12 +205,11 @@ onMounted(() => {
           <span
             v-if="!dmBlockLoading && dmBlocks.filter((x) => x.block_type === 1).length === 0"
             class="text-3 text-text-3 self-center"
-          >暂无屏蔽词</span>
+            >暂无屏蔽词</span
+          >
         </div>
         <template v-if="dmBlocks.some((x) => x.block_type === 2)">
-          <p class="mt-3 mb-1.5 text-3 text-text-2">
-            已屏蔽用户
-          </p>
+          <p class="mt-3 mb-1.5 text-3 text-text-2">已屏蔽用户</p>
           <div class="flex flex-wrap gap-1.5">
             <el-tag
               v-for="b in dmBlocks.filter((x) => x.block_type === 2)"
@@ -276,18 +230,12 @@ onMounted(() => {
       <!-- 个性化推荐 -->
       <div class="flex items-center justify-between max-w-480px">
         <div>
-          <p class="m-0 font-600">
-            个性化推荐
-          </p>
+          <p class="m-0 font-600">个性化推荐</p>
           <p class="mt-1 mb-0 text-3 text-text-2">
             关闭后首页推荐将仅展示热门内容，不再根据你的观看行为个性化
           </p>
         </div>
-        <el-switch
-          v-model="recEnabled"
-          :loading="recSaving"
-          @change="toggleRecommend"
-        />
+        <el-switch v-model="recEnabled" :loading="recSaving" @change="toggleRecommend" />
       </div>
     </el-card>
   </div>

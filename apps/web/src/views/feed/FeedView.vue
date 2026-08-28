@@ -95,41 +95,20 @@ async function post() {
           placeholder="有什么想和大家分享的？"
         />
         <div class="feed-editor__ops mt-2.5 flex justify-end">
-          <el-button
-            type="primary"
-            :loading="posting"
-            :disabled="!draft.trim()"
-            @click="post"
-          >
+          <el-button type="primary" :loading="posting" :disabled="!draft.trim()" @click="post">
             发布
           </el-button>
         </div>
       </div>
     </div>
 
-    <el-skeleton
-      v-if="loading"
-      :rows="6"
-      animated
-    />
-    <el-empty
-      v-else-if="list.length === 0"
-      description="动态空空如也，去关注一些有趣的 UP 主吧"
-    >
-      <el-button
-        type="primary"
-        @click="router.push('/')"
-      >
-        去逛逛
-      </el-button>
+    <el-skeleton v-if="loading" :rows="6" animated />
+    <el-empty v-else-if="list.length === 0" description="动态空空如也，去关注一些有趣的 UP 主吧">
+      <el-button type="primary" @click="router.push('/')"> 去逛逛 </el-button>
     </el-empty>
 
     <!-- 动态流 -->
-    <div
-      v-for="item in list"
-      :key="item.id"
-      class="flex gap-3 p-4 mb-3 rounded-10px bg-white"
-    >
+    <div v-for="item in list" :key="item.id" class="flex gap-3 p-4 mb-3 rounded-10px bg-white">
       <el-avatar
         :size="44"
         :src="item.user.avatar || defaultAvatar"
@@ -143,14 +122,17 @@ async function post() {
           <span
             class="feed-card__name text-3.75 font-600 cursor-pointer"
             @click="router.push(`/space/${item.user.id}`)"
-          >{{ item.user.nickname }}</span>
+            >{{ item.user.nickname }}</span
+          >
           <span class="text-3 text-text-2">
-            {{ formatPubdate(item.created_at) }} · {{ item.type === 1 ? '投稿了视频' : item.type === 3 ? '转发了视频' : '发布了动态' }}
+            {{ formatPubdate(item.created_at) }} ·
+            {{ item.type === 1 ? '投稿了视频' : item.type === 3 ? '转发了视频' : '发布了动态' }}
           </span>
           <span
             class="feed-card__report ml-auto text-3 text-text-2 cursor-pointer"
             @click="openReport(item)"
-          >举报</span>
+            >举报</span
+          >
         </p>
         <p
           v-if="item.content"
@@ -165,42 +147,38 @@ async function post() {
           class="feed-video flex gap-3 mt-2.5 p-2.5 rounded-8px border border-border cursor-pointer"
           @click="router.push(`/video/${item.video.bvid}`)"
         >
-          <div class="feed-video__cover relative w-180px shrink-0 aspect-video rounded-6px overflow-hidden bg-#f1f2f3">
-            <img
-              :src="item.video.cover || defaultCover"
-              :alt="item.video.title"
-              loading="lazy"
-            >
+          <div
+            class="feed-video__cover relative w-180px shrink-0 aspect-video rounded-6px overflow-hidden bg-#f1f2f3"
+          >
+            <img :src="item.video.cover || defaultCover" :alt="item.video.title" loading="lazy" />
             <span
               v-if="item.video.duration > 0"
               class="absolute right-1.5 bottom-1.5 px-1.5 py-0.25 rounded-4px bg-black/60 text-white text-3"
-            >{{ formatDuration(item.video.duration) }}</span>
+              >{{ formatDuration(item.video.duration) }}</span
+            >
           </div>
           <div class="flex-1 min-w-0 flex flex-col justify-between py-1">
             <p class="feed-video__title m-0 text-3.5 font-600 leading-[1.4]">
               {{ item.video.title }}
             </p>
             <p class="flex items-center m-0 text-3 text-text-2">
-              <span class="i-mingcute-play-circle-line mr-1" />{{ formatCount(item.video.stat.view) }} ·
-              <span class="i-mingcute-danmaku-line mx-1" />{{ formatCount(item.video.stat.comment) }} ·
-              <span class="i-mingcute-thumb-up-2-line mx-1" />{{ formatCount(item.video.stat.like) }}
+              <span class="i-mingcute-play-circle-line mr-1" />{{
+                formatCount(item.video.stat.view)
+              }}
+              · <span class="i-mingcute-danmaku-line mx-1" />{{
+                formatCount(item.video.stat.comment)
+              }}
+              · <span class="i-mingcute-thumb-up-2-line mx-1" />{{
+                formatCount(item.video.stat.like)
+              }}
             </p>
           </div>
         </div>
       </div>
     </div>
 
-    <div
-      v-if="hasMore && !loading"
-      class="text-center py-3.5"
-    >
-      <el-button
-        link
-        :loading="loadingMore"
-        @click="load(false)"
-      >
-        加载更多
-      </el-button>
+    <div v-if="hasMore && !loading" class="text-center py-3.5">
+      <el-button link :loading="loadingMore" @click="load(false)"> 加载更多 </el-button>
     </div>
   </div>
 

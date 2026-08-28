@@ -34,13 +34,7 @@ const {
   loadHead,
   toggleFollow,
 } = space
-const {
-  collections,
-  createColVisible,
-  createColForm,
-  createColSaving,
-  createCollection,
-} = cols
+const { collections, createColVisible, createColForm, createColSaving, createCollection } = cols
 const { activeTab, videos, users, tabLoading, loadTab } = tabs
 
 // 举报用户
@@ -65,58 +59,38 @@ watch(uid, reload)
 
 <template>
   <div class="mx-auto max-w-1100px">
-    <el-result
-      v-if="notFound"
-      icon="warning"
-      title="用户不存在"
-    >
+    <el-result v-if="notFound" icon="warning" title="用户不存在">
       <template #extra>
-        <el-button @click="router.push('/')">
-          回首页
-        </el-button>
+        <el-button @click="router.push('/')"> 回首页 </el-button>
       </template>
     </el-result>
 
     <template v-else-if="profile">
       <!-- 本人空间才展示账号状态（禁言/封禁），不对外公开 -->
-      <AccountStatusAlert
-        v-if="isSelf"
-        :user="userStore.profile"
-      />
+      <AccountStatusAlert v-if="isSelf" :user="userStore.profile" />
 
       <!-- 空间头部 -->
       <div class="space-head">
         <div class="space-head__banner" />
         <div class="space-head__main">
-          <el-avatar
-            :size="72"
-            :src="profile.avatar || defaultAvatar"
-            class="space-head__avatar"
-          >
+          <el-avatar :size="72" :src="profile.avatar || defaultAvatar" class="space-head__avatar">
             {{ profile.nickname?.slice(0, 1) ?? 'U' }}
           </el-avatar>
           <div class="space-head__info">
             <p class="space-head__name">
               {{ profile.nickname }}
-              <el-tag
-                size="small"
-                effect="plain"
-              >
-                Lv{{ profile.level }}
-              </el-tag>
+              <el-tag size="small" effect="plain"> Lv{{ profile.level }} </el-tag>
             </p>
             <p class="space-head__sign">
               {{ profile.signature || '这个人很神秘，什么都没有写' }}
             </p>
             <p class="space-head__stats">
-              <span
-                class="stat-item"
-                @click="activeTab = 'followings'"
-              >关注 <b>{{ formatCount(followingCnt) }}</b></span>
-              <span
-                class="stat-item"
-                @click="activeTab = 'followers'"
-              >粉丝 <b>{{ formatCount(followerCnt) }}</b></span>
+              <span class="stat-item" @click="activeTab = 'followings'"
+                >关注 <b>{{ formatCount(followingCnt) }}</b></span
+              >
+              <span class="stat-item" @click="activeTab = 'followers'"
+                >粉丝 <b>{{ formatCount(followerCnt) }}</b></span
+              >
             </p>
           </div>
           <el-button
@@ -136,19 +110,8 @@ watch(uid, reload)
           >
             发私信
           </el-button>
-          <el-button
-            v-else
-            round
-            @click="router.push('/settings')"
-          >
-            编辑资料
-          </el-button>
-          <el-button
-            v-if="!isSelf"
-            text
-            class="space-head__report"
-            @click="openReport"
-          >
+          <el-button v-else round @click="router.push('/settings')"> 编辑资料 </el-button>
+          <el-button v-if="!isSelf" text class="space-head__report" @click="openReport">
             举报
           </el-button>
         </div>
@@ -160,76 +123,57 @@ watch(uid, reload)
           class="space-tab"
           :class="{ 'is-active': activeTab === 'videos' }"
           @click="activeTab = 'videos'"
-        >投稿</span>
+          >投稿</span
+        >
         <span
           class="space-tab"
           :class="{ 'is-active': activeTab === 'collections' }"
           @click="activeTab = 'collections'"
-        >合集</span>
+          >合集</span
+        >
         <span
           class="space-tab"
           :class="{ 'is-active': activeTab === 'followings' }"
           @click="activeTab = 'followings'"
-        >关注</span>
+          >关注</span
+        >
         <span
           class="space-tab"
           :class="{ 'is-active': activeTab === 'followers' }"
           @click="activeTab = 'followers'"
-        >粉丝</span>
+          >粉丝</span
+        >
         <span
           v-if="isSelf"
           class="space-tab"
           :class="{ 'is-active': activeTab === 'favorites' }"
           @click="activeTab = 'favorites'"
-        >收藏</span>
+          >收藏</span
+        >
       </div>
 
-      <el-skeleton
-        v-if="tabLoading"
-        :rows="4"
-        animated
-      />
+      <el-skeleton v-if="tabLoading" :rows="4" animated />
 
       <!-- 合集（M3-CRT-05） -->
       <template v-else-if="activeTab === 'collections'">
-        <div
-          v-if="isSelf"
-          class="flex justify-end mb-2"
-        >
-          <el-button
-            size="small"
-            type="primary"
-            round
-            @click="createColVisible = true"
-          >
+        <div v-if="isSelf" class="flex justify-end mb-2">
+          <el-button size="small" type="primary" round @click="createColVisible = true">
             + 新建合集
           </el-button>
         </div>
-        <el-empty
-          v-if="collections.length === 0"
-          description="还没有合集"
-        />
-        <div
-          v-else
-          class="grid grid-cols-2 sm:grid-cols-3 gap-3"
-        >
+        <el-empty v-if="collections.length === 0" description="还没有合集" />
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div
             v-for="c in collections"
             :key="c.id"
             class="col-card"
             @click="router.push(`/collections/${c.id}`)"
           >
-            <img
-              :src="c.cover || defaultCover"
-              alt=""
-              class="col-card__cover"
-            >
+            <img :src="c.cover || defaultCover" alt="" class="col-card__cover" />
             <p class="col-card__title">
               {{ c.title }}
             </p>
-            <p class="col-card__meta">
-              {{ c.video_count }} 个视频
-            </p>
+            <p class="col-card__meta">{{ c.video_count }} 个视频</p>
           </div>
         </div>
       </template>
@@ -240,16 +184,8 @@ watch(uid, reload)
           v-if="videos.length === 0"
           :description="activeTab === 'videos' ? 'TA 还没有投稿' : '还没有收藏任何视频'"
         />
-        <div
-          v-else
-          class="space-grid"
-        >
-          <VideoCard
-            v-for="v in videos"
-            :key="v.bvid"
-            :video="v"
-            show-date
-          />
+        <div v-else class="space-grid">
+          <VideoCard v-for="v in videos" :key="v.bvid" :video="v" show-date />
         </div>
       </template>
 
@@ -259,10 +195,7 @@ watch(uid, reload)
           v-if="users.length === 0"
           :description="activeTab === 'followings' ? '还没有关注任何人' : '还没有粉丝，快去投稿吧'"
         />
-        <div
-          v-else
-          class="space-users"
-        >
+        <div v-else class="space-users">
           <div
             v-for="u in users"
             :key="u.id"
@@ -284,12 +217,7 @@ watch(uid, reload)
                 {{ u.signature || 'TA 还没有签名' }}
               </p>
             </div>
-            <el-tag
-              size="small"
-              effect="plain"
-            >
-              Lv{{ u.level }}
-            </el-tag>
+            <el-tag size="small" effect="plain"> Lv{{ u.level }} </el-tag>
           </div>
         </div>
       </template>
@@ -305,21 +233,10 @@ watch(uid, reload)
   />
 
   <!-- 新建合集 -->
-  <el-dialog
-    v-model="createColVisible"
-    title="新建合集"
-    width="420px"
-  >
-    <el-form
-      label-width="60px"
-      class="max-w-380px"
-    >
+  <el-dialog v-model="createColVisible" title="新建合集" width="420px">
+    <el-form label-width="60px" class="max-w-380px">
       <el-form-item label="标题">
-        <el-input
-          v-model="createColForm.title"
-          placeholder="合集标题（必填）"
-          maxlength="64"
-        />
+        <el-input v-model="createColForm.title" placeholder="合集标题（必填）" maxlength="64" />
       </el-form-item>
       <el-form-item label="简介">
         <el-input
@@ -332,14 +249,8 @@ watch(uid, reload)
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="createColVisible = false">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        :loading="createColSaving"
-        @click="createCollection"
-      >
+      <el-button @click="createColVisible = false"> 取消 </el-button>
+      <el-button type="primary" :loading="createColSaving" @click="createCollection">
         创建
       </el-button>
     </template>
@@ -356,7 +267,9 @@ watch(uid, reload)
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 
   &:hover {
     transform: translateY(-2px);

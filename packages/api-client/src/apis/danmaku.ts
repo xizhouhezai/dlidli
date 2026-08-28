@@ -46,8 +46,7 @@ export function createDanmakuApi(http: HttpClient) {
         page_size: pageSize,
       }),
 
-    send: (bvid: string, req: SendDanmakuReq) =>
-      http.post<DanmakuItem>(base(bvid), req),
+    send: (bvid: string, req: SendDanmakuReq) => http.post<DanmakuItem>(base(bvid), req),
 
     /** 实时弹幕 WS 地址（http → ws 协议换算由调用方处理） */
     wsUrl: (bvid: string) => `${base(bvid)}/ws`,
@@ -56,11 +55,14 @@ export function createDanmakuApi(http: HttpClient) {
     blocks: () => http.get<{ list: DanmakuBlockItem[] }>(`${base('_')}/blocks`),
 
     /** 新增屏蔽：type=1 传 keyword；type=2 传 target_uid 或 block_hash（前端无真实 UID 时） */
-    addBlock: (req: { block_type: 1 | 2; keyword?: string; target_uid?: string; block_hash?: string }) =>
-      http.post<null>(`${base('_')}/blocks`, req),
+    addBlock: (req: {
+      block_type: 1 | 2
+      keyword?: string
+      target_uid?: string
+      block_hash?: string
+    }) => http.post<null>(`${base('_')}/blocks`, req),
 
     /** 删除屏蔽项 */
-    deleteBlock: (id: string) =>
-      http.delete<null>(`${base('_')}/blocks/${id}`),
+    deleteBlock: (id: string) => http.delete<null>(`${base('_')}/blocks/${id}`),
   }
 }

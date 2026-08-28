@@ -20,7 +20,12 @@ export const useUserStore = defineStore('user', () => {
     applyTokenPair(await api.auth.loginBySms(phone, code))
   }
 
-  async function loginByPassword(account: string, password: string, captchaId: string, captchaCode: string) {
+  async function loginByPassword(
+    account: string,
+    password: string,
+    captchaId: string,
+    captchaCode: string,
+  ) {
     applyTokenPair(await api.auth.loginByPassword(account, password, captchaId, captchaCode))
   }
 
@@ -65,5 +70,14 @@ export const useUserStore = defineStore('user', () => {
     clearTokens()
   }
 
-  return { token, profile, loginBySms, loginByPassword, fetchProfile, refreshProfile, logout, forceLogout }
+  return {
+    token,
+    profile,
+    loginBySms,
+    loginByPassword,
+    fetchProfile,
+    refreshProfile,
+    logout,
+    forceLogout,
+  }
 })

@@ -57,5 +57,14 @@ export function useSpaceProfile(uid: ComputedRef<string> | Ref<string>) {
     }
   }
 
-  return { profile, notFound, following, followerCnt, followingCnt, followPending, loadHead, toggleFollow }
+  return {
+    profile,
+    notFound,
+    following,
+    followerCnt,
+    followingCnt,
+    followPending,
+    loadHead,
+    toggleFollow,
+  }
 }

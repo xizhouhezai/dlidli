@@ -32,7 +32,7 @@ export function createCollectionApi(http: HttpClient) {
       http.get<{ collection: CollectionDetail; list: VideoCard[] }>(`/api/v1/collections/${id}`),
 
     /** 创建合集 */
-    create: (payload: { title: string, description?: string, cover?: string }) =>
+    create: (payload: { title: string; description?: string; cover?: string }) =>
       http.post<null>('/api/v1/collections', payload),
 
     /** 合集添加稿件（仅本人已发布） */

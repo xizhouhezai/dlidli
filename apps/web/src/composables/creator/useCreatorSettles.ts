@@ -33,5 +33,13 @@ export function useCreatorSettles() {
     void loadSettles()
   }
 
-  return { settles, settlesTotal, settlesPage, settlesLoading, settlesLoaded, loadSettles, onSettlesPage }
+  return {
+    settles,
+    settlesTotal,
+    settlesPage,
+    settlesLoading,
+    settlesLoaded,
+    loadSettles,
+    onSettlesPage,
+  }
 }
