@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,7 +29,10 @@ const (
 	refreshTTL      = 30 * 24 * time.Hour
 	loginLockTTL    = 15 * time.Minute
 	maxLoginFails   = 5
+	activateTTL     = 24 * time.Hour // 邮箱激活 token 有效期（ACC-02）
 )
+
+var emailRe = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 type Service struct {
 	repo      *Repo
@@ -149,6 +154,85 @@ func (s *Service) LoginBySms(ctx context.Context, phone, code string) (*TokenPai
 	return s.issueTokens(ctx, user)
 }
 
+// RegisterByEmail 邮箱注册（ACC-02）：校验格式/查重 → 创建待激活账号 → 生成激活 token 并 mock 发送激活邮件。
+// dev 环境返回 debug 激活链接（真实邮件服务接入后移除）。
+func (s *Service) RegisterByEmail(ctx context.Context, email, password string) (debugURL string, err error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if !emailRe.MatchString(email) {
+		return "", errcode.ErrInvalidParams.WithMsg("邮箱格式不正确")
+	}
+	if len(password) < 6 || len(password) > 64 {
+		return "", errcode.ErrInvalidParams.WithMsg("密码长度须为 6-64 位")
+	}
+	existing, err := s.repo.FindAuth(IdentityEmail, email)
+	if err != nil {
+		return "", err
+	}
+	if existing != nil {
+		return "", errcode.ErrAccountExists
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	user := &User{
+		ID:       snowflake.NextID(),
+		Nickname: defaultNickname(),
+		Level:    1, // 与手机注册一致：注册即 Lv1
+		Coin:     5, // 注册礼
+	}
+	auth := &UserAuth{
+		IdentityType:   IdentityEmail,
+		Identifier:     email, // 邮箱明文存储（ACC-43 加密仅针对手机号）
+		IdentifierHash: encrypt.IdentifierHash(IdentityEmail, email),
+		Credential:     string(hash),
+		Activated:      0, // 待激活
+	}
+	if err := s.repo.CreateUserWithAuth(user, auth); err != nil {
+		return "", err
+	}
+	token, err := randomToken()
+	if err != nil {
+		return "", err
+	}
+	if err := s.rdb.Set(ctx, "ac:act:"+token, strconv.FormatInt(user.ID, 10), activateTTL).Err(); err != nil {
+		return "", err
+	}
+	debugURL = fmt.Sprintf("/api/v1/auth/activate?token=%s", token)
+	s.log.Info("mock 激活邮件", zap.String("email", email), zap.String("url", debugURL))
+	if s.cfg.App.Env == "dev" {
+		return debugURL, nil
+	}
+	return "", nil
+}
+
+// ActivateEmail 激活邮箱账号（ACC-02）：校验激活 token → 置 activated=1 → 一次性消费。
+func (s *Service) ActivateEmail(ctx context.Context, token string) error {
+	key := "ac:act:" + token
+	uidStr, err := s.rdb.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return errcode.ErrInvalidParams.WithMsg("激活链接无效或已过期")
+	}
+	if err != nil {
+		return err
+	}
+	uid, _ := strconv.ParseInt(uidStr, 10, 64)
+	if err := s.repo.UpdateAuthActivated(uid, IdentityEmail, 1); err != nil {
+		return err
+	}
+	_ = s.rdb.Del(ctx, key).Err() // 一次性使用
+	return nil
+}
+
+// randomToken 生成 64 位十六进制随机 token（激活/邀请等一次性令牌）。
+func randomToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
 // GenerateCaptcha 生成图形验证码。
 func (s *Service) GenerateCaptcha(ctx context.Context) (*captcha.Result, error) {
 	return captcha.Generate(ctx, s.rdb)
@@ -188,6 +272,11 @@ func (s *Service) LoginByPassword(ctx context.Context, account, password, captch
 		return nil, errcode.ErrPasswordMismatch
 	}
 	_ = s.rdb.Del(ctx, lockKey).Err()
+
+	// 邮箱注册的待激活账号拒绝登录（ACC-02）
+	if auth.Activated == 0 {
+		return nil, errcode.ErrAccountInactive
+	}
 
 	user, err := s.repo.FindUserByID(auth.UserID)
 	if err != nil {

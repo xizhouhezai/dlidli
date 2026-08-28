@@ -104,6 +104,13 @@ func (r *Repo) UpdateIdentifierEncrypted(authID int64, ciphertext, hash string) 
 		Updates(map[string]any{"identifier": ciphertext, "identifier_hash": hash}).Error
 }
 
+// UpdateAuthActivated 更新认证激活状态（邮箱注册激活 ACC-02）。
+func (r *Repo) UpdateAuthActivated(uid int64, identityType int8, activated int8) error {
+	return r.db.Model(&UserAuth{}).
+		Where("user_id = ? AND identity_type = ?", uid, identityType).
+		Update("activated", activated).Error
+}
+
 // UpdateCredentialByUser 更新认证凭证（密码 bcrypt）。
 func (r *Repo) UpdateCredentialByUser(uid int64, identityType int8, credential string) error {
 	return r.db.Model(&UserAuth{}).

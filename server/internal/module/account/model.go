@@ -46,6 +46,7 @@ type UserAuth struct {
 	Identifier     string // 密文（手机号 AES-GCM；邮箱/三方明文），见 ACC-43
 	IdentifierHash string // 确定性哈希 SHA-256(IdentityType:Identifier)，供查重/精确查询
 	Credential     string
+	Activated      int8 // 0 待激活（邮箱注册 ACC-02） 1 已激活（手机/微信默认 1）
 	CreatedAt      time.Time
 }
 
