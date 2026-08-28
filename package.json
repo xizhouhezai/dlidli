@@ -16,7 +16,8 @@
     "h5:dev": "pnpm --filter @dlidli/h5 dev",
     "h5:build": "pnpm --filter @dlidli/h5 build",
     "format": "prettier --write apps packages --ignore-unknown",
-    "format:check": "prettier --check apps packages --ignore-unknown"
+    "format:check": "prettier --check apps packages --ignore-unknown",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20",
@@ -24,7 +25,14 @@
   },
   "packageManager": "pnpm@10.18.3",
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
     "prettier": "^3.6.2",
     "sharp": "^0.35.3"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,vue,json,scss,css}": [
+      "prettier --write"
+    ]
   }
 }

@@ -73,6 +73,21 @@ jobs:
       - run: pnpm --filter @dlidli/h5 typecheck
       - run: pnpm h5:build
 
+  format:
+    name: 前端格式检查（Prettier）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+
   docs:
     name: 文档站构建
     runs-on: ubuntu-latest
