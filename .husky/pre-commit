@@ -1,2 +1,7 @@
-# 提交前：对暂存文件跑 Prettier（ESLint 在 CI / 各 app lint 全量执行）
-pnpm exec lint-staged
+# 提交前对暂存文件跑 Prettier（ESLint 在 CI / 各 app lint 全量执行）。
+# Node < 18 的环境直接跳过，避免钩子崩溃阻塞提交。
+if node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 18 ? 0 : 1)' 2>/dev/null; then
+  pnpm exec lint-staged
+else
+  echo "⚠️  pre-commit: 当前 Node 版本过低，跳过 lint-staged（请用 Node ≥ 18 提交或手动执行 pnpm format）"
+fi
