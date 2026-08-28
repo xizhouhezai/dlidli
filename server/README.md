@@ -63,6 +63,23 @@ curl http://localhost:8000/api/v1/ping
 
 - 统一响应：`{ code, message, data, trace_id }`；错误码分段见 `internal/pkg/errcode`。
 - 模块间只允许通过 service 接口调用，禁止跨模块访问 repo。
-- 配置密钥不入库：生产环境通过 `DLIDLI_JWT_SECRET`、`DLIDLI_MYSQL_DSN` 等环境变量注入（前缀 `DLIDLI_`，yaml 键名点号转下划线，如 `DLIDLI_TRANSCODE_FFMPEGPATH`）。
+- 配置密钥不入库：生产环境通过 `DLIDLI_` 前缀环境变量注入（yaml 键名点号转下划线）。
 - 环境配置：`configs/dev|staging|prod.yaml`；prod 为模板，`env: prod` 时 `Load()` 强制校验 JWT secret 与 MySQL DSN，缺失或 dev 占位值直接拒绝启动。
 - ffmpeg/ffprobe 不写机器路径：缺省走 PATH，特殊环境用 `DLIDLI_TRANSCODE_FFMPEGPATH` / `DLIDLI_TRANSCODE_FFPROBEPATH` 覆盖。
+
+### 可用环境变量键清单（DLIDLI_ 前缀）
+
+| 环境变量 | 覆盖 yaml 键 | 说明 |
+| --- | --- | --- |
+| `DLIDLI_APP_PORT` | `app.port` | 服务端口 |
+| `DLIDLI_MYSQL_DSN` | `mysql.dsn` | 数据库连接串（prod 必填，加载强校验） |
+| `DLIDLI_MYSQL_MAXOPENCONNS` / `DLIDLI_MYSQL_MAXIDLECONNS` | `mysql.maxOpenConns|maxIdleConns` | 连接池配置 |
+| `DLIDLI_REDIS_ADDR` / `DLIDLI_REDIS_PASSWORD` / `DLIDLI_REDIS_DB` | `redis.addr|password|db` | Redis 连接 |
+| `DLIDLI_JWT_SECRET` | `jwt.secret` | JWT 签名与标识加密密钥（prod 必填，加载强校验） |
+| `DLIDLI_JWT_ACCESSTTLMIN` | `jwt.accessTtlMin` | access token 有效期（分钟） |
+| `DLIDLI_STORAGE_DRIVER` / `DLIDLI_STORAGE_LOCALDIR` / `DLIDLI_STORAGE_BASEURL` | `storage.driver|localDir|baseUrl` | 存储驱动与静态资源前缀 |
+| `DLIDLI_RATELIMIT_ENABLED` / `DLIDLI_RATELIMIT_PERMINUTE` | `ratelimit.enabled|perMinute` | 写接口限流 |
+| `DLIDLI_TRANSCODE_ENABLED` / `DLIDLI_TRANSCODE_WORKERS` / `DLIDLI_TRANSCODE_FFMPEGPATH` / `DLIDLI_TRANSCODE_FFPROBEPATH` | `transcode.*` | 转码开关/并发/ffmpeg 路径 |
+
+> 键名完全映射：yaml 键（含嵌套父段）全部小写+去除分隔符，如 `transcode.ffmpegPath` → `DLIDLI_TRANSCODE_FFMPEGPATH`。
+
