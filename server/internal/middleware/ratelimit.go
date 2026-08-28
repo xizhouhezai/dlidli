@@ -42,7 +42,10 @@ func (rl *RateLimiter) Allow(ctx context.Context, scope, path string) bool {
 		return true
 	}
 	if n == 1 {
-		_ = rl.rdb.Expire(ctx, key, time.Minute).Err()
+		if err := rl.rdb.Expire(ctx, key, time.Minute).Err(); err != nil {
+			// 过期设置失败会导致固定窗口永不滚动（key 永久存在），必须可见
+			rl.log.Warn("限流窗口过期设置失败", zap.String("key", key), zap.Error(err))
+		}
 	}
 	return n <= int64(rl.perMinute)
 }

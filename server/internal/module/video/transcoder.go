@@ -126,7 +126,7 @@ func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver,
 	// dev 自动过审直接发布 → 触发发布钩子（动态生成等旁路逻辑）
 	if s.cfg.App.AutoApprove {
 		if v, err := s.repo.FindVideoByID(job.VideoID); err == nil && v != nil {
-			s.firePublish(v.ID, v.UserID)
+			s.firePublish(ctx, v.ID, v.UserID)
 		}
 	}
 }
