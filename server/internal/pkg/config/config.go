@@ -75,6 +75,7 @@ func Load(path string) (*Config, error) {
 	v.SetEnvPrefix("DLIDLI")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+	setSchemaDefaults(v)
 
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("读取配置文件 %s 失败: %w", path, err)
@@ -99,5 +100,51 @@ func Load(path string) (*Config, error) {
 	if cfg.Transcode.FfprobePath == "" {
 		cfg.Transcode.FfprobePath = "ffprobe"
 	}
+	if err := validateProd(&cfg); err != nil {
+		return nil, err
+	}
 	return &cfg, nil
+}
+
+// setSchemaDefaults 为全量配置项注册零值缺省。viper 的 AutomaticEnv 只对
+// AllKeys 里已存在的键生效（yaml 缺省的键不会查环境变量），注册缺省值后
+// Unmarshal 才能感知并应用 DLIDLI_ 环境变量覆盖。
+func setSchemaDefaults(v *viper.Viper) {
+	v.SetDefault("app.name", "")
+	v.SetDefault("app.env", "")
+	v.SetDefault("app.port", 0)
+	v.SetDefault("app.autoapprove", false)
+	v.SetDefault("app.alloworigins", []string{})
+	v.SetDefault("log.level", "")
+	v.SetDefault("mysql.dsn", "")
+	v.SetDefault("mysql.maxopenconns", 0)
+	v.SetDefault("mysql.maxidleconns", 0)
+	v.SetDefault("redis.addr", "")
+	v.SetDefault("redis.password", "")
+	v.SetDefault("redis.db", 0)
+	v.SetDefault("jwt.secret", "")
+	v.SetDefault("jwt.accessttlmin", 0)
+	v.SetDefault("storage.driver", "")
+	v.SetDefault("storage.localdir", "")
+	v.SetDefault("storage.baseurl", "")
+	v.SetDefault("ratelimit.enabled", false)
+	v.SetDefault("ratelimit.perminute", 0)
+	v.SetDefault("transcode.enabled", false)
+	v.SetDefault("transcode.workers", 0)
+	v.SetDefault("transcode.ffmpegpath", "")
+	v.SetDefault("transcode.ffprobepath", "")
+}
+
+// validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。
+func validateProd(cfg *Config) error {
+	if cfg.App.Env != "prod" {
+		return nil
+	}
+	if cfg.JWT.Secret == "" || cfg.JWT.Secret == "dev-secret-do-not-use-in-prod" {
+		return fmt.Errorf("prod 环境必须通过 DLIDLI_JWT_SECRET 注入正式密钥")
+	}
+	if cfg.MySQL.DSN == "" {
+		return fmt.Errorf("prod 环境必须通过 DLIDLI_MYSQL_DSN 注入数据库连接串")
+	}
+	return nil
 }

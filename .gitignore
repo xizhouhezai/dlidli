@@ -9,6 +9,8 @@ docs/.vitepress/cache/
 # go
 server/bin/
 server/uploads/
+server/uploads_staging/
+server/uploads_prod/
 *.exe
 *.test
 *.out
