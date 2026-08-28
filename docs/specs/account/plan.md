@@ -17,6 +17,7 @@
 | 图形验证码 | 自研 SVG（crypto/rand 随机码 + Redis 5min 一次性），密码登录强制校验 | 零外部依赖；点击刷新/失败自动换 | 第三方验证码服务 |
 | 短信 | 当前 mock（dev 返回 debug_code），真实短信服务待接入 | 内测优先；接口层已隔离 | 直接接云服务商 |
 | 邮箱注册/激活（ACC-02） | user_auth 新增 activated 列（0 待激活/1 已激活，0029 迁移）；注册生成激活 token（Redis 24h）并 mock 发送激活邮件（dev 返回 debug 链接）；未激活拒绝登录 | 待激活态需持久化；无真实邮件服务，mock 与短信同模式 | 复用 user.status 待激活值（侵入现状状态机）；Redis 纯内存激活态（重启丢失，不可靠） |
+| 内测邀请码（ACC-44） | invite_code 表 + `app.inviteCodeRequired` 开关（默认关）；注册（短信自动注册/邮箱注册）开关开启时必填，`UPDATE … WHERE used_by IS NULL AND (expires_at IS NULL OR expires_at > NOW())` 原子占用（一次性）；admin 批量生成接口 | MVP 内测控量；原子 UPDATE 免事务，天然防并发重复使用 | Redis 计数配额（无持久审计） |
 | 经验/等级 | growth 规则引擎：5 类经验来源 + Redis 每日去重限量 + `exp_log` 流水 + Lv0-Lv6 阈值重算 | 防刷可审计；升级即时 | 定时批量计算（延迟高） |
 | 硬币 | MySQL 事务强一致（发放/消费）+ `coin_log` 流水 | 防并发超扣；幂等 | Redis 计数异步落库（最终一致，不适合资产） |
 | 处罚执行 | account govern 层统一处罚（禁言/封禁/到期懒解除），登录封号拦截、发言链路禁言拦截 | 处罚一处生效全局 | 各模块自行判断（易漏） |
@@ -28,6 +29,7 @@
 ```sql
 -- 邮箱激活（0029 迁移，ACC-02）
 user_auth.activated { 0 待激活 / 1 已激活，手机/微信默认 1 }
+invite_code { code 唯一，used_by/used_at，expires_at(可空) } -- 0030 迁移（ACC-44）
 -- 经验流水（0012 迁移）
 exp_log    { id, user_id, source, exp, created_at }          -- source：登录/观看/投稿/弹幕/评论
 -- 硬币流水
@@ -44,6 +46,7 @@ Redis：`sess:{refresh_token}`（会话/30d）、`rl:{scene}:{uid|ip}`（短信�
 | POST | /api/v1/auth/login/{sms\|password} | 验证码 / 密码登录（注册登录一体） |
 | POST | /api/v1/auth/register/email | 邮箱 + 密码注册（创建待激活账号，mock 发送激活邮件） |
 | POST | /api/v1/auth/activate | 激活邮箱账号（token 24h 有效） |
+| POST | /api/v1/admin/invite-codes | 生成内测邀请码（权限 config:edit，一次性） |
 | POST | /api/v1/auth/refresh ｜ /auth/logout | 令牌轮换 / 登出吊销 |
 | GET/PUT | /api/v1/users/me | 资料读取/编辑 |
 | POST | /api/v1/users/me/avatar | 头像上传（裁剪前端完成，机审后生效） |

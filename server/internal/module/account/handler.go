@@ -87,14 +87,15 @@ func (h *Handler) sendSmsCode(c *gin.Context) {
 // @Router   /auth/register/email [post]
 func (h *Handler) registerByEmail(c *gin.Context) {
 	var req struct {
-		Email    string `json:"email" binding:"required"`
-		Password string `json:"password" binding:"required,min=6,max=64"`
+		Email      string `json:"email" binding:"required"`
+		Password   string `json:"password" binding:"required,min=6,max=64"`
+		InviteCode string `json:"invite_code"` // 内测邀请码（ACC-44，开关开启时必填）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, errcode.ErrInvalidParams)
 		return
 	}
-	debugURL, err := h.svc.RegisterByEmail(c.Request.Context(), req.Email, req.Password)
+	debugURL, err := h.svc.RegisterByEmail(c.Request.Context(), req.Email, req.Password, req.InviteCode)
 	if err != nil {
 		response.Fail(c, err)
 		return
@@ -139,14 +140,15 @@ func (h *Handler) activateEmail(c *gin.Context) {
 // @Router   /auth/login/sms [post]
 func (h *Handler) loginBySms(c *gin.Context) {
 	var req struct {
-		Phone string `json:"phone" binding:"required"`
-		Code  string `json:"code" binding:"required,len=6"`
+		Phone      string `json:"phone" binding:"required"`
+		Code       string `json:"code" binding:"required,len=6"`
+		InviteCode string `json:"invite_code"` // 内测邀请码（ACC-44，开关开启时必填）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil || !phoneRe.MatchString(req.Phone) {
 		response.Fail(c, errcode.ErrInvalidParams)
 		return
 	}
-	pair, err := h.svc.LoginBySms(c.Request.Context(), req.Phone, req.Code)
+	pair, err := h.svc.LoginBySms(c.Request.Context(), req.Phone, req.Code, req.InviteCode)
 	if err != nil {
 		response.Fail(c, err)
 		return

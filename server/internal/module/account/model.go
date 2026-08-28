@@ -63,6 +63,24 @@ type CoinLog struct {
 
 func (CoinLog) TableName() string { return "coin_log" }
 
+// InviteCode 对应 invite_code 表（内测邀请码 ACC-44）。
+type InviteCode struct {
+	ID        int64 `gorm:"primaryKey;autoIncrement"`
+	Code      string
+	CreatedBy int64
+	UsedBy    *int64
+	UsedAt    *time.Time
+	ExpiresAt *time.Time
+	CreatedAt time.Time
+}
+
+func (InviteCode) TableName() string { return "invite_code" }
+
+// expiredAt 判断邀请码在指定时间是否过期（expires_at 为空表示永久有效，ACC-44）。
+func (c *InviteCode) expiredAt(now time.Time) bool {
+	return c.ExpiresAt != nil && c.ExpiresAt.Before(now)
+}
+
 // Profile 对外用户信息（ID 用字符串避免 JS 精度丢失）。
 type Profile struct {
 	ID          string     `json:"id"`
