@@ -63,4 +63,6 @@ curl http://localhost:8000/api/v1/ping
 
 - 统一响应：`{ code, message, data, trace_id }`；错误码分段见 `internal/pkg/errcode`。
 - 模块间只允许通过 service 接口调用，禁止跨模块访问 repo。
-- 配置密钥不入库：生产环境通过 `DLIDLI_JWT_SECRET`、`DLIDLI_MYSQL_DSN` 等环境变量注入。
+- 配置密钥不入库：生产环境通过 `DLIDLI_JWT_SECRET`、`DLIDLI_MYSQL_DSN` 等环境变量注入（前缀 `DLIDLI_`，yaml 键名点号转下划线，如 `DLIDLI_TRANSCODE_FFMPEGPATH`）。
+- 环境配置：`configs/dev|staging|prod.yaml`；prod 为模板，`env: prod` 时 `Load()` 强制校验 JWT secret 与 MySQL DSN，缺失或 dev 占位值直接拒绝启动。
+- ffmpeg/ffprobe 不写机器路径：缺省走 PATH，特殊环境用 `DLIDLI_TRANSCODE_FFMPEGPATH` / `DLIDLI_TRANSCODE_FFPROBEPATH` 覆盖。
