@@ -33,6 +33,17 @@ export function createAuthApi(http: HttpClient) {
         captcha_code: captchaCode,
       }),
 
+    /** 邮箱注册（ACC-02）：创建待激活账号；dev 环境后端返回 debug_activate_url 便于联调 */
+    registerEmail: (email: string, password: string, inviteCode = '') =>
+      http.post<{ activated: boolean; debug_activate_url?: string }>('/api/v1/auth/register/email', {
+        email,
+        password,
+        invite_code: inviteCode,
+      }),
+
+    /** 激活邮箱账号（ACC-02）：一次性 token */
+    activate: (token: string) => http.post<{ activated: boolean }>('/api/v1/auth/activate', { token }),
+
     /** 获取图形验证码（返回 id + 内联 SVG） */
     captcha: () => http.get<{ id: string; svg: string }>('/api/v1/auth/captcha'),
 

@@ -11,8 +11,17 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-const tab = ref<'password' | 'sms'>('password')
+const tab = ref<'password' | 'sms' | 'register'>('password')
 const loading = ref(false)
+
+// 邮箱注册（ACC-02）表单与激活流程
+const regForm = reactive({ email: '', password: '', confirm: '', inviteCode: '' })
+const activateDialog = ref(false)
+const activateToken = ref('')
+const activateLoading = ref(false)
+const pendingEmail = ref('')
+const debugActivateUrl = ref('')
+const regSubmitted = ref(false)
 
 const pwdForm = reactive({ account: '', password: '' })
 const smsForm = reactive({ phone: '', code: '' })
@@ -68,6 +77,55 @@ async function sendCode() {
     startCountdown()
   } catch (e) {
     ElMessage.error(e instanceof ApiError ? e.message : '发送失败，请稍后再试')
+  }
+}
+
+async function onRegister() {
+  const email = regForm.email.trim()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    ElMessage.warning('请输入正确的邮箱')
+    return
+  }
+  if (regForm.password.length < 6 || regForm.password !== regForm.confirm) {
+    ElMessage.warning('密码至少 6 位且两次输入需一致')
+    return
+  }
+  loading.value = true
+  try {
+    const res = await api.auth.registerEmail(email, regForm.password, regForm.inviteCode.trim())
+    pendingEmail.value = email
+    regSubmitted.value = true
+    // dev 环境返回 debug 激活链接（mock 邮件）；生产环境提示查收邮箱
+    debugActivateUrl.value = res.debug_activate_url ?? ''
+    activateToken.value = ''
+    ElMessage.success('注册成功，请激活邮箱账号')
+    activateDialog.value = true
+  } catch (e) {
+    ElMessage.error(e instanceof ApiError ? e.message : '注册失败，请稍后再试')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function onActivate() {
+  const token = (activateToken.value || debugActivateUrl.value.split('token=')[1] || '').trim()
+  if (!token) {
+    ElMessage.warning('请输入激活链接中的 token')
+    return
+  }
+  activateLoading.value = true
+  try {
+    await api.auth.activate(token)
+    ElMessage.success('激活成功，请使用邮箱 + 密码登录')
+    activateDialog.value = false
+    // 切回密码登录并预填邮箱
+    pwdForm.account = pendingEmail.value
+    tab.value = 'password'
+    loadCaptcha()
+  } catch (e) {
+    ElMessage.error(e instanceof ApiError ? e.message : '激活失败，请检查链接是否有效')
+  } finally {
+    activateLoading.value = false
   }
 }
 
@@ -194,15 +252,74 @@ async function onSubmit() {
             </el-form-item>
           </el-form>
         </el-tab-pane>
+
+        <el-tab-pane label="邮箱注册" name="register">
+          <el-form label-position="top" @submit.prevent="onRegister">
+            <el-form-item>
+              <el-input v-model="regForm.email" placeholder="邮箱" size="large" type="email" />
+            </el-form-item>
+            <el-form-item>
+              <el-input
+                v-model="regForm.password"
+                type="password"
+                placeholder="设置密码（6-64 位）"
+                size="large"
+                show-password
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-input
+                v-model="regForm.confirm"
+                type="password"
+                placeholder="确认密码"
+                size="large"
+                show-password
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-input v-model="regForm.inviteCode" placeholder="邀请码（选填，内测开启时必填）" size="large" maxlength="16" />
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
 
-      <el-button type="primary" size="large" class="login-btn" :loading="loading" @click="onSubmit">
-        登录
+      <el-button
+        type="primary"
+        size="large"
+        class="login-btn"
+        :loading="loading"
+        @click="tab === 'register' ? onRegister() : onSubmit()"
+      >
+        {{ tab === 'register' ? '注册' : '登录' }}
       </el-button>
       <p class="login-tip">
         首次使用推荐「短信登录」，未注册手机号将自动创建账号
         <RouterLink to="/reset-password" class="login-forgot"> 忘记密码？ </RouterLink>
       </p>
+      <!-- 邮箱激活对话框（ACC-02） -->
+      <el-dialog
+        v-model="activateDialog"
+        title="激活邮箱账号"
+        width="440px"
+        :close-on-click-modal="false"
+      >
+        <p v-if="debugActivateUrl" class="activate-tip">
+          （dev 模式 mock 邮件）激活链接已生成，可直接复制 token 或点击下方按钮：
+        </p>
+        <p v-else class="activate-tip">激活邮件已发送至 {{ pendingEmail }}，请查收并输入链接中的 token。</p>
+        <el-input v-model="activateToken" placeholder="激活 token" size="large" />
+        <div class="activate-actions">
+          <el-button size="large" @click="activateDialog = false">稍后激活</el-button>
+          <el-button
+            type="primary"
+            size="large"
+            :loading="activateLoading"
+            @click="onActivate"
+          >
+            立即激活
+          </el-button>
+        </div>
+      </el-dialog>
     </el-card>
   </div>
 </template>
@@ -461,5 +578,19 @@ async function onSubmit() {
   .bg-danmaku {
     display: none;
   }
+}
+
+.activate-tip {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--dli-text-2);
+  word-break: break-all;
+}
+
+.activate-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
 }
 </style>
