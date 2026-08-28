@@ -68,14 +68,16 @@ func NewHub(allowOrigins []string, log *zap.Logger) *Hub {
 
 // Broadcast 向视频房间广播一条弹幕（无在线连接时 no-op）。
 // excludeUID > 0 时跳过该用户的连接（发送者本人已乐观上屏，避免重复）。
+// 迭代期间全程持读锁：send 为非阻塞投递不会死锁，且与 remove 的写锁
+// （delete + close(send)）互斥，避免并发迭代/写 map 与 send on closed channel。
 func (h *Hub) Broadcast(videoID, excludeUID int64, item *Item) {
 	msg, err := json.Marshal(WSMsg{Type: "danmaku", Data: *item})
 	if err != nil {
 		return
 	}
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 	r, ok := h.rooms[videoID]
-	h.mu.RUnlock()
 	if !ok {
 		return
 	}

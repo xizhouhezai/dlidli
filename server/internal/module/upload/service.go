@@ -341,10 +341,20 @@ func (s *Service) StartCleanupWorker(ctx context.Context, interval time.Duration
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if _, err := s.CleanupOrphans(ctx, sessionTTL); err != nil {
-					s.log.Warn("孤儿分片清理失败", zap.Error(err))
-				}
+				s.cleanupOnce(ctx)
 			}
 		}
 	}()
+}
+
+// cleanupOnce 单轮清理：panic 自隔离，后台 Worker 任一轮异常不击穿进程。
+func (s *Service) cleanupOnce(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.log.Error("孤儿分片清理 panic，已隔离", zap.Any("recover", r))
+		}
+	}()
+	if _, err := s.CleanupOrphans(ctx, sessionTTL); err != nil {
+		s.log.Warn("孤儿分片清理失败", zap.Error(err))
+	}
 }
