@@ -18,6 +18,9 @@ hero:
     - theme: alt
       text: 开发进度
       link: /project/progress
+    - theme: alt
+      text: API 参考（Swagger）
+      link: http://localhost:8000/swagger/index.html
 
 features:
   - icon: 📺
