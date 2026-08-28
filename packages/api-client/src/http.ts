@@ -16,7 +16,11 @@ export interface RequestOptions {
  * 请求适配器：Web/H5 用 fetch；小程序端注入 uni.request 实现。
  * 返回值为后端统一响应体。
  */
-export type RequestAdapter = (url: string, options: Required<Pick<RequestOptions, 'method'>> & RequestOptions & { body?: string | FormData | Blob }) => Promise<{
+export type RequestAdapter = (
+  url: string,
+  options: Required<Pick<RequestOptions, 'method'>> &
+    RequestOptions & { body?: string | FormData | Blob },
+) => Promise<{
   status: number
   body: ApiBody<unknown>
 }>
@@ -47,6 +51,19 @@ export interface ClientConfig {
   adapter?: RequestAdapter
 }
 
+export interface DownloadOptions {
+  /** query 参数 */
+  params?: RequestOptions['params']
+  /** 响应无 Content-Disposition 时的文件名兜底 */
+  fallbackName: string
+}
+
+export interface DownloadResult {
+  blob: Blob
+  /** 优先取 Content-Disposition filename，否则为 fallbackName */
+  filename: string
+}
+
 /** 默认 fetch 适配器（Web/H5） */
 export const fetchAdapter: RequestAdapter = async (url, options) => {
   const res = await fetch(url, {
@@ -69,17 +86,9 @@ export class HttpClient {
   }
 
   private async doRequest<T>(path: string, options: RequestOptions, retried: boolean): Promise<T> {
-    const { baseURL = '', getToken, onUnauthorized, adapter = fetchAdapter } = this.cfg
+    const { getToken, onUnauthorized, adapter = fetchAdapter } = this.cfg
 
-    let url = baseURL + path
-    if (options.params) {
-      const qs = new URLSearchParams()
-      for (const [k, v] of Object.entries(options.params)) {
-        if (v !== undefined) qs.append(k, String(v))
-      }
-      const s = qs.toString()
-      if (s) url += (url.includes('?') ? '&' : '?') + s
-    }
+    const url = this.buildUrl(path, options.params)
 
     const headers: Record<string, string> = { ...options.headers }
     const token = getToken?.()
@@ -111,6 +120,58 @@ export class HttpClient {
       throw new ApiError(resBody.code, resBody.message, resBody.trace_id)
     }
     return resBody.data as T
+  }
+
+  /**
+   * 下载非 JSON 响应（CSV 导出等）：自动带鉴权；401 同样走静默续期与
+   * onUnauthorized 流程，避免调用方绕过封装手拼 token。
+   */
+  async download(path: string, opts: DownloadOptions, retried = false): Promise<DownloadResult> {
+    const { getToken, onUnauthorized } = this.cfg
+    const url = this.buildUrl(path, opts.params)
+
+    const headers: Record<string, string> = {}
+    const token = getToken?.()
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    const res = await fetch(url, { headers })
+    if (!res.ok) {
+      let code: number = ErrCode.Internal
+      let message = `HTTP ${res.status}`
+      try {
+        // 错误体为后端统一响应时透出业务码，否则保留 HTTP 状态
+        const body = (await res.json()) as ApiBody<unknown>
+        if (typeof body.code === 'number') {
+          code = body.code
+          message = body.message
+        }
+      } catch {
+        // 非 JSON 错误体
+      }
+      if (code === ErrCode.Unauthorized) {
+        if (!retried && (await this.tryRefresh())) {
+          return this.download(path, opts, true)
+        }
+        onUnauthorized?.()
+      }
+      throw new ApiError(code, message)
+    }
+    const blob = await res.blob()
+    const match = (res.headers.get('Content-Disposition') ?? '').match(/filename="?([^";]+)"?/)
+    return { blob, filename: match?.[1] ?? opts.fallbackName }
+  }
+
+  private buildUrl(path: string, params?: RequestOptions['params']): string {
+    let url = (this.cfg.baseURL ?? '') + path
+    if (params) {
+      const qs = new URLSearchParams()
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined) qs.append(k, String(v))
+      }
+      const s = qs.toString()
+      if (s) url += (url.includes('?') ? '&' : '?') + s
+    }
+    return url
   }
 
   private tryRefresh(): Promise<boolean> {

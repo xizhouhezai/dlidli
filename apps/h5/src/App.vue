@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import { onLaunch, onShow, onHide } from "@dcloudio/uni-app";
-onLaunch(() => {
-  console.log("App Launch");
-});
-onShow(() => {
-  console.log("App Show");
-});
-onHide(() => {
-  console.log("App Hide");
-});
+// uni-app 生命周期钩子在接入 H5 剩余页（M2-H5-04~06）时按需补充
 </script>
+
 <style></style>

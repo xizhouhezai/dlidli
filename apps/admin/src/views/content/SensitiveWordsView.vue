@@ -25,7 +25,10 @@ onMounted(load)
 async function add() {
   const w = newWord.value.trim()
   if (!w) return
-  const ok = await run(() => adminApi.admin.addSensitiveWord(w), { success: '已添加，词库即时生效', fallback: '添加失败' })
+  const ok = await run(() => adminApi.admin.addSensitiveWord(w), {
+    success: '已添加，词库即时生效',
+    fallback: '添加失败',
+  })
   if (ok) {
     newWord.value = ''
     load()
@@ -33,20 +36,20 @@ async function add() {
 }
 
 async function remove(word: SensitiveWord) {
-  await run(async () => {
-    await ElMessageBox.confirm(`确定删除敏感词「${word.word}」吗？`, '删除', { type: 'warning' })
-    await adminApi.admin.deleteSensitiveWord(word.id)
-    load()
-  }, { success: '已删除，词库即时生效', fallback: '删除失败' })
+  await run(
+    async () => {
+      await ElMessageBox.confirm(`确定删除敏感词「${word.word}」吗？`, '删除', { type: 'warning' })
+      await adminApi.admin.deleteSensitiveWord(word.id)
+      load()
+    },
+    { success: '已删除，词库即时生效', fallback: '删除失败' },
+  )
 }
 </script>
 
 <template>
   <div>
-    <PageHead
-      title="敏感词库"
-      :sub="`共 ${words.length} 个自定义词（另含内置默认词）`"
-    />
+    <PageHead title="敏感词库" :sub="`共 ${words.length} 个自定义词（另含内置默认词）`" />
 
     <div class="page-card max-w-720px">
       <!-- 新增 -->
@@ -75,26 +78,10 @@ async function remove(word: SensitiveWord) {
         class="mb-4"
       />
 
-      <el-skeleton
-        v-if="loading"
-        :rows="4"
-        animated
-      />
-      <el-empty
-        v-else-if="words.length === 0"
-        description="还没有自定义敏感词"
-      />
-      <div
-        v-else
-        class="flex flex-wrap gap-2"
-      >
-        <el-tag
-          v-for="w in words"
-          :key="w.id"
-          size="large"
-          closable
-          @close="remove(w)"
-        >
+      <el-skeleton v-if="loading" :rows="4" animated />
+      <el-empty v-else-if="words.length === 0" description="还没有自定义敏感词" />
+      <div v-else class="flex flex-wrap gap-2">
+        <el-tag v-for="w in words" :key="w.id" size="large" closable @close="remove(w)">
           {{ w.word }}
         </el-tag>
       </div>

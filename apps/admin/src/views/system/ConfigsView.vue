@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { type SystemConfigItem } from '@dlidli/api-client'
+import { formatDateTime } from '@dlidli/shared'
 import { adminApi } from '@/api'
 import { useApiAction } from '@/composables/useApiAction'
 import PageHead from '@/components/PageHead.vue'
@@ -66,8 +67,13 @@ async function save() {
 }
 
 async function remove(item: SystemConfigItem) {
-  await ElMessageBox.confirm(`确定删除配置「${item.config_key}」吗？`, '删除配置', { type: 'warning' })
-  const ok = await run(() => adminApi.admin.deleteConfig(item.id), { success: '已删除', fallback: '删除失败' })
+  await ElMessageBox.confirm(`确定删除配置「${item.config_key}」吗？`, '删除配置', {
+    type: 'warning',
+  })
+  const ok = await run(() => adminApi.admin.deleteConfig(item.id), {
+    success: '已删除',
+    fallback: '删除失败',
+  })
   if (ok) load()
 }
 
@@ -76,91 +82,45 @@ onMounted(load)
 
 <template>
   <div>
-    <PageHead
-      title="系统配置"
-      :sub="`共 ${list.length} 项配置（键值，热更新生效）`"
-    />
+    <PageHead title="系统配置" :sub="`共 ${list.length} 项配置（键值，热更新生效）`" />
 
     <div class="page-card">
       <div class="flex justify-end mb-4">
-        <el-button
-          v-perm="'config:edit'"
-          type="primary"
-          class="pink-btn"
-          @click="openCreate"
-        >
+        <el-button v-perm="'config:edit'" type="primary" class="pink-btn" @click="openCreate">
           新增配置
         </el-button>
       </div>
 
-      <el-table
-        v-loading="loading"
-        :data="list"
-        stripe
-      >
-        <el-table-column
-          prop="config_key"
-          label="配置键"
-          min-width="160"
-        >
+      <el-table v-loading="loading" :data="list" stripe>
+        <el-table-column prop="config_key" label="配置键" min-width="160">
           <template #default="{ row }">
             <code class="text-3.5">{{ row.config_key }}</code>
           </template>
         </el-table-column>
-        <el-table-column
-          prop="name"
-          label="名称"
-          width="140"
-        />
-        <el-table-column
-          prop="value"
-          label="值"
-          min-width="120"
-        >
+        <el-table-column prop="name" label="名称" width="140" />
+        <el-table-column prop="value" label="值" min-width="120">
           <template #default="{ row }">
             <span class="truncate block">{{ row.value || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          prop="remark"
-          label="说明"
-          min-width="160"
-        >
+        <el-table-column prop="remark" label="说明" min-width="160">
           <template #default="{ row }">
-            <span
-              class="truncate block text-3 text-text-2"
-              :title="row.remark"
-            >{{ row.remark || '—' }}</span>
+            <span class="truncate block text-3 text-text-2" :title="row.remark">{{
+              row.remark || '—'
+            }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="更新时间"
-          width="160"
-        >
+        <el-table-column label="更新时间" width="160">
           <template #default="{ row }">
-            {{ new Date(row.updated_at).toLocaleString() }}
+            {{ formatDateTime(row.updated_at) }}
           </template>
         </el-table-column>
-        <el-table-column
-          label="操作"
-          width="130"
-          fixed="right"
-        >
+        <el-table-column label="操作" width="130" fixed="right">
           <template #default="{ row }">
-            <el-button
-              v-perm="'config:edit'"
-              link
-              type="primary"
-              @click="openEdit(row)"
-            >
+            <el-button v-perm="'config:edit'" link type="primary" @click="openEdit(row)">
               编辑
             </el-button>
-            <el-button
-              v-perm="'config:edit'"
-              link
-              type="danger"
-              @click="remove(row)"
-            >
+            <el-button v-perm="'config:edit'" link type="danger" @click="remove(row)">
               删除
             </el-button>
           </template>
@@ -169,53 +129,24 @@ onMounted(load)
     </div>
 
     <!-- 编辑弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="editingId ? '编辑配置' : '新增配置'"
-      width="460px"
-    >
-      <el-form
-        label-width="72px"
-        class="max-w-420px"
-      >
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑配置' : '新增配置'" width="460px">
+      <el-form label-width="72px" class="max-w-420px">
         <el-form-item label="配置键">
-          <el-input
-            v-model="form.config_key"
-            placeholder="如 audit:sampling"
-            maxlength="64"
-          />
+          <el-input v-model="form.config_key" placeholder="如 audit:sampling" maxlength="64" />
         </el-form-item>
         <el-form-item label="名称">
-          <el-input
-            v-model="form.name"
-            maxlength="64"
-          />
+          <el-input v-model="form.name" maxlength="64" />
         </el-form-item>
         <el-form-item label="值">
-          <el-input
-            v-model="form.value"
-            maxlength="500"
-          />
+          <el-input v-model="form.value" maxlength="500" />
         </el-form-item>
         <el-form-item label="说明">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            :rows="2"
-            maxlength="200"
-          />
+          <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="200" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          class="pink-btn"
-          :loading="saving"
-          @click="save"
-        >
+        <el-button @click="dialogVisible = false"> 取消 </el-button>
+        <el-button type="primary" class="pink-btn" :loading="saving" @click="save">
           保存
         </el-button>
       </template>

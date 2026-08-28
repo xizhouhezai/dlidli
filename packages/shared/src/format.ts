@@ -29,3 +29,12 @@ export function formatPubdate(iso: string): string {
   const d = new Date(t)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+/** 后台时间展示：ISO -> "YYYY-MM-DD HH:mm:ss"（本地时区）；空值/非法值返回 fallback */
+export function formatDateTime(iso: string | null | undefined, fallback = '—'): string {
+  if (!iso) return fallback
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return fallback
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}

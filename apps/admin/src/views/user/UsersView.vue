@@ -2,18 +2,21 @@
 import { ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { type AdminUserItem, type PunishAction } from '@dlidli/api-client'
+import { formatDateTime } from '@dlidli/shared'
 import { adminApi } from '@/api'
 import { usePagedList } from '@/composables/usePagedList'
 import { useApiAction } from '@/composables/useApiAction'
 import PageHead from '@/components/PageHead.vue'
 import defaultAvatar from '@/assets/default-avatar.png'
-import { readAdminToken } from '@/utils/token'
-import { ElMessage } from 'element-plus'
+import { saveBlob } from '@/utils/download'
 
 const keyword = ref('')
 const status = ref(-1)
 
-const STATUS_META: Record<number, { label: string, type: '' | 'success' | 'warning' | 'danger' | 'info' }> = {
+const STATUS_META: Record<
+  number,
+  { label: string; type: '' | 'success' | 'warning' | 'danger' | 'info' }
+> = {
   0: { label: '正常', type: 'success' },
   1: { label: '禁言', type: 'warning' },
   2: { label: '封禁', type: 'danger' },
@@ -22,79 +25,83 @@ const STATUS_META: Record<number, { label: string, type: '' | 'success' | 'warni
 
 const GENDER_LABEL: Record<number, string> = { 0: '—', 1: '男', 2: '女' }
 
-function fmtDate(s: string | null | undefined): string {
-  return s ? new Date(s).toLocaleDateString() : '—'
-}
-
-const { list: users, total, loading, page, pageSize, load, search, onPageChange } = usePagedList<AdminUserItem>(
-  (p, size) => adminApi.admin.users({ keyword: keyword.value.trim(), status: status.value, page: p, page_size: size }),
+const {
+  list: users,
+  total,
+  loading,
+  page,
+  pageSize,
+  load,
+  search,
+  onPageChange,
+} = usePagedList<AdminUserItem>((p, size) =>
+  adminApi.admin.users({
+    keyword: keyword.value.trim(),
+    status: status.value,
+    page: p,
+    page_size: size,
+  }),
 )
 const { run } = useApiAction()
 
 // 导出 CSV（当前筛选，SYS-06）
 async function exportCsv() {
-  const qs = new URLSearchParams()
-  if (keyword.value.trim()) qs.set('keyword', keyword.value.trim())
-  if (status.value !== -1) qs.set('status', String(status.value))
-  try {
-    const res = await fetch(`/api/v1/admin/users/export?${qs.toString()}`, {
-      headers: { Authorization: `Bearer ${readAdminToken() ?? ''}` },
-    })
-    if (!res.ok) {
-      ElMessage.error('导出失败')
-      return
-    }
-    const blob = await res.blob()
-    const match = (res.headers.get('Content-Disposition') ?? '').match(/filename="?([^";]+)"?/)
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = match?.[1] ?? `users-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    ElMessage.success('导出成功')
-  } catch {
-    ElMessage.error('导出失败，请稍后再试')
-  }
+  await run(
+    () =>
+      adminApi.http
+        .download('/api/v1/admin/users/export', {
+          params: {
+            keyword: keyword.value.trim() || undefined,
+            status: status.value !== -1 ? status.value : undefined,
+          },
+          fallbackName: `users-${Date.now()}.csv`,
+        })
+        .then(saveBlob),
+    { success: '导出成功', fallback: '导出失败，请稍后再试' },
+  )
 }
 
 async function punish(user: AdminUserItem, action: PunishAction) {
-  const ok = await run(async () => {
-    let days = 0
-    let reason = ''
-    if (action === 'mute' || action === 'ban') {
-      const dayOptions = action === 'mute'
-        ? '禁言天数（1/3/7/30）'
-        : '封禁天数（0=永久，或 7/30/90）'
-      const { value } = await ElMessageBox.prompt(dayOptions, action === 'mute' ? '禁言用户' : '封禁用户', {
-        inputValue: action === 'mute' ? '3' : '0',
-        inputPattern: /^\d+$/,
-        inputErrorMessage: '请输入非负整数',
-      })
-      days = Number(value)
-      const { value: r } = await ElMessageBox.prompt('处罚原因（选填，审计留痕）', '原因', {
-        inputValue: '',
-        inputType: 'textarea',
-      }).catch(() => ({ value: '' }))
-      reason = r || ''
-    } else {
-      await ElMessageBox.confirm(
-        `确定对「${user.nickname}」执行${action === 'unmute' ? '解除禁言' : '解除封禁'}吗？`,
-        '确认',
-        { type: 'warning' },
-      )
-    }
-    await adminApi.admin.punishUser(user.id, action, days, reason)
-  }, { success: '操作成功', fallback: '操作失败' })
+  const ok = await run(
+    async () => {
+      let days = 0
+      let reason = ''
+      if (action === 'mute' || action === 'ban') {
+        const dayOptions =
+          action === 'mute' ? '禁言天数（1/3/7/30）' : '封禁天数（0=永久，或 7/30/90）'
+        const { value } = await ElMessageBox.prompt(
+          dayOptions,
+          action === 'mute' ? '禁言用户' : '封禁用户',
+          {
+            inputValue: action === 'mute' ? '3' : '0',
+            inputPattern: /^\d+$/,
+            inputErrorMessage: '请输入非负整数',
+          },
+        )
+        days = Number(value)
+        const { value: r } = await ElMessageBox.prompt('处罚原因（选填，审计留痕）', '原因', {
+          inputValue: '',
+          inputType: 'textarea',
+        }).catch(() => ({ value: '' }))
+        reason = r || ''
+      } else {
+        await ElMessageBox.confirm(
+          `确定对「${user.nickname}」执行${action === 'unmute' ? '解除禁言' : '解除封禁'}吗？`,
+          '确认',
+          { type: 'warning' },
+        )
+      }
+      await adminApi.admin.punishUser(user.id, action, days, reason)
+    },
+    { success: '操作成功', fallback: '操作失败' },
+  )
   if (ok) load()
 }
 </script>
 
 <template>
   <div>
-    <PageHead
-      title="用户管理"
-      :sub="`共 ${total} 名用户`"
-    />
+    <PageHead title="用户管理" :sub="`共 ${total} 名用户`" />
 
     <div class="page-card">
       <!-- 查询栏 -->
@@ -106,59 +113,21 @@ async function punish(user: AdminUserItem, action: PunishAction) {
           clearable
           @keyup.enter="search"
         />
-        <el-select
-          v-model="status"
-          class="w-32"
-          @change="search"
-        >
-          <el-option
-            :value="-1"
-            label="全部状态"
-          />
-          <el-option
-            :value="0"
-            label="正常"
-          />
-          <el-option
-            :value="1"
-            label="禁言"
-          />
-          <el-option
-            :value="2"
-            label="封禁"
-          />
+        <el-select v-model="status" class="w-32" @change="search">
+          <el-option :value="-1" label="全部状态" />
+          <el-option :value="0" label="正常" />
+          <el-option :value="1" label="禁言" />
+          <el-option :value="2" label="封禁" />
         </el-select>
-        <el-button
-          type="primary"
-          class="pink-btn"
-          @click="search"
-        >
-          查询
-        </el-button>
-        <el-button
-          v-perm="'user:view'"
-          class="pink-btn"
-          @click="exportCsv"
-        >
-          导出 CSV
-        </el-button>
+        <el-button type="primary" class="pink-btn" @click="search"> 查询 </el-button>
+        <el-button v-perm="'user:view'" class="pink-btn" @click="exportCsv"> 导出 CSV </el-button>
       </div>
 
-      <el-table
-        v-loading="loading"
-        :data="users"
-        stripe
-      >
-        <el-table-column
-          label="用户"
-          min-width="200"
-        >
+      <el-table v-loading="loading" :data="users" stripe>
+        <el-table-column label="用户" min-width="200">
           <template #default="{ row }">
             <div class="flex items-center gap-2">
-              <el-avatar
-                :size="32"
-                :src="row.avatar || defaultAvatar"
-              >
+              <el-avatar :size="32" :src="row.avatar || defaultAvatar">
                 {{ row.nickname?.slice(0, 1) ?? 'U' }}
               </el-avatar>
               <div>
@@ -172,75 +141,47 @@ async function punish(user: AdminUserItem, action: PunishAction) {
             </div>
           </template>
         </el-table-column>
-        <el-table-column
-          label="手机号"
-          min-width="120"
-        >
+        <el-table-column label="手机号" min-width="120">
           <template #default="{ row }">
             <span :class="row.phone ? '' : 'text-text-3'">{{ row.phone || '未绑定' }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="个性签名"
-          min-width="160"
-        >
+        <el-table-column label="个性签名" min-width="160">
           <template #default="{ row }">
-            <span
-              class="text-3 text-text-2"
-              :title="row.signature"
-            >{{ row.signature || '—' }}</span>
+            <span class="text-3 text-text-2" :title="row.signature">{{
+              row.signature || '—'
+            }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="经验/硬币"
-          min-width="110"
-        >
+        <el-table-column label="经验/硬币" min-width="110">
           <template #default="{ row }">
             <span class="text-3 text-text-2">{{ row.exp }} / {{ row.coin }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="注册时间"
-          min-width="110"
-        >
+        <el-table-column label="注册时间" min-width="110">
           <template #default="{ row }">
-            <span class="text-3 text-text-2">{{ fmtDate(row.created_at) }}</span>
+            <span class="text-3 text-text-2">{{ formatDateTime(row.created_at) }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="状态"
-          width="90"
-        >
+        <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="STATUS_META[row.status]?.type">
               {{ STATUS_META[row.status]?.label ?? '未知' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column
-          label="处罚到期"
-          min-width="180"
-        >
+        <el-table-column label="处罚到期" min-width="180">
           <template #default="{ row }">
-            <span
-              v-if="row.status === 1 && row.muted_until"
-              class="text-3 text-text-2"
-            >禁言至 {{ new Date(row.muted_until).toLocaleString() }}</span>
-            <span
-              v-else-if="row.status === 2"
-              class="text-3 text-text-2"
-            >{{ row.banned_until ? '封禁至 ' + new Date(row.banned_until).toLocaleString() : '永久封禁' }}</span>
-            <span
-              v-else
-              class="text-3 text-text-3"
-            >—</span>
+            <span v-if="row.status === 1 && row.muted_until" class="text-3 text-text-2"
+              >禁言至 {{ formatDateTime(row.muted_until) }}</span
+            >
+            <span v-else-if="row.status === 2" class="text-3 text-text-2">{{
+              row.banned_until ? '封禁至 ' + formatDateTime(row.banned_until) : '永久封禁'
+            }}</span>
+            <span v-else class="text-3 text-text-3">—</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="操作"
-          width="260"
-          fixed="right"
-        >
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <template v-if="row.status === 0">
               <el-button
