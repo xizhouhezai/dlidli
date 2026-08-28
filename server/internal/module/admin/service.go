@@ -93,6 +93,13 @@ func NewService(repo *Repo, videoSvc *video.Service, accountSvc *account.Service
 	return s
 }
 
+// addAudit 写审计日志：审计是旁路不阻塞业务动作，但失败必须告警，不允许静默丢失。
+func (s *Service) addAudit(l *AuditLog) {
+	if err := s.repo.AddAudit(l); err != nil {
+		s.log.Warn("审计日志写入失败", zap.Error(err), zap.String("action", l.Action), zap.Int64("oid", l.Oid))
+	}
+}
+
 // reloadWords 从 DB 重新加载词库并热刷到 moderate（启动与增删后调用）。
 func (s *Service) reloadWords() {
 	words, err := s.repo.AllWordStrings()
@@ -162,11 +169,9 @@ func (s *Service) SetVideoStatus(ctx context.Context, adminID int64, bv string, 
 		action = "video_restore"
 	}
 	oid, _ := strconv.ParseInt(bv[2:], 36, 64)
-	if err := s.repo.AddAudit(&AuditLog{
+	s.addAudit(&AuditLog{
 		AdminID: adminID, Action: action, ObjType: "video", Oid: oid, Detail: "bvid=" + bv,
-	}); err != nil {
-		s.log.Warn("稿件定档审计留痕失败", zap.String("bvid", bv), zap.Error(err))
-	}
+	})
 	return nil
 }
 
@@ -176,11 +181,9 @@ func (s *Service) DeleteVideo(ctx context.Context, adminID int64, bv string) err
 		return err
 	}
 	oid, _ := strconv.ParseInt(bv[2:], 36, 64)
-	if err := s.repo.AddAudit(&AuditLog{
+	s.addAudit(&AuditLog{
 		AdminID: adminID, Action: "video_delete", ObjType: "video", Oid: oid, Detail: "bvid=" + bv,
-	}); err != nil {
-		s.log.Warn("稿件删除审计留痕失败", zap.String("bvid", bv), zap.Error(err))
-	}
+	})
 	return nil
 }
 
@@ -195,12 +198,10 @@ func (s *Service) Review(ctx context.Context, adminID int64, bv string, req *Rev
 		action = "reject"
 	}
 	oid, _ := strconv.ParseInt(bv[2:], 36, 64) // 仅用于索引参考，精确对象以 detail 为准
-	if err := s.repo.AddAudit(&AuditLog{
+	s.addAudit(&AuditLog{
 		AdminID: adminID, Action: action, ObjType: "video", Oid: oid,
 		Detail: "bvid=" + bv + " reason=" + req.Reason,
-	}); err != nil {
-		s.log.Warn("审计日志写入失败", zap.Error(err))
-	}
+	})
 	return nil
 }
 
@@ -219,7 +220,7 @@ func (s *Service) AddWord(adminID int64, word string) (*SensitiveWord, error) {
 		return nil, err
 	}
 	s.reloadWords()
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_word", ObjType: "sensitive_word", Oid: w.ID, Detail: word})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "add_word", ObjType: "sensitive_word", Oid: w.ID, Detail: word})
 	return w, nil
 }
 
@@ -229,7 +230,7 @@ func (s *Service) DeleteWord(adminID, id int64) error {
 		return err
 	}
 	s.reloadWords()
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_word", ObjType: "sensitive_word", Oid: id})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "del_word", ObjType: "sensitive_word", Oid: id})
 	return nil
 }
 
@@ -243,7 +244,7 @@ func (s *Service) PunishUser(ctx context.Context, adminID, uid int64, action str
 	if err := s.accountSvc.PunishUser(ctx, uid, action, days); err != nil {
 		return err
 	}
-	_ = s.repo.AddAudit(&AuditLog{
+	s.addAudit(&AuditLog{
 		AdminID: adminID, Action: action, ObjType: "user", Oid: uid,
 		Detail: fmt.Sprintf("days=%d reason=%s", days, reason),
 	})
@@ -263,7 +264,7 @@ func (s *Service) CreateCategory(ctx context.Context, adminID int64, req *video.
 	if err != nil {
 		return nil, err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_category", ObjType: "category", Oid: int64(c.ID), Detail: req.Name})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "add_category", ObjType: "category", Oid: int64(c.ID), Detail: req.Name})
 	return c, nil
 }
 
@@ -272,7 +273,7 @@ func (s *Service) UpdateCategory(ctx context.Context, adminID int64, id int, req
 	if err := s.videoSvc.UpdateCategory(ctx, id, req); err != nil {
 		return err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_category", ObjType: "category", Oid: int64(id), Detail: req.Name})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "edit_category", ObjType: "category", Oid: int64(id), Detail: req.Name})
 	return nil
 }
 
@@ -281,6 +282,6 @@ func (s *Service) DeleteCategory(ctx context.Context, adminID int64, id int) err
 	if err := s.videoSvc.DeleteCategory(ctx, id); err != nil {
 		return err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_category", ObjType: "category", Oid: int64(id)})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "del_category", ObjType: "category", Oid: int64(id)})
 	return nil
 }

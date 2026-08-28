@@ -65,10 +65,10 @@ func (r *Repo) CreateBlock(b *DanmakuBlock) error {
 	return r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(b).Error
 }
 
-// ListBlocks 某用户全部屏蔽项（新→旧）。
+// ListBlocks 某用户全部屏蔽项（新→旧；DB 层兜底上限，防服务层校验被绕过时全量拉取）。
 func (r *Repo) ListBlocks(uid int64) ([]DanmakuBlock, error) {
 	var list []DanmakuBlock
-	err := r.db.Where("user_id = ?", uid).Order("id DESC").Find(&list).Error
+	err := r.db.Where("user_id = ?", uid).Order("id DESC").Limit(maxBlockWords).Find(&list).Error
 	return list, err
 }
 

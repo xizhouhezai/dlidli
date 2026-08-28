@@ -183,7 +183,7 @@ func (s *Service) CreatePermission(adminID int64, req *SavePermissionReq) (*Perm
 	if err := s.repo.CreatePermission(p); err != nil {
 		return nil, err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_permission", ObjType: "permission", Oid: p.ID, Detail: req.Code})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "add_permission", ObjType: "permission", Oid: p.ID, Detail: req.Code})
 	return p, nil
 }
 
@@ -210,7 +210,7 @@ func (s *Service) UpdatePermission(adminID, id int64, req *SavePermissionReq) er
 	if err := s.repo.UpdatePermission(id, fields); err != nil {
 		return err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_permission", ObjType: "permission", Oid: id, Detail: p.Code})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "edit_permission", ObjType: "permission", Oid: id, Detail: p.Code})
 	return nil
 }
 
@@ -234,7 +234,7 @@ func (s *Service) DeletePermission(adminID, id int64) error {
 	if err := s.repo.DeletePermission(id); err != nil {
 		return err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_permission", ObjType: "permission", Oid: id, Detail: p.Code})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "del_permission", ObjType: "permission", Oid: id, Detail: p.Code})
 	return nil
 }
 
@@ -269,7 +269,7 @@ func (s *Service) CreateRole(adminID int64, req *SaveRoleReq) (*Role, error) {
 		return nil, err
 	}
 	_ = s.repo.SetRolePerms(role.ID, req.Perms)
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_role", ObjType: "role", Oid: role.ID, Detail: req.Name})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "add_role", ObjType: "role", Oid: role.ID, Detail: req.Name})
 	return role, nil
 }
 
@@ -288,7 +288,7 @@ func (s *Service) UpdateRole(adminID, id int64, req *SaveRoleReq) error {
 	if role.Code != SuperRoleCode {
 		_ = s.repo.SetRolePerms(id, req.Perms)
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_role", ObjType: "role", Oid: id, Detail: req.Name})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "edit_role", ObjType: "role", Oid: id, Detail: req.Name})
 	return nil
 }
 
@@ -306,7 +306,7 @@ func (s *Service) DeleteRole(adminID, id int64) error {
 	if err := s.repo.DeleteRole(id); err != nil {
 		return err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_role", ObjType: "role", Oid: id, Detail: role.Name})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "del_role", ObjType: "role", Oid: id, Detail: role.Name})
 	return nil
 }
 
@@ -366,7 +366,7 @@ func (s *Service) CreateAdmin(adminID int64, req *SaveAdminReq) (*AdminUser, err
 		return nil, err
 	}
 	_ = s.repo.SetAdminRoles(u.ID, parseRoleIDs(req.RoleIDs))
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_admin", ObjType: "admin", Oid: u.ID, Detail: req.Username})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "add_admin", ObjType: "admin", Oid: u.ID, Detail: req.Username})
 	return u, nil
 }
 
@@ -382,7 +382,7 @@ func (s *Service) UpdateAdmin(adminID, id int64, req *SaveAdminReq) error {
 		return err
 	}
 	_ = s.repo.SetAdminRoles(id, parseRoleIDs(req.RoleIDs))
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_admin", ObjType: "admin", Oid: id, Detail: req.Username})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "edit_admin", ObjType: "admin", Oid: id, Detail: req.Username})
 	return nil
 }
 
@@ -405,7 +405,7 @@ func (s *Service) ToggleAdmin(adminID, id int64, status int8) error {
 	if status != 0 {
 		act = "disable_admin"
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: act, ObjType: "admin", Oid: id})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: act, ObjType: "admin", Oid: id})
 	return nil
 }
 
@@ -423,7 +423,7 @@ func (s *Service) DeleteAdmin(adminID, id int64) error {
 	if err := s.repo.DeleteAdmin(id); err != nil {
 		return err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_admin", ObjType: "admin", Oid: id, Detail: u.Username})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "del_admin", ObjType: "admin", Oid: id, Detail: u.Username})
 	return nil
 }
 
@@ -442,6 +442,6 @@ func (s *Service) ResetAdminPwd(adminID, id int64, newPwd string) error {
 	if err := s.repo.UpdateAdmin(id, map[string]any{"password": string(hash)}); err != nil {
 		return err
 	}
-	_ = s.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "reset_pwd", ObjType: "admin", Oid: id})
+	s.addAudit(&AuditLog{AdminID: adminID, Action: "reset_pwd", ObjType: "admin", Oid: id})
 	return nil
 }

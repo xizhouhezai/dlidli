@@ -133,7 +133,7 @@ func (h *Handler) createConfig(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	_ = h.svc.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_config", ObjType: "config", Detail: req.ConfigKey})
+	h.svc.addAudit(&AuditLog{AdminID: adminID, Action: "add_config", ObjType: "config", Detail: req.ConfigKey})
 	response.OK(c, nil)
 }
 
@@ -162,7 +162,7 @@ func (h *Handler) updateConfig(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	_ = h.svc.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_config", ObjType: "config", Oid: id, Detail: req.ConfigKey})
+	h.svc.addAudit(&AuditLog{AdminID: adminID, Action: "edit_config", ObjType: "config", Oid: id, Detail: req.ConfigKey})
 	response.OK(c, nil)
 }
 
@@ -184,7 +184,7 @@ func (h *Handler) deleteConfig(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	_ = h.svc.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_config", ObjType: "config", Oid: id})
+	h.svc.addAudit(&AuditLog{AdminID: adminID, Action: "del_config", ObjType: "config", Oid: id})
 	response.OK(c, nil)
 }
 
@@ -224,7 +224,7 @@ func (h *Handler) createDict(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	_ = h.svc.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "add_dict", ObjType: "dict", Detail: req.DictType + ":" + req.Value})
+	h.svc.addAudit(&AuditLog{AdminID: adminID, Action: "add_dict", ObjType: "dict", Detail: req.DictType + ":" + req.Value})
 	response.OK(c, nil)
 }
 
@@ -253,7 +253,7 @@ func (h *Handler) updateDict(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	_ = h.svc.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "edit_dict", ObjType: "dict", Oid: id, Detail: req.DictType + ":" + req.Value})
+	h.svc.addAudit(&AuditLog{AdminID: adminID, Action: "edit_dict", ObjType: "dict", Oid: id, Detail: req.DictType + ":" + req.Value})
 	response.OK(c, nil)
 }
 
@@ -275,7 +275,7 @@ func (h *Handler) deleteDict(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	_ = h.svc.repo.AddAudit(&AuditLog{AdminID: adminID, Action: "del_dict", ObjType: "dict", Oid: id})
+	h.svc.addAudit(&AuditLog{AdminID: adminID, Action: "del_dict", ObjType: "dict", Oid: id})
 	response.OK(c, nil)
 }
 

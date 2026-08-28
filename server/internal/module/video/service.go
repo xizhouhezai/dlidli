@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -257,14 +258,22 @@ func (s *Service) Parts(ctx context.Context, bv string) ([]PartItem, error) {
 	if len(parts) == 0 {
 		return []PartItem{}, nil
 	}
+	// 一次取全量流按分P分组（此前每分P一查，多P稿件 N+1）
+	streams, err := s.repo.StreamsByVideo(v.ID)
+	if err != nil {
+		return nil, err
+	}
+	byPart := make(map[int8][]Stream, len(parts))
+	for _, st := range streams {
+		byPart[st.PartIndex] = append(byPart[st.PartIndex], st)
+	}
 	items := make([]PartItem, 0, len(parts))
 	for _, p := range parts {
-		streams, err := s.repo.StreamsByVideoPart(v.ID, p.PartIndex)
-		if err != nil {
-			return nil, err
-		}
-		sis := make([]StreamItem, 0, len(streams))
-		for _, st := range streams {
+		ss := byPart[p.PartIndex]
+		// 对齐 StreamsByVideoPart 的质量升序展示
+		sort.Slice(ss, func(i, j int) bool { return ss[i].Quality < ss[j].Quality })
+		sis := make([]StreamItem, 0, len(ss))
+		for _, st := range ss {
 			sis = append(sis, StreamItem{Quality: st.Quality, Format: st.Format, URL: s.signedPlayURL(st.PlayPath)})
 		}
 		items = append(items, PartItem{Index: int(p.PartIndex), Title: p.Title, Duration: p.Duration, Streams: sis})
@@ -562,7 +571,7 @@ func (s *Service) SetPublishHook(h PublishHook) {
 	s.publishHook = h
 }
 
-func (s *Service) firePublish(videoID, userID int64) {
+func (s *Service) firePublish(ctx context.Context, videoID, userID int64) {
 	if s.publishHook != nil {
 		// 钩子为外部注入的旁路逻辑，异步执行并 panic 自隔离（Recovery 中间件不覆盖 worker goroutine）
 		go func() {
@@ -576,12 +585,12 @@ func (s *Service) firePublish(videoID, userID int64) {
 	}
 	// 投稿发布 +10 经验（每日上限 2 次，M2-GRW-01）
 	if s.growthSvc != nil {
-		s.growthSvc.AddExpWithLimit(context.Background(), userID, growth.ReasonVideoUpload)
+		s.growthSvc.AddExpWithLimit(ctx, userID, growth.ReasonVideoUpload)
 	}
 }
 
 // Review 审核定档：待审 → 发布 / 驳回。
-func (s *Service) Review(_ context.Context, bv string, approve bool, reason string) error {
+func (s *Service) Review(ctx context.Context, bv string, approve bool, reason string) error {
 	v, err := s.repo.FindByBvid(bv)
 	if err != nil {
 		return err
@@ -605,7 +614,7 @@ func (s *Service) Review(_ context.Context, bv string, approve bool, reason stri
 		return err
 	}
 	if approve {
-		s.firePublish(v.ID, v.UserID)
+		s.firePublish(ctx, v.ID, v.UserID)
 	}
 	return nil
 }

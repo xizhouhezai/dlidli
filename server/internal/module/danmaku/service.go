@@ -285,8 +285,13 @@ func (s *Service) ListSegment(ctx context.Context, bv string, seg int, viewerUID
 	var items []Item
 	key := segKey(videoID, seg)
 	if cached, err := s.rdb.Get(ctx, key).Result(); err == nil {
-		_ = json.Unmarshal([]byte(cached), &items)
-	} else {
+		if err := json.Unmarshal([]byte(cached), &items); err != nil {
+			// 缓存数据损坏视同 miss：记日志并回源 DB，避免无声返回空列表
+			s.log.Warn("弹幕分段缓存反序列化失败，回源 DB", zap.String("key", key), zap.Error(err))
+			items = nil
+		}
+	}
+	if items == nil {
 		list, err := s.repo.ListSegment(videoID, seg*SegmentMS, (seg+1)*SegmentMS)
 		if err != nil {
 			return nil, err
@@ -340,7 +345,7 @@ func (s *Service) DanmakuBrief(_ context.Context, id int64) (content string, use
 }
 
 // AdminDeleteDanmaku 管理员删除弹幕（举报处理用）。
-func (s *Service) AdminDeleteDanmaku(_ context.Context, id int64) error {
+func (s *Service) AdminDeleteDanmaku(ctx context.Context, id int64) error {
 	d, err := s.repo.FindByID(id)
 	if err != nil {
 		return err
@@ -352,8 +357,8 @@ func (s *Service) AdminDeleteDanmaku(_ context.Context, id int64) error {
 		return err
 	}
 	if d.Status == StatusNormal {
-		s.rdb.Del(context.Background(), segKey(d.VideoID, d.TimeMs/SegmentMS))
-		_ = s.videoSvc.AddStat(context.Background(), d.VideoID, "danmaku_cnt", -1)
+		s.rdb.Del(ctx, segKey(d.VideoID, d.TimeMs/SegmentMS))
+		_ = s.videoSvc.AddStat(ctx, d.VideoID, "danmaku_cnt", -1)
 	}
 	return nil
 }
