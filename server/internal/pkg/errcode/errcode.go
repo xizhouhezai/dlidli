@@ -45,6 +45,8 @@ var (
 	ErrAccountNotExists = New(20008, "账号不存在")
 	ErrCoinNotEnough    = New(20009, "硬币不足，每日登录可获得硬币")
 	ErrUserMuted        = New(20010, "账号已被禁言，暂无法发布内容")
+	ErrAccountExists    = New(20011, "该邮箱已注册")
+	ErrAccountInactive  = New(20012, "账号未激活，请先查收激活邮件")
 )
 
 // 视频/上传错误码（3xxxx）
