@@ -55,14 +55,16 @@ func NewHub(allowOrigins []string, log *zap.Logger) *Hub {
 }
 
 // Push 向用户推送一条消息（在线时；无连接 no-op）。
+// 迭代期间全程持读锁：send 为非阻塞投递不会死锁，且与 remove 的写锁
+// （delete + close(send)）互斥，避免并发迭代/写 map 与 send on closed channel。
 func (h *Hub) Push(uid int64, item MessageItem) {
 	msg, err := json.Marshal(WSMsg{Type: "message", Data: item})
 	if err != nil {
 		return
 	}
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 	r, ok := h.users[uid]
-	h.mu.RUnlock()
 	if !ok {
 		return
 	}

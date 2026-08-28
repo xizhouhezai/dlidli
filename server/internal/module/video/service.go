@@ -564,7 +564,15 @@ func (s *Service) SetPublishHook(h PublishHook) {
 
 func (s *Service) firePublish(videoID, userID int64) {
 	if s.publishHook != nil {
-		go s.publishHook(videoID, userID)
+		// 钩子为外部注入的旁路逻辑，异步执行并 panic 自隔离（Recovery 中间件不覆盖 worker goroutine）
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					s.log.Error("发布钩子 panic，已隔离", zap.Any("recover", r), zap.Int64("video", videoID))
+				}
+			}()
+			s.publishHook(videoID, userID)
+		}()
 	}
 	// 投稿发布 +10 经验（每日上限 2 次，M2-GRW-01）
 	if s.growthSvc != nil {

@@ -17,6 +17,9 @@ import (
 
 const pollInterval = 3 * time.Second
 
+// transcodeJobTimeout 单个转码任务上限：ffmpeg/ffprobe 挂死时由 ctx 超时兜底，避免永久占用 Worker。
+const transcodeJobTimeout = 30 * time.Minute
+
 // 转码档位参数（对齐 docs/architecture/video-pipeline.md §3）
 var presets = map[int16]struct {
 	height  int
@@ -67,6 +70,20 @@ func (s *Service) workerLoop(ctx context.Context, resolver storage.PathResolver,
 }
 
 func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver, job *TranscodeJob, workerID int) {
+	// 单任务超时 + panic 自隔离：任一任务异常只回写失败状态，不能拖死 Worker 或击穿进程
+	ctx, cancel := context.WithTimeout(ctx, transcodeJobTimeout)
+	defer cancel()
+	completed := false
+	defer func() {
+		if r := recover(); r != nil {
+			s.log.Error("转码任务 panic，已隔离", zap.Any("recover", r), zap.Int64("job_id", job.ID))
+			if !completed {
+				if err := s.repo.FailJob(job, fmt.Sprintf("worker panic: %v", r)); err != nil {
+					s.log.Error("panic 后回写失败状态出错", zap.Error(err), zap.Int64("job_id", job.ID))
+				}
+			}
+		}
+	}()
 	log := s.log.With(
 		zap.Int64("job_id", job.ID),
 		zap.Int64("video_id", job.VideoID),
@@ -87,6 +104,7 @@ func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver,
 		log.Error("回写完成状态出错", zap.Error(err))
 		return
 	}
+	completed = true
 	log.Info("转码完成", zap.Duration("cost", time.Since(start)))
 
 	// 全部档位完成 → 推进稿件状态机：转码中 → 待审核（dev autoApprove 直接发布）
