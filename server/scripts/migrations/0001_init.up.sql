@@ -20,7 +20,7 @@ CREATE TABLE `user_auth` (
   `id`            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `user_id`       BIGINT UNSIGNED NOT NULL,
   `identity_type` TINYINT      NOT NULL COMMENT '1手机 2邮箱 3微信',
-  `identifier`    VARCHAR(128) NOT NULL COMMENT '手机号(加密)/邮箱/openid',
+  `identifier`    VARCHAR(128) NOT NULL COMMENT '手机号(AES-GCM密文)/邮箱/openid',
   `credential`    VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'bcrypt密码，三方为空',
   `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY `uk_type_identifier` (`identity_type`, `identifier`),

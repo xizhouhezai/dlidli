@@ -3,6 +3,7 @@ package account
 import (
 	"errors"
 
+	"github.com/dlidli/server/internal/pkg/encrypt"
 	"gorm.io/gorm"
 )
 
@@ -15,9 +16,29 @@ func NewRepo(db *gorm.DB) *Repo {
 }
 
 // FindAuth 按认证方式+标识查找凭据；不存在返回 (nil, nil)。
+// 优先按确定性哈希精确匹配（ACC-43 密文存储）；未命中时回退旧明文列，
+// 兼容尚未惰性迁移的存量手机号/邮箱账号。
 func (r *Repo) FindAuth(identityType int8, identifier string) (*UserAuth, error) {
+	hash := encrypt.IdentifierHash(identityType, identifier)
 	var auth UserAuth
-	err := r.db.Where("identity_type = ? AND identifier = ?", identityType, identifier).First(&auth).Error
+	err := r.db.Where("identity_type = ? AND identifier_hash = ?", identityType, hash).First(&auth).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// 存量明文回退：命中后由调用方做惰性加密回填（见 service migrateAuth）
+		err = r.db.Where("identity_type = ? AND identifier = ?", identityType, identifier).First(&auth).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &auth, nil
+}
+
+// FindAuthByHash 纯按哈希查找（新数据路径，无需明文回退）。
+func (r *Repo) FindAuthByHash(identityType int8, hash string) (*UserAuth, error) {
+	var auth UserAuth
+	err := r.db.Where("identity_type = ? AND identifier_hash = ?", identityType, hash).First(&auth).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -76,6 +97,13 @@ func (r *Repo) FindAuthByUser(uid int64, identityType int8) (*UserAuth, error) {
 	return &auth, nil
 }
 
+// UpdateIdentifierEncrypted 存量明文标识加密回填：写密文 + 哈希（ACC-43）。
+func (r *Repo) UpdateIdentifierEncrypted(authID int64, ciphertext, hash string) error {
+	return r.db.Model(&UserAuth{}).
+		Where("id = ?", authID).
+		Updates(map[string]any{"identifier": ciphertext, "identifier_hash": hash}).Error
+}
+
 // UpdateCredentialByUser 更新认证凭证（密码 bcrypt）。
 func (r *Repo) UpdateCredentialByUser(uid int64, identityType int8, credential string) error {
 	return r.db.Model(&UserAuth{}).
@@ -102,8 +130,9 @@ func (r *Repo) SearchByNickname(keyword string, page, size int) ([]User, int64, 
 }
 
 // AdminSearchUsers 后台用户查询：keyword 纯数字时按 UID/手机号精确匹配，否则按昵称模糊；
-// status 传 -1 表示全部状态。
-func (r *Repo) AdminSearchUsers(keyword string, status int, page, size int) ([]User, int64, error) {
+// status 传 -1 表示全部状态。phoneHash 为手机号确定性哈希（ACC-43 密文存储下按哈希匹配），
+// 由 service 层计算传入；空串表示该分支不参与（纯 UID 匹配时不传哈希亦可）。
+func (r *Repo) AdminSearchUsers(keyword string, phoneHash string, status int, page, size int) ([]User, int64, error) {
 	q := r.db.Model(&User{})
 	if keyword != "" {
 		isDigits := true
@@ -114,8 +143,16 @@ func (r *Repo) AdminSearchUsers(keyword string, status int, page, size int) ([]U
 			}
 		}
 		if isDigits {
-			q = q.Where("id = ? OR id IN (SELECT user_id FROM user_auth WHERE identity_type = ? AND identifier = ?)",
-				keyword, IdentityPhone, keyword)
+			cond := "id = ?"
+			args := []any{keyword}
+			if phoneHash != "" {
+				cond += " OR id IN (SELECT user_id FROM user_auth WHERE identity_type = ? AND identifier_hash = ?)"
+				args = append(args, IdentityPhone, phoneHash)
+			}
+			// 兼容历史明文：仍未回填的存量手机号按明文 identifier 继续可查（两阶段迁移期间）
+			cond += " OR id IN (SELECT user_id FROM user_auth WHERE identity_type = ? AND identifier = ?)"
+			args = append(args, IdentityPhone, keyword)
+			q = q.Where(cond, args...)
 		} else {
 			q = q.Where("nickname LIKE ?", "%"+keyword+"%")
 		}
@@ -133,6 +170,7 @@ func (r *Repo) AdminSearchUsers(keyword string, status int, page, size int) ([]U
 }
 
 // PhoneByUsers 批量取用户手机号（identity_type=1），返回 uid→手机号 映射（未绑定不出现）。
+// 返回的为密文（ACC-43），由调用方解密展示。
 func (r *Repo) PhoneByUsers(ids []int64) map[int64]string {
 	out := make(map[int64]string, len(ids))
 	if len(ids) == 0 {

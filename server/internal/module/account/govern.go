@@ -6,8 +6,23 @@ import (
 	"context"
 	"time"
 
+	"github.com/dlidli/server/internal/pkg/encrypt"
 	"github.com/dlidli/server/internal/pkg/errcode"
+	"go.uber.org/zap"
 )
+
+// isPhonePlain 判断是否为历史明文手机号（11 位数字，1 开头；区别于 base64 密文）。
+func isPhonePlain(s string) bool {
+	if len(s) != 11 || s[0] != '1' {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
 
 // AdminUserItem 后台用户列表项。
 type AdminUserItem struct {
@@ -28,7 +43,11 @@ type AdminUserItem struct {
 
 // AdminListUsers 后台用户查询（UID/手机号/昵称，可按状态过滤）。
 func (s *Service) AdminListUsers(_ context.Context, keyword string, status, page, size int) ([]AdminUserItem, int64, error) {
-	users, total, err := s.repo.AdminSearchUsers(keyword, status, page, size)
+	var phoneHash string
+	if isPhonePlain(keyword) {
+		phoneHash = encrypt.IdentifierHash(int8(IdentityPhone), keyword)
+	}
+	users, total, err := s.repo.AdminSearchUsers(keyword, phoneHash, status, page, size)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -36,17 +55,36 @@ func (s *Service) AdminListUsers(_ context.Context, keyword string, status, page
 	for _, u := range users {
 		ids = append(ids, u.ID)
 	}
-	phones := s.repo.PhoneByUsers(ids)
+	phones := s.repo.PhoneByUsers(ids) // 密文（ACC-43）
 	items := make([]AdminUserItem, 0, len(users))
 	for _, u := range users {
 		items = append(items, AdminUserItem{
-			ID: u.ID, Nickname: u.Nickname, Avatar: u.Avatar, Phone: phones[u.ID],
+			ID: u.ID, Nickname: u.Nickname, Avatar: u.Avatar,
+			Phone:     s.decryptPhone(phones[u.ID]),
 			Signature: u.Signature, Gender: u.Gender, Level: u.Level, Exp: u.Exp, Coin: u.Coin,
 			Status: u.Status, MutedUntil: u.MutedUntil, BannedUntil: u.BannedUntil,
 			CreatedAt: u.CreatedAt,
 		})
 	}
 	return items, total, nil
+}
+
+// decryptPhone 解密手机号密文；空值/历史明文/解密失败均返回空串（后台展示兜底，不阻塞列举）。
+func (s *Service) decryptPhone(ciphertext string) string {
+	if ciphertext == "" {
+		return ""
+	}
+	// 兼容未迁移的明文历史数据：无前缀且非 base64 密文特征时原样返回
+	out, err := encrypt.Decrypt(s.phKey(), ciphertext)
+	if err != nil {
+		// 历史明文：11 位纯数字，直接展示
+		if isPhonePlain(ciphertext) {
+			return ciphertext
+		}
+		s.log.Warn("后台手机号解密失败", zap.Int("len", len(ciphertext)), zap.Error(err))
+		return ""
+	}
+	return out
 }
 
 // PunishUser 处罚/解除：action = mute|unmute|ban|unban；days 处罚天数（ban 传 0 = 永久）。
