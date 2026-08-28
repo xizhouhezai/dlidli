@@ -39,5 +39,6 @@ storage:
 transcode:
   enabled: true
   workers: 1
-  ffmpegPath: C:\Users\yr137\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe
-  ffprobePath: C:\Users\yr137\AppData\Local\Microsoft\WinGet\Links\ffprobe.exe
+  # ffmpeg/ffprobe 缺省走 PATH；特殊环境用环境变量覆盖：
+  #   DLIDLI_TRANSCODE_FFMPEGPATH / DLIDLI_TRANSCODE_FFPROBEPATH
+

@@ -1,0 +1,42 @@
+# prod 配置模板：敏感项（JWT 密钥 / 数据库 DSN / Redis 密码）一律通过环境变量注入，
+# 不入库。Load() 对 env=prod 做强制校验：JWT secret 与 MySQL DSN 缺失或为 dev 占位值
+# 时拒绝启动（见 internal/pkg/config/config.go validateProd）。
+app:
+  name: dlidli-api
+  env: prod
+  port: 8000
+  autoApprove: false # 生产必须走人工审核
+  allowOrigins:
+    - https://dlidli.example.com # TODO: 替换为正式域名
+
+log:
+  level: info
+
+mysql:
+  dsn: "" # 必填：DLIDLI_MYSQL_DSN
+  maxOpenConns: 100
+  maxIdleConns: 20
+
+redis:
+  addr: 127.0.0.1:6379
+  password: "" # 按需：DLIDLI_REDIS_PASSWORD
+  db: 0
+
+jwt:
+  secret: "" # 必填：DLIDLI_JWT_SECRET
+  accessTtlMin: 120
+
+ratelimit:
+  enabled: true
+  perMinute: 30
+
+storage:
+  driver: local
+  localDir: ./uploads_prod
+  baseUrl: "" # 必填：对外可访问的静态资源前缀，或 DLIDLI_STORAGE_BASEURL
+
+transcode:
+  enabled: true
+  workers: 2
+  # ffmpeg/ffprobe 缺省走 PATH；特殊环境用环境变量覆盖：
+  #   DLIDLI_TRANSCODE_FFMPEGPATH / DLIDLI_TRANSCODE_FFPROBEPATH
