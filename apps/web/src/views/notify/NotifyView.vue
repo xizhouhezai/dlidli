@@ -52,19 +52,10 @@ function open(n: NotifyItem) {
 
 <template>
   <div class="mx-auto max-w-160">
-    <h2 class="m-0 mb-3.5 text-5">
-      消息通知
-    </h2>
+    <h2 class="m-0 mb-3.5 text-5">消息通知</h2>
 
-    <el-skeleton
-      v-if="loading"
-      :rows="5"
-      animated
-    />
-    <el-empty
-      v-else-if="list.length === 0"
-      description="还没有收到任何消息"
-    />
+    <el-skeleton v-if="loading" :rows="5" animated />
+    <el-empty v-else-if="list.length === 0" description="还没有收到任何消息" />
 
     <div
       v-for="n in list"
@@ -87,29 +78,15 @@ function open(n: NotifyItem) {
           {{ n.content }}
         </p>
         <p class="flex items-center mt-1 mb-0 text-3 text-text-3">
-          <span
-            class="mr-1"
-            :class="TYPE_META[n.type]?.icon"
-          />{{ TYPE_META[n.type]?.label }} · {{ formatPubdate(n.created_at) }}
+          <span class="mr-1" :class="TYPE_META[n.type]?.icon" />{{ TYPE_META[n.type]?.label }} ·
+          {{ formatPubdate(n.created_at) }}
         </p>
       </div>
-      <span
-        v-if="!n.is_read"
-        class="shrink-0 w-2 h-2 rounded-full bg-primary"
-      />
+      <span v-if="!n.is_read" class="shrink-0 w-2 h-2 rounded-full bg-primary" />
     </div>
 
-    <div
-      v-if="hasMore && !loading"
-      class="text-center py-3"
-    >
-      <el-button
-        link
-        :loading="loadingMore"
-        @click="load(false)"
-      >
-        加载更多
-      </el-button>
+    <div v-if="hasMore && !loading" class="text-center py-3">
+      <el-button link :loading="loadingMore" @click="load(false)"> 加载更多 </el-button>
     </div>
   </div>
 </template>

@@ -34,4 +34,3 @@ export const ErrCode = {
   NotFound: 10005,
   TooManyRequests: 10006,
 } as const
-

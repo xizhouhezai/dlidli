@@ -81,50 +81,32 @@ onBeforeUnmount(() => {
           class="sort-tab"
           :class="{ 'is-active': sort === 'recommend' }"
           @click="switchSort('recommend')"
-        >推荐</span>
+          >推荐</span
+        >
         <span class="text-border">|</span>
-        <span
-          class="sort-tab"
-          :class="{ 'is-active': sort === 'new' }"
-          @click="switchSort('new')"
-        >最新</span>
+        <span class="sort-tab" :class="{ 'is-active': sort === 'new' }" @click="switchSort('new')"
+          >最新</span
+        >
         <span class="text-border">|</span>
-        <span
-          class="sort-tab"
-          :class="{ 'is-active': sort === 'hot' }"
-          @click="switchSort('hot')"
-        >最热</span>
+        <span class="sort-tab" :class="{ 'is-active': sort === 'hot' }" @click="switchSort('hot')"
+          >最热</span
+        >
       </span>
     </div>
 
     <!-- 推荐区：左大轮播 + 右 2×2 网格（仅首页 Tab 展示） -->
-    <div
-      v-if="activeCategory === 0 && banners.length > 0"
-      class="reco mb-5"
-    >
-      <el-carousel
-        class="reco__carousel"
-        height="320px"
-        :interval="5000"
-        arrow="hover"
-      >
-        <el-carousel-item
-          v-for="b in banners"
-          :key="b.bvid"
-          @click="onCardClick(b)"
-        >
+    <div v-if="activeCategory === 0 && banners.length > 0" class="reco mb-5">
+      <el-carousel class="reco__carousel" height="320px" :interval="5000" arrow="hover">
+        <el-carousel-item v-for="b in banners" :key="b.bvid" @click="onCardClick(b)">
           <div class="banner__slide">
-            <img
-              class="banner__img"
-              :src="b.cover || defaultCover"
-              :alt="b.title"
-            >
+            <img class="banner__img" :src="b.cover || defaultCover" :alt="b.title" />
             <div class="banner__mask">
               <p class="banner__title">
                 {{ b.title }}
               </p>
               <p class="banner__meta flex items-center">
-                <span class="i-mingcute-play-circle-line mr-1" />{{ formatCount(b.stat.view) }} · {{ b.owner.nickname }}
+                <span class="i-mingcute-play-circle-line mr-1" />{{ formatCount(b.stat.view) }} ·
+                {{ b.owner.nickname }}
               </p>
             </div>
           </div>
@@ -133,49 +115,35 @@ onBeforeUnmount(() => {
 
       <!-- 右侧 2×2 推荐网格 -->
       <div class="reco__side">
-        <div
-          v-for="r in sideRecos"
-          :key="r.bvid"
-          class="reco-card"
-          @click="onCardClick(r)"
-        >
+        <div v-for="r in sideRecos" :key="r.bvid" class="reco-card" @click="onCardClick(r)">
           <div class="reco-card__cover">
-            <img
-              :src="r.cover || defaultCover"
-              :alt="r.title"
-              loading="lazy"
-            >
+            <img :src="r.cover || defaultCover" :alt="r.title" loading="lazy" />
             <span
               v-if="r.duration > 0"
               class="absolute right-1.5 bottom-1.5 px-1.5 py-0.25 rounded-4px bg-black/60 text-white text-3"
-            >{{ formatDuration(r.duration) }}</span>
+              >{{ formatDuration(r.duration) }}</span
+            >
           </div>
           <p class="reco-card__title">
             {{ r.title }}
           </p>
           <p class="flex items-center m-0 text-3 text-text-2">
-            <span class="i-mingcute-play-circle-line mr-1" />{{ formatCount(r.stat.view) }} · {{ r.owner.nickname }}
+            <span class="i-mingcute-play-circle-line mr-1" />{{ formatCount(r.stat.view) }} ·
+            {{ r.owner.nickname }}
           </p>
         </div>
       </div>
     </div>
 
     <!-- 稿件网格 -->
-    <el-skeleton
-      v-if="loading"
-      :rows="6"
-      animated
-    />
+    <el-skeleton v-if="loading" :rows="6" animated />
 
     <el-empty
       v-else-if="videos.length === 0"
       description="这个分区还没有稿件，点击右上角「投稿」发布第一个视频吧！"
     />
 
-    <div
-      v-else
-      class="video-grid"
-    >
+    <div v-else class="video-grid">
       <div
         v-for="v in videos"
         :key="v.bvid"
@@ -183,22 +151,16 @@ onBeforeUnmount(() => {
         @click="onCardClick(v)"
       >
         <div class="video-card__cover relative aspect-video rounded-8px overflow-hidden">
-          <img
-            :src="v.cover || defaultCover"
-            :alt="v.title"
-            loading="lazy"
-          >
+          <img :src="v.cover || defaultCover" :alt="v.title" loading="lazy" />
           <span
             v-if="v.duration > 0"
             class="absolute right-1.5 bottom-1.5 px-1.5 py-0.25 rounded-4px bg-black/60 text-white text-3"
-          >{{ formatDuration(v.duration) }}</span>
+            >{{ formatDuration(v.duration) }}</span
+          >
         </div>
         <div class="pt-2 px-0.5">
           <div class="flex items-start gap-1">
-            <p
-              class="video-card__title m-0 text-3.5 leading-[1.4] flex-1 min-w-0"
-              :title="v.title"
-            >
+            <p class="video-card__title m-0 text-3.5 leading-[1.4] flex-1 min-w-0" :title="v.title">
               {{ v.title }}
             </p>
             <!-- 更多操作（仅推荐 Tab）：不感兴趣等 -->
@@ -209,11 +171,7 @@ onBeforeUnmount(() => {
               popper-class="card-menu-popper"
               @command="(cmd: string) => onCardMenu(cmd, v)"
             >
-              <span
-                class="video-card__menu shrink-0"
-                title="更多"
-                @click.stop
-              >
+              <span class="video-card__menu shrink-0" title="更多" @click.stop>
                 <span class="i-mingcute-more-2-line" />
               </span>
               <template #dropdown>
@@ -234,10 +192,7 @@ onBeforeUnmount(() => {
               {{ v.owner.nickname?.slice(0, 1) ?? 'U' }}
             </el-avatar>
             <span class="video-card__up truncate">{{ v.owner.nickname }}</span>
-            <span
-              v-if="v.published_at"
-              class="mx-1"
-            >·</span>
+            <span v-if="v.published_at" class="mx-1">·</span>
             <span v-if="v.published_at">{{ formatPubdate(v.published_at) }}</span>
           </p>
           <p class="flex items-center mt-1 mb-0 text-3 text-text-2">
@@ -250,10 +205,7 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 无限滚动：滚动触底自动加载；载入中/到底提示 -->
-    <div
-      v-if="!loading && videos.length > 0"
-      class="text-center py-4 text-3.25 text-text-3"
-    >
+    <div v-if="!loading && videos.length > 0" class="text-center py-4 text-3.25 text-text-3">
       <span v-if="loadingMore">加载中…</span>
       <span v-else-if="!hasMore">没有更多了</span>
     </div>
@@ -387,14 +339,24 @@ onBeforeUnmount(() => {
 
 // 上半圆：闭合 → 向上旋 40° 张嘴 → 闭合（右侧开口，吃豆人）
 @keyframes eat-chomp-up {
-  0%, 100% { transform: rotate(0); }
-  50% { transform: rotate(-40deg); }
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(-40deg);
+  }
 }
 
 // 下半圆：反向旋转
 @keyframes eat-chomp-down {
-  0%, 100% { transform: rotate(0); }
-  50% { transform: rotate(40deg); }
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(40deg);
+  }
 }
 
 // 无障碍：偏好减少动效时关闭张合动画

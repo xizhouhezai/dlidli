@@ -1,0 +1,2 @@
+# 提交前：对暂存文件跑 Prettier（ESLint 在 CI / 各 app lint 全量执行）
+pnpm exec lint-staged

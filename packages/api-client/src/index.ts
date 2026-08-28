@@ -22,10 +22,49 @@ export * from './error'
 export * from './token'
 export type { TokenPair } from './apis/auth'
 export type { UploadInitResp } from './apis/upload'
-export type { CategoryItem, VideoCard, VideoDetail, StreamItem, SubmitVideoReq, PartItem } from './apis/video'
+export type {
+  CategoryItem,
+  VideoCard,
+  VideoDetail,
+  StreamItem,
+  SubmitVideoReq,
+  PartItem,
+} from './apis/video'
 export type { DanmakuItem, SendDanmakuReq, DanmakuBlockItem } from './apis/danmaku'
-export type { CommentItem, CommentUser, AddCommentReq, InteractionState, TripleResult, CollectionItem } from './apis/interaction'
-export type { AdminLoginResp, ReviewItem, SensitiveWord, AdminUserItem, PunishAction, AdminPermission, AdminMenuItem, CurrentPerm, AdminRole, AdminAccount, SaveRolePayload, SaveAdminPayload, AdminCategory, SaveCategoryPayload, SavePermissionPayload, ReportItem, HandleReportPayload, AuditLogItem, SystemConfigItem, DataDictItem, BannerItem, DashboardStats, AdminVideoItem, ExperimentItem } from './apis/admin'
+export type {
+  CommentItem,
+  CommentUser,
+  AddCommentReq,
+  InteractionState,
+  TripleResult,
+  CollectionItem,
+} from './apis/interaction'
+export type {
+  AdminLoginResp,
+  ReviewItem,
+  SensitiveWord,
+  AdminUserItem,
+  PunishAction,
+  AdminPermission,
+  AdminMenuItem,
+  CurrentPerm,
+  AdminRole,
+  AdminAccount,
+  SaveRolePayload,
+  SaveAdminPayload,
+  AdminCategory,
+  SaveCategoryPayload,
+  SavePermissionPayload,
+  ReportItem,
+  HandleReportPayload,
+  AuditLogItem,
+  SystemConfigItem,
+  DataDictItem,
+  BannerItem,
+  DashboardStats,
+  AdminVideoItem,
+  ExperimentItem,
+} from './apis/admin'
 export type { UserBrief, RelationStat } from './apis/relation'
 export type { FeedItem } from './apis/dynamic'
 export type { NotifyItem } from './apis/notify'

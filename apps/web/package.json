@@ -17,7 +17,6 @@
     "echarts": "^6.1.0",
     "element-plus": "^2.10.0",
     "hash-wasm": "^4.12.0",
-    "hls.js": "^1.6.0",
     "pinia": "^3.0.0",
     "vue": "^3.5.0",
     "vue-router": "^4.5.0"
@@ -27,12 +26,12 @@
     "@types/node": "^22.0.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "eslint": "^9.0.0",
-    "eslint-plugin-vue": "^10.0.0",
     "sass": "^1.102.0",
     "typescript": "~5.8.0",
-    "typescript-eslint": "^8.0.0",
     "unocss": "^66.7.5",
     "vite": "^7.0.0",
-    "vue-tsc": "^3.0.0"
+    "vue-tsc": "^3.0.0",
+    "@dlidli/eslint-config": "workspace:*",
+    "@dlidli/tsconfig": "workspace:*"
   }
 }

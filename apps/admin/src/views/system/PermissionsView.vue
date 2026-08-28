@@ -12,15 +12,17 @@ const { loading: saving, run } = useApiAction()
 
 // 页面权限（menu，含其下按钮权限），按 sort 排
 const menus = computed(() =>
-  list.value.filter(p => p.type === 'menu').sort((a, b) => a.sort - b.sort),
+  list.value.filter((p) => p.type === 'menu').sort((a, b) => a.sort - b.sort),
 )
 function buttonsOf(menuCode: string) {
-  return list.value.filter(p => p.type === 'button' && p.parent === menuCode).sort((a, b) => a.sort - b.sort)
+  return list.value
+    .filter((p) => p.type === 'button' && p.parent === menuCode)
+    .sort((a, b) => a.sort - b.sort)
 }
 // 无归属的按钮权限（parent 指向不存在的 menu，容错展示）
 const orphanButtons = computed(() => {
-  const menuCodes = new Set(menus.value.map(m => m.code))
-  return list.value.filter(p => p.type === 'button' && !menuCodes.has(p.parent))
+  const menuCodes = new Set(menus.value.map((m) => m.code))
+  return list.value.filter((p) => p.type === 'button' && !menuCodes.has(p.parent))
 })
 
 async function load() {
@@ -36,8 +38,22 @@ onMounted(load)
 // 对话框
 const dialogVisible = ref(false)
 const editing = ref<AdminPermission | null>(null)
-const form = ref<{ code: string, name: string, type: 'menu' | 'button', parent: string, path: string, icon: string, sort: number }>({
-  code: '', name: '', type: 'menu', parent: '', path: '', icon: '', sort: 0,
+const form = ref<{
+  code: string
+  name: string
+  type: 'menu' | 'button'
+  parent: string
+  path: string
+  icon: string
+  sort: number
+}>({
+  code: '',
+  name: '',
+  type: 'menu',
+  parent: '',
+  path: '',
+  icon: '',
+  sort: 0,
 })
 
 function openCreateMenu() {
@@ -52,7 +68,15 @@ function openCreateButton(menuCode: string) {
 }
 function openEdit(p: AdminPermission) {
   editing.value = p
-  form.value = { code: p.code, name: p.name, type: p.type as 'menu' | 'button', parent: p.parent, path: p.path, icon: p.icon, sort: p.sort }
+  form.value = {
+    code: p.code,
+    name: p.name,
+    type: p.type as 'menu' | 'button',
+    parent: p.parent,
+    path: p.path,
+    icon: p.icon,
+    sort: p.sort,
+  }
   dialogVisible.value = true
 }
 
@@ -74,13 +98,16 @@ async function save() {
     icon: form.value.icon,
     sort: form.value.sort,
   }
-  const ok = await run(async () => {
-    if (editing.value) {
-      await adminApi.admin.updatePermission(editing.value.id, payload)
-    } else {
-      await adminApi.admin.createPermission(payload)
-    }
-  }, { success: editing.value ? '已保存' : '已创建', fallback: '保存失败' })
+  const ok = await run(
+    async () => {
+      if (editing.value) {
+        await adminApi.admin.updatePermission(editing.value.id, payload)
+      } else {
+        await adminApi.admin.createPermission(payload)
+      }
+    },
+    { success: editing.value ? '已保存' : '已创建', fallback: '保存失败' },
+  )
   if (ok) {
     dialogVisible.value = false
     load()
@@ -88,10 +115,15 @@ async function save() {
 }
 
 async function remove(p: AdminPermission) {
-  const ok = await run(async () => {
-    await ElMessageBox.confirm(`确定删除权限点「${p.name}」（${p.code}）吗？`, '删除', { type: 'warning' })
-    await adminApi.admin.deletePermission(p.id)
-  }, { success: '已删除', fallback: '删除失败' })
+  const ok = await run(
+    async () => {
+      await ElMessageBox.confirm(`确定删除权限点「${p.name}」（${p.code}）吗？`, '删除', {
+        type: 'warning',
+      })
+      await adminApi.admin.deletePermission(p.id)
+    },
+    { success: '已删除', fallback: '删除失败' },
+  )
   if (ok) load()
 }
 </script>
@@ -114,68 +146,28 @@ async function remove(p: AdminPermission) {
       </template>
     </PageHead>
 
-    <div
-      v-loading="loading"
-      class="perm-list"
-    >
-      <div
-        v-for="m in menus"
-        :key="m.id"
-        class="page-card mb-3"
-      >
+    <div v-loading="loading" class="perm-list">
+      <div v-for="m in menus" :key="m.id" class="page-card mb-3">
         <!-- 页面权限（menu）行 -->
         <div class="flex items-center gap-3">
-          <span
-            :class="m.icon || 'i-mingcute-menu-line'"
-            class="text-5 text-primary"
-          />
+          <span :class="m.icon || 'i-mingcute-menu-line'" class="text-5 text-primary" />
           <span class="text-4 font-600">{{ m.name }}</span>
-          <el-tag
-            size="small"
-            type="success"
-          >
-            页面
-          </el-tag>
+          <el-tag size="small" type="success"> 页面 </el-tag>
           <code class="perm-code">{{ m.code }}</code>
-          <span
-            v-if="m.path"
-            class="text-3 text-text-3"
-          >{{ m.path }}</span>
+          <span v-if="m.path" class="text-3 text-text-3">{{ m.path }}</span>
           <div class="flex-1" />
-          <el-button
-            v-perm="'permission:edit'"
-            size="small"
-            @click="openCreateButton(m.code)"
-          >
+          <el-button v-perm="'permission:edit'" size="small" @click="openCreateButton(m.code)">
             <span class="i-mingcute-add-line mr-1" />按钮权限
           </el-button>
-          <el-button
-            v-perm="'permission:edit'"
-            size="small"
-            @click="openEdit(m)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            v-perm="'permission:edit'"
-            size="small"
-            type="danger"
-            @click="remove(m)"
-          >
+          <el-button v-perm="'permission:edit'" size="small" @click="openEdit(m)"> 编辑 </el-button>
+          <el-button v-perm="'permission:edit'" size="small" type="danger" @click="remove(m)">
             删除
           </el-button>
         </div>
 
         <!-- 按钮权限 -->
-        <div
-          v-if="buttonsOf(m.code).length"
-          class="mt-3 pl-8 flex flex-wrap gap-2"
-        >
-          <div
-            v-for="b in buttonsOf(m.code)"
-            :key="b.id"
-            class="perm-btn"
-          >
+        <div v-if="buttonsOf(m.code).length" class="mt-3 pl-8 flex flex-wrap gap-2">
+          <div v-for="b in buttonsOf(m.code)" :key="b.id" class="perm-btn">
             <span>{{ b.name }}</span>
             <code class="perm-code perm-code--sm">{{ b.code }}</code>
             <span
@@ -193,19 +185,10 @@ async function remove(p: AdminPermission) {
       </div>
 
       <!-- 无归属按钮权限（容错） -->
-      <div
-        v-if="orphanButtons.length"
-        class="page-card mb-3"
-      >
-        <div class="text-3 text-text-3 mb-2">
-          未归属页面的按钮权限（parent 无效）
-        </div>
+      <div v-if="orphanButtons.length" class="page-card mb-3">
+        <div class="text-3 text-text-3 mb-2">未归属页面的按钮权限（parent 无效）</div>
         <div class="flex flex-wrap gap-2">
-          <div
-            v-for="b in orphanButtons"
-            :key="b.id"
-            class="perm-btn"
-          >
+          <div v-for="b in orphanButtons" :key="b.id" class="perm-btn">
             <span>{{ b.name }}</span>
             <code class="perm-code perm-code--sm">{{ b.code }}</code>
             <span
@@ -226,32 +209,18 @@ async function remove(p: AdminPermission) {
     <!-- 新建/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="editing ? '编辑权限点' : (form.type === 'button' ? '新建按钮权限' : '新建页面权限')"
+      :title="editing ? '编辑权限点' : form.type === 'button' ? '新建按钮权限' : '新建页面权限'"
       width="480px"
     >
       <el-form label-width="80px">
         <el-form-item label="类型">
-          <el-radio-group
-            v-model="form.type"
-            :disabled="!!editing || form.type === 'button'"
-          >
-            <el-radio value="menu">
-              页面权限
-            </el-radio>
-            <el-radio value="button">
-              按钮权限
-            </el-radio>
+          <el-radio-group v-model="form.type" :disabled="!!editing || form.type === 'button'">
+            <el-radio value="menu"> 页面权限 </el-radio>
+            <el-radio value="button"> 按钮权限 </el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item
-          v-if="form.type === 'button'"
-          label="所属页面"
-        >
-          <el-select
-            v-model="form.parent"
-            placeholder="选择页面权限"
-            class="w-full"
-          >
+        <el-form-item v-if="form.type === 'button'" label="所属页面">
+          <el-select v-model="form.parent" placeholder="选择页面权限" class="w-full">
             <el-option
               v-for="m in menus"
               :key="m.code"
@@ -269,25 +238,14 @@ async function remove(p: AdminPermission) {
           />
         </el-form-item>
         <el-form-item label="名称">
-          <el-input
-            v-model="form.name"
-            maxlength="64"
-          />
+          <el-input v-model="form.name" maxlength="64" />
         </el-form-item>
         <template v-if="form.type === 'menu'">
           <el-form-item label="路由路径">
-            <el-input
-              v-model="form.path"
-              placeholder="如 /banners"
-              maxlength="128"
-            />
+            <el-input v-model="form.path" placeholder="如 /banners" maxlength="128" />
           </el-form-item>
           <el-form-item label="菜单图标">
-            <el-input
-              v-model="form.icon"
-              placeholder="如 i-mingcute-pic-line"
-              maxlength="64"
-            >
+            <el-input v-model="form.icon" placeholder="如 i-mingcute-pic-line" maxlength="64">
               <template #prepend>
                 <span :class="form.icon || 'i-mingcute-menu-line'" />
               </template>
@@ -298,24 +256,13 @@ async function remove(p: AdminPermission) {
           </el-form-item>
         </template>
         <el-form-item label="排序">
-          <el-input-number
-            v-model="form.sort"
-            :min="0"
-            :max="9999"
-          />
+          <el-input-number v-model="form.sort" :min="0" :max="9999" />
           <span class="ml-2 text-3 text-text-3">数字越小越靠前</span>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          class="pink-btn"
-          :loading="saving"
-          @click="save"
-        >
+        <el-button @click="dialogVisible = false"> 取消 </el-button>
+        <el-button type="primary" class="pink-btn" :loading="saving" @click="save">
           保存
         </el-button>
       </template>

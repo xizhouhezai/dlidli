@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { ApiError, type CollectionDetail, type VideoCard as VideoCardData } from '@dlidli/api-client'
+import {
+  ApiError,
+  type CollectionDetail,
+  type VideoCard as VideoCardData,
+} from '@dlidli/api-client'
 import { api } from '@/api'
 import VideoCard from '@/components/VideoCard.vue'
 
@@ -28,17 +32,9 @@ onMounted(async () => {
 
 <template>
   <div class="mx-auto max-w-1100px">
-    <el-skeleton
-      v-if="loading"
-      :rows="6"
-      animated
-    />
+    <el-skeleton v-if="loading" :rows="6" animated />
 
-    <el-result
-      v-else-if="notFound"
-      icon="warning"
-      title="合集不存在"
-    />
+    <el-result v-else-if="notFound" icon="warning" title="合集不存在" />
 
     <template v-else-if="col">
       <div class="col-head">
@@ -46,31 +42,16 @@ onMounted(async () => {
           <h2 class="col-head__title">
             {{ col.title }}
           </h2>
-          <p
-            v-if="col.description"
-            class="col-head__desc"
-          >
+          <p v-if="col.description" class="col-head__desc">
             {{ col.description }}
           </p>
-          <p class="col-head__meta">
-            共 {{ videos.length }} 个视频
-          </p>
+          <p class="col-head__meta">共 {{ videos.length }} 个视频</p>
         </div>
       </div>
 
-      <el-empty
-        v-if="videos.length === 0"
-        description="合集还没有视频"
-      />
-      <div
-        v-else
-        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
-      >
-        <VideoCard
-          v-for="v in videos"
-          :key="v.bvid"
-          :video="v"
-        />
+      <el-empty v-if="videos.length === 0" description="合集还没有视频" />
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <VideoCard v-for="v in videos" :key="v.bvid" :video="v" />
       </div>
     </template>
   </div>

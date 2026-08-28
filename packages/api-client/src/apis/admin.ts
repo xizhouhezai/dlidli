@@ -208,8 +208,8 @@ export type AdminVideoItem = ReviewItem
 
 /** 数据大盘（M3-OPS-02） */
 export interface DashboardStats {
-  today: { dau: number, new_users: number, uploads: number, views: number }
-  trend: Array<{ date: string, dau: number, new_users: number, uploads: number, views: number }>
+  today: { dau: number; new_users: number; uploads: number; views: number }
+  trend: Array<{ date: string; dau: number; new_users: number; uploads: number; views: number }>
   review_hours: number
   pending_review: number
 }
@@ -224,28 +224,48 @@ export function createAdminApi(http: HttpClient) {
     dashboardStats: () => http.get<DashboardStats>('/api/v1/admin/dashboard/stats'),
 
     /** 稿件管理列表（全状态 + 状态/分区/关键词筛选） */
-    videoList: (params: { status?: number, category_id?: number, keyword?: string, page?: number, page_size?: number }) =>
-      http.get<{ list: AdminVideoItem[]; total: number }>('/api/v1/admin/videos', params),
+    videoList: (params: {
+      status?: number
+      category_id?: number
+      keyword?: string
+      page?: number
+      page_size?: number
+    }) => http.get<{ list: AdminVideoItem[]; total: number }>('/api/v1/admin/videos', params),
 
     /** 稿件下架/恢复（4 发布 / 6 锁定） */
     updateVideoStatus: (bvid: string, status: number) =>
       http.put<null>(`/api/v1/admin/videos/${bvid}/status`, { status }),
 
     /** 删除稿件（软删除） */
-    deleteVideo: (bvid: string) =>
-      http.delete<null>(`/api/v1/admin/videos/${bvid}`),
+    deleteVideo: (bvid: string) => http.delete<null>(`/api/v1/admin/videos/${bvid}`),
 
     // ---- A/B 实验（M3-OPS-03） ----
     experiments: () => http.get<{ list: ExperimentItem[] }>('/api/v1/admin/experiments'),
 
-    createExperiment: (payload: { name: string, target: string, variant_a: string, variant_b: string, ratio: number, status?: number, remark?: string }) =>
-      http.post<null>('/api/v1/admin/experiments', payload),
+    createExperiment: (payload: {
+      name: string
+      target: string
+      variant_a: string
+      variant_b: string
+      ratio: number
+      status?: number
+      remark?: string
+    }) => http.post<null>('/api/v1/admin/experiments', payload),
 
-    updateExperiment: (id: string, payload: { name: string, target: string, variant_a: string, variant_b: string, ratio: number, status?: number, remark?: string }) =>
-      http.put<null>(`/api/v1/admin/experiments/${id}`, payload),
+    updateExperiment: (
+      id: string,
+      payload: {
+        name: string
+        target: string
+        variant_a: string
+        variant_b: string
+        ratio: number
+        status?: number
+        remark?: string
+      },
+    ) => http.put<null>(`/api/v1/admin/experiments/${id}`, payload),
 
-    deleteExperiment: (id: string) =>
-      http.delete<null>(`/api/v1/admin/experiments/${id}`),
+    deleteExperiment: (id: string) => http.delete<null>(`/api/v1/admin/experiments/${id}`),
 
     reviewList: (page = 1, pageSize = 20) =>
       http.get<{ list: ReviewItem[]; total: number }>('/api/v1/admin/videos/review', {
@@ -257,20 +277,18 @@ export function createAdminApi(http: HttpClient) {
       http.post<null>(`/api/v1/admin/videos/${bvid}/review`, { approve, reason }),
 
     /** 敏感词列表 */
-    sensitiveWords: () =>
-      http.get<{ list: SensitiveWord[] }>('/api/v1/admin/sensitive-words'),
+    sensitiveWords: () => http.get<{ list: SensitiveWord[] }>('/api/v1/admin/sensitive-words'),
 
     /** 新增敏感词 */
     addSensitiveWord: (word: string) =>
       http.post<SensitiveWord>('/api/v1/admin/sensitive-words', { word }),
 
     /** 删除敏感词（id 字符串避免精度丢失） */
-    deleteSensitiveWord: (id: string) =>
-      http.delete<null>(`/api/v1/admin/sensitive-words/${id}`),
+    deleteSensitiveWord: (id: string) => http.delete<null>(`/api/v1/admin/sensitive-words/${id}`),
 
     /** 后台用户查询（keyword 支持 UID/手机号/昵称；status -1 全部） */
-    users: (params: { keyword?: string, status?: number, page?: number, page_size?: number }) =>
-      http.get<{ list: AdminUserItem[], total: number }>('/api/v1/admin/users', params),
+    users: (params: { keyword?: string; status?: number; page?: number; page_size?: number }) =>
+      http.get<{ list: AdminUserItem[]; total: number }>('/api/v1/admin/users', params),
 
     /** 用户处罚/解除（action: mute|unmute|ban|unban；ban days=0 为永久） */
     punishUser: (id: string, action: PunishAction, days = 0, reason = '') =>
@@ -278,12 +296,10 @@ export function createAdminApi(http: HttpClient) {
 
     // ---- RBAC ----
     /** 当前登录者权限码与可见菜单 */
-    myPermissions: () =>
-      http.get<CurrentPerm>('/api/v1/admin/me/permissions'),
+    myPermissions: () => http.get<CurrentPerm>('/api/v1/admin/me/permissions'),
 
     /** 权限点全集 */
-    permissions: () =>
-      http.get<{ list: AdminPermission[] }>('/api/v1/admin/permissions'),
+    permissions: () => http.get<{ list: AdminPermission[] }>('/api/v1/admin/permissions'),
 
     createPermission: (payload: SavePermissionPayload) =>
       http.post<AdminPermission>('/api/v1/admin/permissions', payload),
@@ -291,25 +307,24 @@ export function createAdminApi(http: HttpClient) {
     updatePermission: (id: string, payload: SavePermissionPayload) =>
       http.put<null>(`/api/v1/admin/permissions/${id}`, payload),
 
-    deletePermission: (id: string) =>
-      http.delete<null>(`/api/v1/admin/permissions/${id}`),
+    deletePermission: (id: string) => http.delete<null>(`/api/v1/admin/permissions/${id}`),
 
     /** 角色列表 */
-    roles: () =>
-      http.get<{ list: AdminRole[] }>('/api/v1/admin/roles'),
+    roles: () => http.get<{ list: AdminRole[] }>('/api/v1/admin/roles'),
 
-    createRole: (payload: SaveRolePayload) =>
-      http.post<AdminRole>('/api/v1/admin/roles', payload),
+    createRole: (payload: SaveRolePayload) => http.post<AdminRole>('/api/v1/admin/roles', payload),
 
     updateRole: (id: string, payload: SaveRolePayload) =>
       http.put<null>(`/api/v1/admin/roles/${id}`, payload),
 
-    deleteRole: (id: string) =>
-      http.delete<null>(`/api/v1/admin/roles/${id}`),
+    deleteRole: (id: string) => http.delete<null>(`/api/v1/admin/roles/${id}`),
 
     /** 管理员账号列表 */
     admins: (page = 1, pageSize = 20) =>
-      http.get<{ list: AdminAccount[], total: number }>('/api/v1/admin/admins', { page, page_size: pageSize }),
+      http.get<{ list: AdminAccount[]; total: number }>('/api/v1/admin/admins', {
+        page,
+        page_size: pageSize,
+      }),
 
     createAdmin: (payload: SaveAdminPayload) =>
       http.post<{ id: string }>('/api/v1/admin/admins', payload),
@@ -323,13 +338,11 @@ export function createAdminApi(http: HttpClient) {
     resetAdminPassword: (id: string, password: string) =>
       http.post<null>(`/api/v1/admin/admins/${id}/reset-password`, { password }),
 
-    deleteAdmin: (id: string) =>
-      http.delete<null>(`/api/v1/admin/admins/${id}`),
+    deleteAdmin: (id: string) => http.delete<null>(`/api/v1/admin/admins/${id}`),
 
     // ---- 分区管理 ----
     /** 分区列表（含停用） */
-    categories: () =>
-      http.get<{ list: AdminCategory[] }>('/api/v1/admin/categories'),
+    categories: () => http.get<{ list: AdminCategory[] }>('/api/v1/admin/categories'),
 
     createCategory: (payload: SaveCategoryPayload) =>
       http.post<AdminCategory>('/api/v1/admin/categories', payload),
@@ -337,13 +350,12 @@ export function createAdminApi(http: HttpClient) {
     updateCategory: (id: number, payload: SaveCategoryPayload) =>
       http.put<null>(`/api/v1/admin/categories/${id}`, payload),
 
-    deleteCategory: (id: number) =>
-      http.delete<null>(`/api/v1/admin/categories/${id}`),
+    deleteCategory: (id: number) => http.delete<null>(`/api/v1/admin/categories/${id}`),
 
     // ---- 举报处理 ----
     /** 举报队列（status -1 全部，默认待处理） */
-    reports: (params: { status?: number, page?: number, page_size?: number }) =>
-      http.get<{ list: ReportItem[], total: number }>('/api/v1/admin/reports', params),
+    reports: (params: { status?: number; page?: number; page_size?: number }) =>
+      http.get<{ list: ReportItem[]; total: number }>('/api/v1/admin/reports', params),
 
     /** 处理举报（ignore/delete/punish） */
     handleReport: (id: string, payload: HandleReportPayload) =>
@@ -351,43 +363,67 @@ export function createAdminApi(http: HttpClient) {
 
     // ---- 审计日志（M2-SYS-01） ----
     /** 审计日志分页查询（action/obj_type 可为空；from/to 为 YYYY-MM-DD） */
-    auditLogs: (params: { admin_id?: string, action?: string, obj_type?: string, from?: string, to?: string, page?: number, page_size?: number }) =>
-      http.get<{ list: AuditLogItem[]; total: number }>('/api/v1/admin/audit-logs', params),
+    auditLogs: (params: {
+      admin_id?: string
+      action?: string
+      obj_type?: string
+      from?: string
+      to?: string
+      page?: number
+      page_size?: number
+    }) => http.get<{ list: AuditLogItem[]; total: number }>('/api/v1/admin/audit-logs', params),
 
     // ---- 系统配置（M2-SYS-02） ----
     configs: () => http.get<{ list: SystemConfigItem[] }>('/api/v1/admin/configs'),
 
-    createConfig: (payload: { config_key: string, name?: string, value?: string, remark?: string }) =>
-      http.post<null>('/api/v1/admin/configs', payload),
+    createConfig: (payload: {
+      config_key: string
+      name?: string
+      value?: string
+      remark?: string
+    }) => http.post<null>('/api/v1/admin/configs', payload),
 
-    updateConfig: (id: string, payload: { config_key?: string, name?: string, value?: string, remark?: string }) =>
-      http.put<null>(`/api/v1/admin/configs/${id}`, payload),
+    updateConfig: (
+      id: string,
+      payload: { config_key?: string; name?: string; value?: string; remark?: string },
+    ) => http.put<null>(`/api/v1/admin/configs/${id}`, payload),
 
-    deleteConfig: (id: string) =>
-      http.delete<null>(`/api/v1/admin/configs/${id}`),
+    deleteConfig: (id: string) => http.delete<null>(`/api/v1/admin/configs/${id}`),
 
     // ---- 数据字典（M2-SYS-02） ----
     dicts: () => http.get<{ groups: Record<string, DataDictItem[]> }>('/api/v1/admin/dicts'),
 
-    createDict: (payload: { dict_type: string, label: string, value: string, sort?: number, remark?: string }) =>
-      http.post<null>('/api/v1/admin/dicts', payload),
+    createDict: (payload: {
+      dict_type: string
+      label: string
+      value: string
+      sort?: number
+      remark?: string
+    }) => http.post<null>('/api/v1/admin/dicts', payload),
 
-    updateDict: (id: string, payload: { dict_type?: string, label: string, value: string, sort?: number, remark?: string }) =>
-      http.put<null>(`/api/v1/admin/dicts/${id}`, payload),
+    updateDict: (
+      id: string,
+      payload: { dict_type?: string; label: string; value: string; sort?: number; remark?: string },
+    ) => http.put<null>(`/api/v1/admin/dicts/${id}`, payload),
 
-    deleteDict: (id: string) =>
-      http.delete<null>(`/api/v1/admin/dicts/${id}`),
+    deleteDict: (id: string) => http.delete<null>(`/api/v1/admin/dicts/${id}`),
 
     // ---- Banner 运营位（M3-OPS-01） ----
     banners: () => http.get<{ list: BannerItem[] }>('/api/v1/admin/banners'),
 
-    createBanner: (payload: { title?: string, image?: string, bvid?: string, sort?: number, status?: number }) =>
-      http.post<null>('/api/v1/admin/banners', payload),
+    createBanner: (payload: {
+      title?: string
+      image?: string
+      bvid?: string
+      sort?: number
+      status?: number
+    }) => http.post<null>('/api/v1/admin/banners', payload),
 
-    updateBanner: (id: string, payload: { title?: string, image?: string, bvid?: string, sort?: number, status?: number }) =>
-      http.put<null>(`/api/v1/admin/banners/${id}`, payload),
+    updateBanner: (
+      id: string,
+      payload: { title?: string; image?: string; bvid?: string; sort?: number; status?: number },
+    ) => http.put<null>(`/api/v1/admin/banners/${id}`, payload),
 
-    deleteBanner: (id: string) =>
-      http.delete<null>(`/api/v1/admin/banners/${id}`),
+    deleteBanner: (id: string) => http.delete<null>(`/api/v1/admin/banners/${id}`),
   }
 }

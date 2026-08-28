@@ -10,10 +10,38 @@ const router = useRouter()
 const adminInfo = readAdminInfo()
 
 const stats = ref([
-  { key: 'review', label: '待审稿件', value: '—', icon: 'i-mingcute-task-2-line', color: '#fb7299', to: '/review' },
-  { key: 'users', label: '注册用户', value: '—', icon: 'i-mingcute-user-3-line', color: '#3b82f6', to: '/users' },
-  { key: 'banned', label: '封禁用户', value: '—', icon: 'i-mingcute-forbid-circle-line', color: '#f59e0b', to: '/users' },
-  { key: 'words', label: '敏感词', value: '—', icon: 'i-mingcute-shield-line', color: '#10b981', to: '/sensitive-words' },
+  {
+    key: 'review',
+    label: '待审稿件',
+    value: '—',
+    icon: 'i-mingcute-task-2-line',
+    color: '#fb7299',
+    to: '/review',
+  },
+  {
+    key: 'users',
+    label: '注册用户',
+    value: '—',
+    icon: 'i-mingcute-user-3-line',
+    color: '#3b82f6',
+    to: '/users',
+  },
+  {
+    key: 'banned',
+    label: '封禁用户',
+    value: '—',
+    icon: 'i-mingcute-forbid-circle-line',
+    color: '#f59e0b',
+    to: '/users',
+  },
+  {
+    key: 'words',
+    label: '敏感词',
+    value: '—',
+    icon: 'i-mingcute-shield-line',
+    color: '#10b981',
+    to: '/sensitive-words',
+  },
 ])
 
 // 数据大盘（M3-OPS-02）
@@ -61,7 +89,11 @@ function renderTrend() {
   const t = dash.value.trend
   trendChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['活跃用户', '新增用户', '投稿', '播放'], bottom: 0, textStyle: { color: '#9499a0', fontSize: 11 } },
+    legend: {
+      data: ['活跃用户', '新增用户', '投稿', '播放'],
+      bottom: 0,
+      textStyle: { color: '#9499a0', fontSize: 11 },
+    },
     grid: { left: 44, right: 16, top: 24, bottom: 36 },
     xAxis: {
       type: 'category',
@@ -77,10 +109,34 @@ function renderTrend() {
       axisLabel: { color: '#9499a0', fontSize: 11 },
     },
     series: [
-      { name: '活跃用户', type: 'line', smooth: true, data: t.map((p) => p.dau), itemStyle: { color: '#fb7299' } },
-      { name: '新增用户', type: 'line', smooth: true, data: t.map((p) => p.new_users), itemStyle: { color: '#3b82f6' } },
-      { name: '投稿', type: 'line', smooth: true, data: t.map((p) => p.uploads), itemStyle: { color: '#10b981' } },
-      { name: '播放', type: 'line', smooth: true, data: t.map((p) => p.views), itemStyle: { color: '#f59e0b' } },
+      {
+        name: '活跃用户',
+        type: 'line',
+        smooth: true,
+        data: t.map((p) => p.dau),
+        itemStyle: { color: '#fb7299' },
+      },
+      {
+        name: '新增用户',
+        type: 'line',
+        smooth: true,
+        data: t.map((p) => p.new_users),
+        itemStyle: { color: '#3b82f6' },
+      },
+      {
+        name: '投稿',
+        type: 'line',
+        smooth: true,
+        data: t.map((p) => p.uploads),
+        itemStyle: { color: '#10b981' },
+      },
+      {
+        name: '播放',
+        type: 'line',
+        smooth: true,
+        data: t.map((p) => p.views),
+        itemStyle: { color: '#f59e0b' },
+      },
     ],
   })
 }
@@ -118,28 +174,16 @@ function go(to: string) {
     <!-- 欢迎条 -->
     <div class="welcome">
       <div>
-        <h2 class="welcome__title">
-          你好，{{ adminInfo?.username ?? '管理员' }} 👋
-        </h2>
-        <p class="welcome__sub">
-          欢迎回到 DliDli 管理后台，祝你今天工作愉快。
-        </p>
+        <h2 class="welcome__title">你好，{{ adminInfo?.username ?? '管理员' }} 👋</h2>
+        <p class="welcome__sub">欢迎回到 DliDli 管理后台，祝你今天工作愉快。</p>
       </div>
       <span class="i-mingcute-tv-2-line welcome__icon" />
     </div>
 
     <!-- 统计卡 -->
     <div class="stat-grid">
-      <div
-        v-for="s in stats"
-        :key="s.key"
-        class="stat-card"
-        @click="go(s.to)"
-      >
-        <div
-          class="stat-card__icon"
-          :style="{ background: s.color + '1a', color: s.color }"
-        >
+      <div v-for="s in stats" :key="s.key" class="stat-card" @click="go(s.to)">
+        <div class="stat-card__icon" :style="{ background: s.color + '1a', color: s.color }">
           <span :class="s.icon" />
         </div>
         <div>
@@ -166,45 +210,32 @@ function go(to: string) {
           <div class="dash-card__value">
             {{ dash?.today.dau ?? '—' }}
           </div>
-          <div class="dash-card__label">
-            今日活跃用户
-          </div>
+          <div class="dash-card__label">今日活跃用户</div>
         </div>
         <div class="dash-card dash-card--blue">
           <div class="dash-card__value">
             {{ dash?.today.new_users ?? '—' }}
           </div>
-          <div class="dash-card__label">
-            今日新增用户
-          </div>
+          <div class="dash-card__label">今日新增用户</div>
         </div>
         <div class="dash-card dash-card--green">
           <div class="dash-card__value">
             {{ dash?.today.uploads ?? '—' }}
           </div>
-          <div class="dash-card__label">
-            今日投稿
-          </div>
+          <div class="dash-card__label">今日投稿</div>
         </div>
         <div class="dash-card dash-card--orange">
           <div class="dash-card__value">
             {{ dash?.today.views ?? '—' }}
           </div>
-          <div class="dash-card__label">
-            今日有效播放
-          </div>
+          <div class="dash-card__label">今日有效播放</div>
         </div>
       </div>
 
       <!-- 近 7 日趋势 -->
       <div class="dash-chart">
-        <div class="dash-chart__title">
-          近 7 日趋势
-        </div>
-        <div
-          ref="trendChartEl"
-          class="dash-chart__body"
-        />
+        <div class="dash-chart__title">近 7 日趋势</div>
+        <div ref="trendChartEl" class="dash-chart__body" />
       </div>
 
       <!-- 审核时效 -->
@@ -226,20 +257,10 @@ function go(to: string) {
 
     <!-- 快捷入口 -->
     <div class="panel">
-      <div class="panel__title">
-        快捷入口
-      </div>
+      <div class="panel__title">快捷入口</div>
       <div class="shortcut-grid">
-        <div
-          v-for="sc in shortcuts"
-          :key="sc.title"
-          class="shortcut-card"
-          @click="go(sc.to)"
-        >
-          <span
-            class="shortcut-card__icon"
-            :class="sc.icon"
-          />
+        <div v-for="sc in shortcuts" :key="sc.title" class="shortcut-card" @click="go(sc.to)">
+          <span class="shortcut-card__icon" :class="sc.icon" />
           <div>
             <div class="shortcut-card__title">
               {{ sc.title }}
@@ -302,7 +323,9 @@ function go(to: string) {
   padding: 20px;
   box-shadow: v.$shadow-card;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 
   &:hover {
     transform: translateY(-2px);

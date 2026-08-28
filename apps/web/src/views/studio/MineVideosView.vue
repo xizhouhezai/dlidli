@@ -15,7 +15,10 @@ const total = ref(0)
 const page = ref(1)
 const loading = ref(false)
 
-const STATUS_MAP: Record<number, { text: string; type: 'info' | 'warning' | 'success' | 'danger' | 'primary' }> = {
+const STATUS_MAP: Record<
+  number,
+  { text: string; type: 'info' | 'warning' | 'success' | 'danger' | 'primary' }
+> = {
   0: { text: '草稿', type: 'info' },
   1: { text: '上传中', type: 'info' },
   2: { text: '转码中', type: 'primary' },
@@ -63,49 +66,29 @@ function open(v: VideoCard) {
 <template>
   <div class="mx-auto max-w-900px">
     <div class="flex items-center gap-3 mb-4">
-      <h2 class="m-0 text-5">
-        稿件管理
-      </h2>
+      <h2 class="m-0 text-5">稿件管理</h2>
       <span class="flex-1 text-3.25 text-text-2">共 {{ total }} 个稿件</span>
-      <el-button
-        type="primary"
-        class="mine__upload"
-        @click="router.push('/upload')"
-      >
+      <el-button type="primary" class="mine__upload" @click="router.push('/upload')">
         + 投稿
       </el-button>
     </div>
 
-    <el-skeleton
-      v-if="loading"
-      :rows="5"
-      animated
-    />
-    <el-empty
-      v-else-if="list.length === 0"
-      description="还没有投过稿，点击右上角开始创作吧"
-    />
+    <el-skeleton v-if="loading" :rows="5" animated />
+    <el-empty v-else-if="list.length === 0" description="还没有投过稿，点击右上角开始创作吧" />
 
-    <el-card
-      v-for="v in list"
-      :key="v.bvid"
-      class="mb-3 rounded-10px"
-      shadow="never"
-    >
+    <el-card v-for="v in list" :key="v.bvid" class="mb-3 rounded-10px" shadow="never">
       <div class="flex gap-4 items-start">
         <div
           class="mine-card__cover relative w-180px shrink-0 aspect-video rounded-8px overflow-hidden"
           :class="{ 'is-clickable': v.status === 4 }"
           @click="open(v)"
         >
-          <img
-            :src="v.cover || defaultCover"
-            :alt="v.title"
-          >
+          <img :src="v.cover || defaultCover" :alt="v.title" />
           <span
             v-if="v.duration > 0"
             class="absolute right-1.5 bottom-1.5 px-1.5 py-0.25 rounded-4px bg-black/60 text-white text-3"
-          >{{ formatDuration(v.duration) }}</span>
+            >{{ formatDuration(v.duration) }}</span
+          >
         </div>
         <div class="flex-1 min-w-0">
           <p
@@ -116,59 +99,40 @@ function open(v: VideoCard) {
             {{ v.title }}
           </p>
           <p class="flex items-center gap-3 my-2 text-3 text-text-2">
-            <el-tag
-              size="small"
-              :type="STATUS_MAP[v.status]?.type ?? 'info'"
-            >
+            <el-tag size="small" :type="STATUS_MAP[v.status]?.type ?? 'info'">
               {{ STATUS_MAP[v.status]?.text ?? '未知' }}
             </el-tag>
             <span>投稿于 {{ formatPubdate(v.created_at) }}</span>
           </p>
-          <p
-            v-if="v.status === 4"
-            class="flex items-center m-0 text-3.25 text-text-2"
-          >
+          <p v-if="v.status === 4" class="flex items-center m-0 text-3.25 text-text-2">
             <span class="i-mingcute-play-circle-line mr-1" />{{ formatCount(v.stat.view) }}
-            <span class="inline-block w-3" /><span class="i-mingcute-thumb-up-2-line mr-1" />{{ formatCount(v.stat.like) }}
-            <span class="inline-block w-3" /><span class="i-mingcute-comment-line mr-1" />{{ formatCount(v.stat.comment) }}
-            <span class="inline-block w-3" /><span class="i-mingcute-danmaku-line mr-1" />{{ formatCount(v.stat.danmaku) }}
+            <span class="inline-block w-3" /><span class="i-mingcute-thumb-up-2-line mr-1" />{{
+              formatCount(v.stat.like)
+            }}
+            <span class="inline-block w-3" /><span class="i-mingcute-comment-line mr-1" />{{
+              formatCount(v.stat.comment)
+            }}
+            <span class="inline-block w-3" /><span class="i-mingcute-danmaku-line mr-1" />{{
+              formatCount(v.stat.danmaku)
+            }}
           </p>
-          <p
-            v-else-if="v.status === 2"
-            class="m-0 text-3.25 text-text-2"
-          >
+          <p v-else-if="v.status === 2" class="m-0 text-3.25 text-text-2">
             转码处理中，完成后将自动进入审核…
           </p>
-          <p
-            v-else-if="v.status === 3"
-            class="m-0 text-3.25 text-text-2"
-          >
+          <p v-else-if="v.status === 3" class="m-0 text-3.25 text-text-2">
             等待审核，通过后自动发布
           </p>
-          <p
-            v-else-if="v.status === 5"
-            class="m-0 text-3.25 text-#f56c6c"
-          >
+          <p v-else-if="v.status === 5" class="m-0 text-3.25 text-#f56c6c">
             稿件被驳回，可修改后重新投稿
           </p>
         </div>
         <div class="shrink-0">
-          <el-button
-            size="small"
-            type="danger"
-            plain
-            @click="remove(v)"
-          >
-            删除
-          </el-button>
+          <el-button size="small" type="danger" plain @click="remove(v)"> 删除 </el-button>
         </div>
       </div>
     </el-card>
 
-    <div
-      v-if="total > PAGE_SIZE"
-      class="flex justify-center py-3"
-    >
+    <div v-if="total > PAGE_SIZE" class="flex justify-center py-3">
       <el-pagination
         v-model:current-page="page"
         layout="prev, pager, next"

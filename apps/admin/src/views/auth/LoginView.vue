@@ -36,22 +36,12 @@ async function onLogin() {
     <div class="login__glow login__glow--pink" />
     <div class="login__glow login__glow--blue" />
     <div class="login__grid" />
-    <div
-      v-for="i in 5"
-      :key="i"
-      class="login__orb"
-      :style="{ '--i': i }"
-    />
+    <div v-for="i in 5" :key="i" class="login__orb" :style="{ '--i': i }" />
 
     <div class="panel">
       <div class="panel__brand">
         <span class="panel__logo">
-          <svg
-            viewBox="0 0 48 48"
-            width="44"
-            height="44"
-            aria-hidden="true"
-          >
+          <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true">
             <rect
               x="4"
               y="12"
@@ -69,18 +59,8 @@ async function onLogin() {
               stroke-linecap="round"
               fill="none"
             />
-            <circle
-              cx="17"
-              cy="26"
-              r="2.6"
-              fill="#fb7299"
-            />
-            <circle
-              cx="31"
-              cy="26"
-              r="2.6"
-              fill="#23ade5"
-            />
+            <circle cx="17" cy="26" r="2.6" fill="#fb7299" />
+            <circle cx="31" cy="26" r="2.6" fill="#23ade5" />
             <path
               d="M19 33q5 3.5 10 0"
               stroke="#fb7299"
@@ -89,45 +69,20 @@ async function onLogin() {
               fill="none"
             />
             <defs>
-              <linearGradient
-                id="lg"
-                x1="0"
-                y1="0"
-                x2="1"
-                y2="1"
-              >
-                <stop
-                  offset="0"
-                  stop-color="#fb7299"
-                />
-                <stop
-                  offset="1"
-                  stop-color="#23ade5"
-                />
+              <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#fb7299" />
+                <stop offset="1" stop-color="#23ade5" />
               </linearGradient>
             </defs>
           </svg>
         </span>
-        <h1 class="panel__title">
-          DliDli <span class="panel__title-sub">管理后台</span>
-        </h1>
-        <p class="panel__desc">
-          内容审核 · 用户治理 · 运营配置
-        </p>
+        <h1 class="panel__title">DliDli <span class="panel__title-sub">管理后台</span></h1>
+        <p class="panel__desc">内容审核 · 用户治理 · 运营配置</p>
       </div>
 
-      <el-form
-        class="panel__form"
-        label-position="top"
-        size="large"
-        @submit.prevent="onLogin"
-      >
+      <el-form class="panel__form" label-position="top" size="large" @submit.prevent="onLogin">
         <el-form-item>
-          <el-input
-            v-model="form.username"
-            placeholder="管理员账号"
-            autocomplete="username"
-          >
+          <el-input v-model="form.username" placeholder="管理员账号" autocomplete="username">
             <template #prefix>
               <span class="input-icon">👤</span>
             </template>
@@ -146,18 +101,10 @@ async function onLogin() {
             </template>
           </el-input>
         </el-form-item>
-        <el-button
-          class="panel__submit"
-          :loading="loading"
-          native-type="submit"
-        >
-          登 录
-        </el-button>
+        <el-button class="panel__submit" :loading="loading" native-type="submit"> 登 录 </el-button>
       </el-form>
 
-      <p class="panel__foot">
-        内部系统 · 仅限授权人员访问 · 操作全程审计留痕
-      </p>
+      <p class="panel__foot">内部系统 · 仅限授权人员访问 · 操作全程审计留痕</p>
     </div>
   </div>
 </template>

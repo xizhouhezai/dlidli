@@ -51,7 +51,10 @@ export interface CollectionItem {
 /** 互动接口：评论 + 点赞 + 投币/收藏/三连（对应后端 interaction 模块）。 */
 export function createInteractionApi(http: HttpClient) {
   return {
-    comments: (bvid: string, params?: { sort?: 'hot' | 'new'; page?: number; page_size?: number }) =>
+    comments: (
+      bvid: string,
+      params?: { sort?: 'hot' | 'new'; page?: number; page_size?: number },
+    ) =>
       http.get<{ list: CommentItem[]; total: number }>(`/api/v1/videos/${bvid}/comments`, params),
 
     addComment: (bvid: string, req: AddCommentReq) =>
@@ -82,7 +85,9 @@ export function createInteractionApi(http: HttpClient) {
 
     /** 收藏开关（可指定收藏夹；ID 字符串传输避免精度丢失） */
     toggleFavorite: (bvid: string, collectionId?: string) =>
-      http.post<{ faved: boolean }>(`/api/v1/videos/${bvid}/favorite`, { collection_id: collectionId || '0' }),
+      http.post<{ faved: boolean }>(`/api/v1/videos/${bvid}/favorite`, {
+        collection_id: collectionId || '0',
+      }),
 
     /** 收藏夹列表 */
     listCollections: () => http.get<CollectionItem[]>('/api/v1/users/me/collections'),
@@ -96,8 +101,7 @@ export function createInteractionApi(http: HttpClient) {
       http.put<null>(`/api/v1/users/me/collections/${id}`, { name }),
 
     /** 删除收藏夹 */
-    deleteCollection: (id: string) =>
-      http.delete<null>(`/api/v1/users/me/collections/${id}`),
+    deleteCollection: (id: string) => http.delete<null>(`/api/v1/users/me/collections/${id}`),
 
     /** 一键三连 */
     triple: (bvid: string) => http.post<TripleResult>(`/api/v1/videos/${bvid}/triple`),

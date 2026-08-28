@@ -55,5 +55,14 @@ export function useDmBlocks() {
     if (b) await removeDmBlock(b)
   }
 
-  return { dmBlocks, dmBlockLoading, dmBlockInput, dmBlockAdding, loadDmBlocks, addDmBlock, removeDmBlock, clearDmBlockHash }
+  return {
+    dmBlocks,
+    dmBlockLoading,
+    dmBlockInput,
+    dmBlockAdding,
+    loadDmBlocks,
+    addDmBlock,
+    removeDmBlock,
+    clearDmBlockHash,
+  }
 }

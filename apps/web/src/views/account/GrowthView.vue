@@ -21,8 +21,12 @@ const LEVEL_RULES = [
 const summary = ref<GrowthSummary | null>(null)
 const loading = ref(true)
 
-const levelRule = computed(() => LEVEL_RULES.find((r) => r.level === summary.value?.level) ?? LEVEL_RULES[1])
-const nextRule = computed(() => LEVEL_RULES.find((r) => r.level === summary.value?.next_level) ?? null)
+const levelRule = computed(
+  () => LEVEL_RULES.find((r) => r.level === summary.value?.level) ?? LEVEL_RULES[1],
+)
+const nextRule = computed(
+  () => LEVEL_RULES.find((r) => r.level === summary.value?.next_level) ?? null,
+)
 const maxLevel = computed(() => !summary.value || summary.value.next_level === 0)
 
 // ---- 明细 Tab：经验 / 硬币 ----
@@ -89,11 +93,7 @@ onMounted(() => {
 
 <template>
   <div class="mx-auto max-w-1100px">
-    <el-skeleton
-      v-if="loading"
-      :rows="6"
-      animated
-    />
+    <el-skeleton v-if="loading" :rows="6" animated />
 
     <template v-else-if="summary">
       <!-- 顶部：等级卡 + 今日任务 -->
@@ -106,9 +106,7 @@ onMounted(() => {
           </div>
           <p class="g-level__exp">
             经验 <b>{{ summary.exp }}</b>
-            <template v-if="!maxLevel">
-              / {{ summary.next_exp }}
-            </template>
+            <template v-if="!maxLevel"> / {{ summary.next_exp }} </template>
           </p>
           <el-progress
             :percentage="summary.progress"
@@ -121,22 +119,16 @@ onMounted(() => {
               距 Lv{{ summary.next_level }} {{ levelRule.title }} 还差
               <b>{{ Math.max(summary.next_exp - summary.exp, 0) }}</b> 经验
             </template>
-            <template v-else>
-              已达成最高等级，感谢一路陪伴
-            </template>
+            <template v-else> 已达成最高等级，感谢一路陪伴 </template>
           </p>
           <ul class="g-level__priv">
-            <li
-              v-if="levelRule.privilege"
-              class="is-locked"
-            >
+            <li v-if="levelRule.privilege" class="is-locked">
               <span class="i-mingcute-check-circle-line" />{{ levelRule.privilege }}
             </li>
-            <li
-              v-if="nextRule?.privilege"
-              class="is-locked"
-            >
-              <span class="i-mingcute-lock-line" />Lv{{ nextRule.level }} 解锁：{{ nextRule.privilege }}
+            <li v-if="nextRule?.privilege" class="is-locked">
+              <span class="i-mingcute-lock-line" />Lv{{ nextRule.level }} 解锁：{{
+                nextRule.privilege
+              }}
             </li>
           </ul>
         </div>
@@ -163,16 +155,11 @@ onMounted(() => {
                   <template v-if="t.limit === 1">
                     {{ t.done ? '已完成' : '未完成' }}
                   </template>
-                  <template v-else>
-                    {{ t.current }} / {{ t.limit }}
-                  </template>
+                  <template v-else> {{ t.current }} / {{ t.limit }} </template>
                 </p>
               </div>
               <span class="g-task__delta">+{{ t.delta }} 经验</span>
-              <span
-                v-if="t.done"
-                class="g-task__done i-mingcute-check-circle-fill"
-              />
+              <span v-if="t.done" class="g-task__done i-mingcute-check-circle-fill" />
             </li>
           </ul>
         </div>
@@ -185,34 +172,24 @@ onMounted(() => {
             class="g-tab"
             :class="{ 'is-active': activeTab === 'exp' }"
             @click="switchTab('exp')"
-          >经验明细</span>
+            >经验明细</span
+          >
           <span
             class="g-tab"
             :class="{ 'is-active': activeTab === 'coin' }"
             @click="switchTab('coin')"
-          >硬币明细<span class="g-tab__coin">余额 {{ userStore.profile?.coin ?? 0 }}</span></span>
+            >硬币明细<span class="g-tab__coin">余额 {{ userStore.profile?.coin ?? 0 }}</span></span
+          >
         </div>
 
-        <el-skeleton
-          v-if="tabLoading"
-          :rows="3"
-          animated
-        />
-        <el-empty
-          v-else-if="logs.length === 0"
-          description="暂无记录，去完成任务吧"
-        />
+        <el-skeleton v-if="tabLoading" :rows="3" animated />
+        <el-empty v-else-if="logs.length === 0" description="暂无记录，去完成任务吧" />
         <template v-else>
           <ul class="g-logs__list">
-            <li
-              v-for="l in logs"
-              :key="l.id"
-              class="g-log"
-            >
-              <span
-                class="g-log__delta"
-                :class="l.delta > 0 ? 'is-plus' : 'is-minus'"
-              >{{ l.delta > 0 ? '+' : '' }}{{ l.delta }}</span>
+            <li v-for="l in logs" :key="l.id" class="g-log">
+              <span class="g-log__delta" :class="l.delta > 0 ? 'is-plus' : 'is-minus'"
+                >{{ l.delta > 0 ? '+' : '' }}{{ l.delta }}</span
+              >
               <div class="g-log__info">
                 <p class="g-log__name">
                   {{ l.reason_name }}

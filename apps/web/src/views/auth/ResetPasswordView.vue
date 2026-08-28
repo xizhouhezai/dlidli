@@ -31,7 +31,6 @@ async function sendCode() {
   }
 }
 
-
 async function onSubmit() {
   if (!/^1\d{10}$/.test(form.phone) || !form.code) {
     ElMessage.warning('请填写手机号和验证码')
@@ -61,36 +60,16 @@ async function onSubmit() {
 <template>
   <div class="reset flex items-start justify-center pt-15">
     <el-card class="w-420px rounded-12px">
-      <h2 class="m-0 text-primary">
-        找回密码
-      </h2>
-      <p class="mt-1.5 mb-4.5 text-3.25 text-text-2">
-        通过注册手机号验证身份后重置密码
-      </p>
-      <el-form
-        label-position="top"
-        size="large"
-        @submit.prevent="onSubmit"
-      >
+      <h2 class="m-0 text-primary">找回密码</h2>
+      <p class="mt-1.5 mb-4.5 text-3.25 text-text-2">通过注册手机号验证身份后重置密码</p>
+      <el-form label-position="top" size="large" @submit.prevent="onSubmit">
         <el-form-item label="手机号">
-          <el-input
-            v-model="form.phone"
-            maxlength="11"
-            placeholder="注册时使用的手机号"
-          />
+          <el-input v-model="form.phone" maxlength="11" placeholder="注册时使用的手机号" />
         </el-form-item>
         <el-form-item label="验证码">
           <div class="flex gap-2.5 w-full">
-            <el-input
-              v-model="form.code"
-              maxlength="6"
-              placeholder="6 位验证码"
-            />
-            <el-button
-              :disabled="countdown > 0"
-              :loading="sending"
-              @click="sendCode"
-            >
+            <el-input v-model="form.code" maxlength="6" placeholder="6 位验证码" />
+            <el-button :disabled="countdown > 0" :loading="sending" @click="sendCode">
               {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
             </el-button>
           </div>
@@ -122,13 +101,7 @@ async function onSubmit() {
         >
           重置密码
         </el-button>
-        <el-button
-          link
-          class="reset__back"
-          @click="router.push('/login')"
-        >
-          返回登录
-        </el-button>
+        <el-button link class="reset__back" @click="router.push('/login')"> 返回登录 </el-button>
       </el-form>
     </el-card>
   </div>

@@ -24,7 +24,7 @@ export interface MessageItem {
 export function createMessageApi(http: HttpClient) {
   return {
     /** 发送私信（机审 + 未互关每日限制） */
-    send: (payload: { to_uid: string, content: string, content_type?: number }) =>
+    send: (payload: { to_uid: string; content: string; content_type?: number }) =>
       http.post<MessageItem>('/api/v1/messages', payload),
 
     /** 会话列表（按最新消息排序，含未读数） */

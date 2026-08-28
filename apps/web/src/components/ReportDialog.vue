@@ -48,24 +48,13 @@ defineExpose({ open })
 </script>
 
 <template>
-  <el-dialog
-    v-model="visible"
-    title="举报"
-    width="420px"
-  >
+  <el-dialog v-model="visible" title="举报" width="420px">
     <div class="report-dialog">
-      <p
-        v-if="title"
-        class="report-dialog__target"
-      >
+      <p v-if="title" class="report-dialog__target">
         {{ title }}
       </p>
       <el-radio-group v-model="reasonType">
-        <el-radio
-          v-for="r in REASONS"
-          :key="r.value"
-          :value="r.value"
-        >
+        <el-radio v-for="r in REASONS" :key="r.value" :value="r.value">
           {{ r.label }}
         </el-radio>
       </el-radio-group>
@@ -79,16 +68,8 @@ defineExpose({ open })
       />
     </div>
     <template #footer>
-      <el-button @click="visible = false">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        :loading="submitting"
-        @click="submit"
-      >
-        提交举报
-      </el-button>
+      <el-button @click="visible = false"> 取消 </el-button>
+      <el-button type="primary" :loading="submitting" @click="submit"> 提交举报 </el-button>
     </template>
   </el-dialog>
 </template>

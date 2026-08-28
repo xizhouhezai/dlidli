@@ -80,14 +80,8 @@ onBeforeUnmount(() => {
   <div class="msg-wrap">
     <!-- 会话列表 -->
     <div class="msg-convs">
-      <div class="msg-convs__head">
-        私信
-      </div>
-      <el-empty
-        v-if="convs.length === 0"
-        description="暂无会话"
-        :image-size="60"
-      />
+      <div class="msg-convs__head">私信</div>
+      <el-empty v-if="convs.length === 0" description="暂无会话" :image-size="60" />
       <div
         v-for="c in convs"
         :key="c.peer_id"
@@ -95,11 +89,7 @@ onBeforeUnmount(() => {
         :class="{ 'is-active': activePeer === c.peer_id }"
         @click="openPeer(c.peer_id)"
       >
-        <img
-          :src="c.avatar || defaultAvatar"
-          alt=""
-          class="msg-conv__avatar"
-        >
+        <img :src="c.avatar || defaultAvatar" alt="" class="msg-conv__avatar" />
         <div class="msg-conv__main">
           <div class="msg-conv__top">
             <span class="msg-conv__name">{{ c.nickname }}</span>
@@ -107,10 +97,9 @@ onBeforeUnmount(() => {
           </div>
           <div class="msg-conv__bottom">
             <span class="msg-conv__preview">{{ c.last_content }}</span>
-            <span
-              v-if="c.unread > 0"
-              class="msg-conv__badge"
-            >{{ c.unread > 99 ? '99+' : c.unread }}</span>
+            <span v-if="c.unread > 0" class="msg-conv__badge">{{
+              c.unread > 99 ? '99+' : c.unread
+            }}</span>
           </div>
         </div>
       </div>
@@ -118,18 +107,12 @@ onBeforeUnmount(() => {
 
     <!-- 聊天窗 -->
     <div class="msg-chat">
-      <div
-        v-if="!activePeer"
-        class="msg-chat__empty"
-      >
-        选择会话开始聊天
-      </div>
+      <div v-if="!activePeer" class="msg-chat__empty">选择会话开始聊天</div>
       <template v-else>
         <div class="msg-chat__head">
-          <span
-            class="msg-chat__name"
-            @click="router.push(`/space/${activePeer}`)"
-          >{{ activeConv?.nickname ?? '对方' }}</span>
+          <span class="msg-chat__name" @click="router.push(`/space/${activePeer}`)">{{
+            activeConv?.nickname ?? '对方'
+          }}</span>
           <span class="msg-chat__actions">
             <span
               class="msg-chat__action"
@@ -139,20 +122,13 @@ onBeforeUnmount(() => {
               <span class="i-mingcute-user-remove-line" />
               {{ iBlocked ? '已拉黑' : '拉黑' }}
             </span>
-            <span
-              class="msg-chat__action"
-              title="举报会话"
-              @click="openReport"
-            >
+            <span class="msg-chat__action" title="举报会话" @click="openReport">
               <span class="i-mingcute-warning-line" />
               举报
             </span>
           </span>
         </div>
-        <div
-          ref="listBox"
-          class="msg-chat__list"
-        >
+        <div ref="listBox" class="msg-chat__list">
           <div
             v-for="m in messages"
             :key="m.id"
@@ -160,24 +136,19 @@ onBeforeUnmount(() => {
             :class="m.mine ? 'is-mine' : 'is-peer'"
           >
             <img
-              :src="m.mine ? (userStore.profile?.avatar || defaultAvatar) : (activeConv?.avatar || defaultAvatar)"
+              :src="
+                m.mine
+                  ? userStore.profile?.avatar || defaultAvatar
+                  : activeConv?.avatar || defaultAvatar
+              "
               alt=""
               class="msg-bubble__avatar"
-            >
+            />
             <div class="msg-bubble__body">
-              <p
-                v-if="m.content_type === 2"
-                class="msg-bubble__img"
-              >
-                <img
-                  :src="m.content"
-                  alt="图片消息"
-                >
+              <p v-if="m.content_type === 2" class="msg-bubble__img">
+                <img :src="m.content" alt="图片消息" />
               </p>
-              <p
-                v-else
-                class="msg-bubble__text"
-              >
+              <p v-else class="msg-bubble__text">
                 {{ m.content }}
               </p>
               <span class="msg-bubble__time">{{ formatTime(m.created_at) }}</span>
@@ -198,15 +169,12 @@ onBeforeUnmount(() => {
             :rows="2"
             maxlength="500"
             :disabled="blockedMe"
-            :placeholder="blockedMe ? '对方已将你拉黑，无法发送消息' : '输入消息（≤500 字，敏感内容将被拦截）'"
+            :placeholder="
+              blockedMe ? '对方已将你拉黑，无法发送消息' : '输入消息（≤500 字，敏感内容将被拦截）'
+            "
             @keydown.enter.exact.prevent="send"
           />
-          <el-button
-            type="primary"
-            :loading="sending"
-            :disabled="blockedMe"
-            @click="send"
-          >
+          <el-button type="primary" :loading="sending" :disabled="blockedMe" @click="send">
             发送
           </el-button>
         </div>

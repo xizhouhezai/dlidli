@@ -43,6 +43,12 @@ function openReport(c: CommentItem) {
   reportDialog.value?.open()
 }
 
+// 加载更多评论（多语句逻辑收敛为具名方法，避免内联多语句 handler）
+function loadMore() {
+  page.value++
+  load()
+}
+
 async function load(reset = false) {
   if (reset) {
     page.value = 1
@@ -173,26 +179,18 @@ async function expandReplies(root: CommentItem) {
   <div class="cmt">
     <div class="cmt__head">
       <span class="cmt__count">{{ total }} 条评论</span>
-      <span
-        class="cmt__sort"
-        :class="{ 'is-active': sort === 'hot' }"
-        @click="switchSort('hot')"
-      >最热</span>
+      <span class="cmt__sort" :class="{ 'is-active': sort === 'hot' }" @click="switchSort('hot')"
+        >最热</span
+      >
       <span class="cmt__divider">|</span>
-      <span
-        class="cmt__sort"
-        :class="{ 'is-active': sort === 'new' }"
-        @click="switchSort('new')"
-      >最新</span>
+      <span class="cmt__sort" :class="{ 'is-active': sort === 'new' }" @click="switchSort('new')"
+        >最新</span
+      >
     </div>
 
     <!-- 发布框 -->
     <div class="cmt__post">
-      <el-avatar
-        :size="36"
-        :src="userStore.profile?.avatar || defaultAvatar"
-        class="cmt__avatar"
-      >
+      <el-avatar :size="36" :src="userStore.profile?.avatar || defaultAvatar" class="cmt__avatar">
         {{ userStore.profile?.nickname?.slice(0, 1) ?? 'U' }}
       </el-avatar>
       <el-input
@@ -202,12 +200,7 @@ async function expandReplies(root: CommentItem) {
         maxlength="1000"
         @keyup.enter="postRoot"
       />
-      <el-button
-        type="primary"
-        class="cmt__send"
-        :loading="posting"
-        @click="postRoot"
-      >
+      <el-button type="primary" class="cmt__send" :loading="posting" @click="postRoot">
         发布
       </el-button>
     </div>
@@ -219,28 +212,14 @@ async function expandReplies(root: CommentItem) {
     />
 
     <!-- 评论列表 -->
-    <div
-      v-for="c in comments"
-      :key="c.id"
-      class="cmt-item"
-    >
-      <el-avatar
-        :size="36"
-        :src="c.user.avatar || defaultAvatar"
-        class="cmt__avatar"
-      >
+    <div v-for="c in comments" :key="c.id" class="cmt-item">
+      <el-avatar :size="36" :src="c.user.avatar || defaultAvatar" class="cmt__avatar">
         {{ c.user.nickname?.slice(0, 1) ?? 'U' }}
       </el-avatar>
       <div class="cmt-item__body">
         <p class="cmt-item__user">
           {{ c.user.nickname }}
-          <el-tag
-            v-if="c.is_top"
-            size="small"
-            type="warning"
-          >
-            置顶
-          </el-tag>
+          <el-tag v-if="c.is_top" size="small" type="warning"> 置顶 </el-tag>
         </p>
         <p class="cmt-item__content">
           {{ c.content }}
@@ -251,62 +230,35 @@ async function expandReplies(root: CommentItem) {
             class="cmt-item__op"
             :class="{ 'is-liked': likedSet.has(c.id) }"
             @click="toggleLike(c)"
-          ><span
-            class="align-middle mr-1"
-            :class="likedSet.has(c.id) ? 'i-mingcute-thumb-up-2-fill' : 'i-mingcute-thumb-up-2-line'"
-          />{{ c.like_cnt || '' }}</span>
-          <span
-            class="cmt-item__op"
-            @click="openReply(c)"
-          >回复</span>
-          <span
-            v-if="c.is_self"
-            class="cmt-item__op"
-            @click="remove(c)"
-          >删除</span>
-          <span
-            class="cmt-item__op"
-            @click="openReport(c)"
-          >举报</span>
+            ><span
+              class="align-middle mr-1"
+              :class="
+                likedSet.has(c.id) ? 'i-mingcute-thumb-up-2-fill' : 'i-mingcute-thumb-up-2-line'
+              "
+            />{{ c.like_cnt || '' }}</span
+          >
+          <span class="cmt-item__op" @click="openReply(c)">回复</span>
+          <span v-if="c.is_self" class="cmt-item__op" @click="remove(c)">删除</span>
+          <span class="cmt-item__op" @click="openReport(c)">举报</span>
         </p>
 
         <!-- 回复输入 -->
-        <div
-          v-if="replyTo.rootId === c.id"
-          class="cmt-reply-box"
-        >
+        <div v-if="replyTo.rootId === c.id" class="cmt-reply-box">
           <el-input
             v-model="replyInput"
             :placeholder="`回复 @${replyTo.nickname}`"
             maxlength="1000"
             @keyup.enter="postReply(c)"
           />
-          <el-button
-            type="primary"
-            size="small"
-            :loading="posting"
-            @click="postReply(c)"
-          >
+          <el-button type="primary" size="small" :loading="posting" @click="postReply(c)">
             回复
           </el-button>
-          <el-button
-            size="small"
-            @click="closeReply"
-          >
-            取消
-          </el-button>
+          <el-button size="small" @click="closeReply"> 取消 </el-button>
         </div>
 
         <!-- 楼中楼 -->
-        <div
-          v-if="c.replies?.length"
-          class="cmt-replies"
-        >
-          <div
-            v-for="r in c.replies"
-            :key="r.id"
-            class="cmt-reply"
-          >
+        <div v-if="c.replies?.length" class="cmt-replies">
+          <div v-for="r in c.replies" :key="r.id" class="cmt-reply">
             <span class="cmt-reply__user">{{ r.user.nickname }}：</span>
             <span>{{ r.content }}</span>
             <span class="cmt-item__meta cmt-reply__meta">
@@ -315,23 +267,16 @@ async function expandReplies(root: CommentItem) {
                 class="cmt-item__op"
                 :class="{ 'is-liked': likedSet.has(r.id) }"
                 @click="toggleLike(r)"
-              ><span
-                class="align-middle mr-1"
-                :class="likedSet.has(r.id) ? 'i-mingcute-thumb-up-2-fill' : 'i-mingcute-thumb-up-2-line'"
-              />{{ r.like_cnt || '' }}</span>
-              <span
-                class="cmt-item__op"
-                @click="openReply(c, r)"
-              >回复</span>
-              <span
-                v-if="r.is_self"
-                class="cmt-item__op"
-                @click="remove(r, c)"
-              >删除</span>
-              <span
-                class="cmt-item__op"
-                @click="openReport(r)"
-              >举报</span>
+                ><span
+                  class="align-middle mr-1"
+                  :class="
+                    likedSet.has(r.id) ? 'i-mingcute-thumb-up-2-fill' : 'i-mingcute-thumb-up-2-line'
+                  "
+                />{{ r.like_cnt || '' }}</span
+              >
+              <span class="cmt-item__op" @click="openReply(c, r)">回复</span>
+              <span v-if="r.is_self" class="cmt-item__op" @click="remove(r, c)">删除</span>
+              <span class="cmt-item__op" @click="openReport(r)">举报</span>
             </span>
           </div>
           <span
@@ -345,17 +290,8 @@ async function expandReplies(root: CommentItem) {
       </div>
     </div>
 
-    <div
-      v-if="comments.length < total"
-      class="cmt__more"
-    >
-      <el-button
-        link
-        :loading="loading"
-        @click="page++; load()"
-      >
-        加载更多评论
-      </el-button>
+    <div v-if="comments.length < total" class="cmt__more">
+      <el-button link :loading="loading" @click="loadMore"> 加载更多评论 </el-button>
     </div>
   </div>
 
