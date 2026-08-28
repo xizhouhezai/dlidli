@@ -12,6 +12,7 @@ import (
 	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/pkg/captcha"
 	"github.com/dlidli/server/internal/pkg/config"
+	"github.com/dlidli/server/internal/pkg/encrypt"
 	"github.com/dlidli/server/internal/pkg/errcode"
 	"github.com/dlidli/server/internal/pkg/jwtx"
 	"github.com/dlidli/server/internal/pkg/snowflake"
@@ -38,6 +39,40 @@ type Service struct {
 
 func NewService(repo *Repo, rdb *redis.Client, cfg *config.Config, log *zap.Logger, growthSvc *growth.Service) *Service {
 	return &Service{repo: repo, rdb: rdb, cfg: cfg, log: log, growthSvc: growthSvc}
+}
+
+// phKey 手机号/标识加密密钥：由 JWT secret 派生（32 字节 AES-256）。
+// 不新增配置项，避免密钥滥用；生产通过 DLIDLI_JWT_SECRET 注入正式密钥（config 已有强校验）。
+func (s *Service) phKey() []byte { return encrypt.DeriveKey(s.cfg.JWT.Secret) }
+
+// encryptIdentifier 加密手机号标识（AES-GCM），并返回其确定性哈希。
+// 返回 (密文, 哈希, 错误)；哈希用于查重/精确查询，密文用于存储。
+func (s *Service) encryptIdentifier(identityType int8, plain string) (ciphertext, hash string, err error) {
+	ciphertext, err = encrypt.Encrypt(s.phKey(), plain)
+	if err != nil {
+		return "", "", err
+	}
+	hash = encrypt.IdentifierHash(identityType, plain)
+	return ciphertext, hash, nil
+}
+
+// migrateAuth 存量明文账号惰性加密回填（ACC-43 两阶段第 2 步前奏）：
+// 命中旧明文的 auth，用明文重新加密并写入密文+哈希。手机号与邮箱标识都需加密；
+// 三方 openid 不加密（非 PII、无展示需求与精确查询冲突）。
+func (s *Service) migrateAuth(auth *UserAuth, plain string) {
+	if auth.IdentifierHash != "" {
+		return
+	}
+	ciphertext, hash, err := s.encryptIdentifier(auth.IdentityType, plain)
+	if err != nil {
+		s.log.Warn("存量标识加密回填失败", zap.Int64("auth_id", auth.ID), zap.Error(err))
+		return
+	}
+	if err := s.repo.UpdateIdentifierEncrypted(auth.ID, ciphertext, hash); err != nil {
+		s.log.Warn("存量标识加密回填落库失败", zap.Int64("auth_id", auth.ID), zap.Error(err))
+		return
+	}
+	auth.Identifier, auth.IdentifierHash = ciphertext, hash
 }
 
 // SendSmsCode 发送短信验证码。当前为 mock 实现：仅写入 Redis 并打日志；
@@ -80,10 +115,18 @@ func (s *Service) LoginBySms(ctx context.Context, phone, code string) (*TokenPai
 	if err != nil {
 		return nil, err
 	}
+	// 命中旧明文（hash 为空）时惰性加密回填
+	if auth != nil {
+		s.migrateAuth(auth, phone)
+	}
 
 	var user *User
 	if auth == nil {
 		// 自动注册（注册礼：5 硬币）
+		ciphertext, hash, err := s.encryptIdentifier(IdentityPhone, phone)
+		if err != nil {
+			return nil, err
+		}
 		user = &User{
 			ID:       snowflake.NextID(),
 			Nickname: defaultNickname(),
@@ -91,8 +134,9 @@ func (s *Service) LoginBySms(ctx context.Context, phone, code string) (*TokenPai
 			Coin:     5,
 		}
 		if err := s.repo.CreateUserWithAuth(user, &UserAuth{
-			IdentityType: IdentityPhone,
-			Identifier:   phone, // TODO(M1-ACC): 加密存储
+			IdentityType:   IdentityPhone,
+			Identifier:     ciphertext, // ACC-43：密文存储
+			IdentifierHash: hash,
 		}); err != nil {
 			return nil, err
 		}
@@ -129,6 +173,10 @@ func (s *Service) LoginByPassword(ctx context.Context, account, password, captch
 	auth, err := s.repo.FindAuth(identityType, account)
 	if err != nil {
 		return nil, err
+	}
+	// 命中旧明文（hash 为空）时惰性加密回填
+	if auth != nil {
+		s.migrateAuth(auth, account)
 	}
 	if auth == nil || auth.Credential == "" ||
 		bcrypt.CompareHashAndPassword([]byte(auth.Credential), []byte(password)) != nil {
@@ -244,6 +292,8 @@ func (s *Service) ResetPassword(ctx context.Context, phone, code, newPwd string)
 	if auth == nil {
 		return errcode.ErrAccountNotExists
 	}
+	// 命中旧明文（hash 为空）时惰性加密回填
+	s.migrateAuth(auth, phone)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPwd), bcrypt.DefaultCost)
 	if err != nil {

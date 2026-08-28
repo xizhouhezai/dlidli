@@ -40,12 +40,13 @@ func (User) TableName() string { return "user" }
 
 // UserAuth 对应 user_auth 表。
 type UserAuth struct {
-	ID           int64 `gorm:"primaryKey"`
-	UserID       int64
-	IdentityType int8
-	Identifier   string
-	Credential   string
-	CreatedAt    time.Time
+	ID             int64 `gorm:"primaryKey"`
+	UserID         int64
+	IdentityType   int8
+	Identifier     string // 密文（手机号 AES-GCM；邮箱/三方明文），见 ACC-43
+	IdentifierHash string // 确定性哈希 SHA-256(IdentityType:Identifier)，供查重/精确查询
+	Credential     string
+	CreatedAt      time.Time
 }
 
 func (UserAuth) TableName() string { return "user_auth" }

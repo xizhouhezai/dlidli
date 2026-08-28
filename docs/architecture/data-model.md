@@ -39,14 +39,17 @@ CREATE TABLE `user` (
 
 -- 认证凭据（与主表分离，便于多种登录方式）
 CREATE TABLE `user_auth` (
-  `id`            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `user_id`       BIGINT UNSIGNED NOT NULL,
-  `identity_type` TINYINT NOT NULL,                     -- 1手机 2邮箱 3微信
-  `identifier`    VARCHAR(128) NOT NULL,                -- 手机号(加密)/邮箱/openid
-  `credential`    VARCHAR(128) NOT NULL DEFAULT '',     -- bcrypt 密码；三方为空
-  UNIQUE KEY `uk_type_identifier` (`identity_type`, `identifier`),
+  `id`              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`         BIGINT UNSIGNED NOT NULL,
+  `identity_type`   TINYINT NOT NULL,                     -- 1手机 2邮箱 3微信
+  `identifier`      VARCHAR(128) NOT NULL,                -- 手机号(AES-GCM密文)/邮箱/openid；ACC-43
+  `identifier_hash` VARCHAR(64)  NOT NULL DEFAULT '',     -- SHA-256(identity_type:identifier)，查重/查询；ACC-43
+  `credential`      VARCHAR(128) NOT NULL DEFAULT '',     -- bcrypt 密码；三方为空
+  UNIQUE KEY `uk_type_identifier` (`identity_type`, `identifier`),          -- 旧索引（明文清空后随第2阶段删除）
   KEY `idx_user` (`user_id`)
 );
+-- 说明：identifier_hash 唯一性由应用层 FindAuth 先查后插（事务）保证；存量行 hash 为 ''
+-- 会互相碰撞，故不建 hash 唯一索引，待第 2 阶段全量回填非空后再补（见 specs/account ACC-43 迁移说明）。
 ```
 
 ### 2.2 视频域
