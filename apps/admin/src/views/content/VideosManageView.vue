@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { type AdminVideoItem, type CategoryItem } from '@dlidli/api-client'
+import { type AdminVideoItem, type CategoryItem, apiErrorMessage } from '@dlidli/api-client'
+import { VideoStatus } from '@dlidli/shared'
 import { adminApi } from '@/api'
 import { useApiAction } from '@/composables/useApiAction'
+import { saveBlob } from '@/utils/download'
 import PageHead from '@/components/PageHead.vue'
-import { readAdminToken } from '@/utils/token'
 
 const list = ref<AdminVideoItem[]>([])
 const total = ref(0)
@@ -20,20 +21,23 @@ const categoryId = ref(0)
 const keyword = ref('')
 const categories = ref<CategoryItem[]>([])
 
-const STATUS_MAP: Record<number, { text: string; type: 'info' | 'warning' | 'success' | 'danger' | 'primary' }> = {
-  0: { text: '草稿', type: 'info' },
-  1: { text: '上传中', type: 'info' },
-  2: { text: '转码中', type: 'primary' },
-  3: { text: '审核中', type: 'warning' },
-  4: { text: '已发布', type: 'success' },
-  5: { text: '已驳回', type: 'danger' },
-  6: { text: '已锁定', type: 'danger' },
+const STATUS_MAP: Record<
+  number,
+  { text: string; type: 'info' | 'warning' | 'success' | 'danger' | 'primary' }
+> = {
+  [VideoStatus.Draft]: { text: '草稿', type: 'info' },
+  [VideoStatus.Uploading]: { text: '上传中', type: 'info' },
+  [VideoStatus.Transcoding]: { text: '转码中', type: 'primary' },
+  [VideoStatus.Reviewing]: { text: '审核中', type: 'warning' },
+  [VideoStatus.Published]: { text: '已发布', type: 'success' },
+  [VideoStatus.Rejected]: { text: '已驳回', type: 'danger' },
+  [VideoStatus.Locked]: { text: '已锁定', type: 'danger' },
 }
 
 // 筛选项：草稿（0）不提供筛选（管理端面向已提交稿件，列表仍展示草稿 tag）
 const STATUS_OPTIONS = computed(() =>
   Object.entries(STATUS_MAP)
-    .filter(([k]) => Number(k) !== 0)
+    .filter(([k]) => Number(k) !== VideoStatus.Draft)
     .map(([k, v]) => ({ value: Number(k), text: v.text })),
 )
 
@@ -50,6 +54,8 @@ async function load(reset = false) {
     })
     list.value = res.list ?? []
     total.value = res.total
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '列表加载失败，请稍后再试'))
   } finally {
     loading.value = false
   }
@@ -61,29 +67,20 @@ function search() {
 
 // 导出 CSV（当前筛选，SYS-06）
 async function exportCsv() {
-  const qs = new URLSearchParams()
-  if (status.value) qs.set('status', String(status.value))
-  if (categoryId.value) qs.set('category_id', String(categoryId.value))
-  if (keyword.value.trim()) qs.set('keyword', keyword.value.trim())
-  try {
-    const res = await fetch(`/api/v1/admin/videos/export?${qs.toString()}`, {
-      headers: { Authorization: `Bearer ${readAdminToken() ?? ''}` },
-    })
-    if (!res.ok) {
-      ElMessage.error('导出失败')
-      return
-    }
-    const blob = await res.blob()
-    const match = (res.headers.get('Content-Disposition') ?? '').match(/filename="?([^";]+)"?/)
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = match?.[1] ?? `videos-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    ElMessage.success('导出成功')
-  } catch {
-    ElMessage.error('导出失败，请稍后再试')
-  }
+  await run(
+    () =>
+      adminApi.http
+        .download('/api/v1/admin/videos/export', {
+          params: {
+            status: status.value || undefined,
+            category_id: categoryId.value || undefined,
+            keyword: keyword.value.trim() || undefined,
+          },
+          fallbackName: `videos-${Date.now()}.csv`,
+        })
+        .then(saveBlob),
+    { success: '导出成功', fallback: '导出失败，请稍后再试' },
+  )
 }
 
 function categoryName(id: number) {
@@ -91,19 +88,34 @@ function categoryName(id: number) {
 }
 
 async function toggleStatus(item: AdminVideoItem) {
-  const isPublished = item.status === 4
+  const isPublished = item.status === VideoStatus.Published
   const action = isPublished ? '下架' : '恢复'
-  await ElMessageBox.confirm(`确定${action}《${item.title}》吗？${isPublished ? '下架后前台不可见。' : ''}`, `${action}稿件`, { type: 'warning' })
+  await ElMessageBox.confirm(
+    `确定${action}《${item.title}》吗？${isPublished ? '下架后前台不可见。' : ''}`,
+    `${action}稿件`,
+    { type: 'warning' },
+  )
   const ok = await run(
-    () => adminApi.admin.updateVideoStatus(item.bvid, isPublished ? 6 : 4),
+    () =>
+      adminApi.admin.updateVideoStatus(
+        item.bvid,
+        isPublished ? VideoStatus.Locked : VideoStatus.Published,
+      ),
     { success: `已${action}`, fallback: `${action}失败` },
   )
   if (ok) load()
 }
 
 async function remove(item: AdminVideoItem) {
-  await ElMessageBox.confirm(`确定删除《${item.title}》吗？删除后作者与游客均不可见，不可恢复。`, '删除稿件', { type: 'error' })
-  const ok = await run(() => adminApi.admin.deleteVideo(item.bvid), { success: '已删除', fallback: '删除失败' })
+  await ElMessageBox.confirm(
+    `确定删除《${item.title}》吗？删除后作者与游客均不可见，不可恢复。`,
+    '删除稿件',
+    { type: 'error' },
+  )
+  const ok = await run(() => adminApi.admin.deleteVideo(item.bvid), {
+    success: '已删除',
+    fallback: '删除失败',
+  })
   if (ok) load()
 }
 
@@ -119,24 +131,13 @@ onMounted(async () => {
 
 <template>
   <div>
-    <PageHead
-      title="稿件管理"
-      :sub="`全站稿件 ${total} 条（含全部状态）`"
-    />
+    <PageHead title="稿件管理" :sub="`全站稿件 ${total} 条（含全部状态）`" />
 
     <div class="page-card">
       <!-- 筛选栏 -->
       <div class="flex flex-wrap items-center gap-3 mb-4">
-        <el-select
-          v-model="status"
-          placeholder="全部状态"
-          class="w-130px"
-          @change="search"
-        >
-          <el-option
-            label="全部状态"
-            :value="0"
-          />
+        <el-select v-model="status" placeholder="全部状态" class="w-130px" @change="search">
+          <el-option label="全部状态" :value="0" />
           <el-option
             v-for="opt in STATUS_OPTIONS"
             :key="opt.value"
@@ -144,22 +145,9 @@ onMounted(async () => {
             :value="opt.value"
           />
         </el-select>
-        <el-select
-          v-model="categoryId"
-          placeholder="全部分区"
-          class="w-140px"
-          @change="search"
-        >
-          <el-option
-            label="全部分区"
-            :value="0"
-          />
-          <el-option
-            v-for="c in categories"
-            :key="c.id"
-            :label="c.name"
-            :value="c.id"
-          />
+        <el-select v-model="categoryId" placeholder="全部分区" class="w-140px" @change="search">
+          <el-option label="全部分区" :value="0" />
+          <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
         </el-select>
         <el-input
           v-model="keyword"
@@ -169,31 +157,12 @@ onMounted(async () => {
           @keyup.enter="search"
           @clear="search"
         />
-        <el-button
-          type="primary"
-          class="pink-btn"
-          @click="search"
-        >
-          查询
-        </el-button>
-        <el-button
-          v-perm="'video:view'"
-          class="pink-btn"
-          @click="exportCsv"
-        >
-          导出 CSV
-        </el-button>
+        <el-button type="primary" class="pink-btn" @click="search"> 查询 </el-button>
+        <el-button v-perm="'video:view'" class="pink-btn" @click="exportCsv"> 导出 CSV </el-button>
       </div>
 
-      <el-table
-        v-loading="loading"
-        :data="list"
-        stripe
-      >
-        <el-table-column
-          label="稿件"
-          min-width="200"
-        >
+      <el-table v-loading="loading" :data="list" stripe>
+        <el-table-column label="稿件" min-width="200">
           <template #default="{ row }">
             <div class="flex items-center gap-2">
               <img
@@ -201,11 +170,8 @@ onMounted(async () => {
                 :src="row.cover"
                 alt=""
                 class="w-70px aspect-video object-cover rounded-4px bg-#f1f2f3"
-              >
-              <span
-                v-else
-                class="w-70px aspect-video rounded-4px bg-#f1f2f3 inline-block"
               />
+              <span v-else class="w-70px aspect-video rounded-4px bg-#f1f2f3 inline-block" />
               <div class="min-w-0">
                 <p class="m-0 text-3.5 font-600 truncate max-w-260px">
                   {{ row.title }}
@@ -217,74 +183,46 @@ onMounted(async () => {
             </div>
           </template>
         </el-table-column>
-        <el-table-column
-          label="分区"
-          width="90"
-        >
+        <el-table-column label="分区" width="90">
           <template #default="{ row }">
             {{ categoryName(row.category_id) }}
           </template>
         </el-table-column>
-        <el-table-column
-          label="状态"
-          width="90"
-        >
+        <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag
-              size="small"
-              effect="plain"
-              :type="STATUS_MAP[row.status]?.type ?? 'info'"
-            >
+            <el-tag size="small" effect="plain" :type="STATUS_MAP[row.status]?.type ?? 'info'">
               {{ STATUS_MAP[row.status]?.text ?? '未知' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column
-          label="播放"
-          width="80"
-        >
+        <el-table-column label="播放" width="80">
           <template #default="{ row }">
             {{ row.stat?.view ?? 0 }}
           </template>
         </el-table-column>
-        <el-table-column
-          label="发布时间"
-          width="160"
-        >
+        <el-table-column label="发布时间" width="160">
           <template #default="{ row }">
             {{ row.published_at ? row.published_at.slice(0, 10) : '—' }}
           </template>
         </el-table-column>
-        <el-table-column
-          label="操作"
-          width="150"
-          fixed="right"
-        >
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <template v-if="row.status === 4 || row.status === 6">
+            <template
+              v-if="row.status === VideoStatus.Published || row.status === VideoStatus.Locked"
+            >
               <el-button
                 v-perm="'video:manage'"
                 link
-                :type="row.status === 4 ? 'warning' : 'primary'"
+                :type="row.status === VideoStatus.Published ? 'warning' : 'primary'"
                 @click="toggleStatus(row)"
               >
-                {{ row.status === 4 ? '下架' : '恢复' }}
+                {{ row.status === VideoStatus.Published ? '下架' : '恢复' }}
               </el-button>
-              <el-button
-                v-perm="'video:manage'"
-                link
-                type="danger"
-                @click="remove(row)"
-              >
+              <el-button v-perm="'video:manage'" link type="danger" @click="remove(row)">
                 删除
               </el-button>
             </template>
-            <span
-              v-else
-              class="text-3 text-text-3"
-            >
-              不可操作
-            </span>
+            <span v-else class="text-3 text-text-3"> 不可操作 </span>
           </template>
         </el-table-column>
       </el-table>

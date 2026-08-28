@@ -1,21 +1,21 @@
-// token 本地存取（独立模块，避免 store 与 api-client 循环依赖）
-const TOKEN_KEY = 'dlidli_token'
-const REFRESH_KEY = 'dlidli_refresh'
+// token 本地存取：委托 api-client 的 TokenStorage（M3-ENG-13），
+// key 约定仍为 dlidli_token / dlidli_refresh；本模块只保留既有导入路径与单例。
+import { createLocalStorageTokens } from '@dlidli/api-client'
+
+export const tokens = createLocalStorageTokens('dlidli')
 
 export function readToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+  return tokens.getAccess()
 }
 
 export function readRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_KEY)
+  return tokens.getRefresh()
 }
 
 export function saveTokens(access: string, refresh: string) {
-  localStorage.setItem(TOKEN_KEY, access)
-  localStorage.setItem(REFRESH_KEY, refresh)
+  tokens.save(access, refresh)
 }
 
 export function clearTokens() {
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(REFRESH_KEY)
+  tokens.clear()
 }
