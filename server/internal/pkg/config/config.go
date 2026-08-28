@@ -25,6 +25,8 @@ type App struct {
 	Env          string // dev / test / staging / prod
 	Port         int
 	AllowOrigins []string
+	// InviteCodeRequired 内测开关：开启后新注册（短信自动注册/邮箱注册）须携带一次性邀请码（ACC-44）
+	InviteCodeRequired bool
 	// AutoApprove 仅限开发环境：稿件提交后自动过审（审核工作台 M1-ADM 上线前的联调便利）
 	AutoApprove bool
 }

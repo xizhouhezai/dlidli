@@ -4,6 +4,8 @@ app:
   port: 8100
   # staging 环境自动过审，便于联调演示（生产仍走人工审核）
   autoApprove: true
+  # 内测邀请码注册开关（ACC-44；staging 内测可开）
+  inviteCodeRequired: false
   allowOrigins:
     - http://localhost:5173
     - http://localhost:5174

@@ -148,7 +148,7 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		videoSvc.SetPublishHook(dynamicSvc.OnVideoPublished)
 
 		adminSvc := admin.NewService(admin.NewRepo(res.DB), videoSvc, accountSvc, cfg, log)
-		admin.NewHandler(adminSvc).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret))
+		admin.NewHandler(adminSvc).WithInviteGen(accountSvc.GenerateInviteCodes).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret))
 
 		// 举报体系（M2-AUD-03）：C 端提交 + 后台队列处理
 		reportSvc := report.NewService(report.NewRepo(res.DB), videoSvc, accountSvc,

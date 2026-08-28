@@ -2,6 +2,7 @@ package account
 
 import (
 	"errors"
+	"time"
 
 	"github.com/dlidli/server/internal/pkg/encrypt"
 	"gorm.io/gorm"
@@ -102,6 +103,11 @@ func (r *Repo) UpdateIdentifierEncrypted(authID int64, ciphertext, hash string) 
 	return r.db.Model(&UserAuth{}).
 		Where("id = ?", authID).
 		Updates(map[string]any{"identifier": ciphertext, "identifier_hash": hash}).Error
+}
+
+// DeleteUser 删除用户（邀请码占用失败补偿，ACC-44）。
+func (r *Repo) DeleteUser(uid int64) error {
+	return r.db.Delete(&User{}, uid).Error
 }
 
 // UpdateAuthActivated 更新认证激活状态（邮箱注册激活 ACC-02）。
@@ -222,4 +228,43 @@ func (r *Repo) ListCoinLogs(uid int64, page, size int) ([]CoinLog, int64, error)
 	var list []CoinLog
 	err := q.Order("id DESC").Offset((page - 1) * size).Limit(size).Find(&list).Error
 	return list, total, err
+}
+
+// CreateInviteCodes 批量写入邀请码（uk_code 冲突时跳过）。
+func (r *Repo) CreateInviteCodes(codes []InviteCode) (int, error) {
+	if len(codes) == 0 {
+		return 0, nil
+	}
+	if err := r.db.Create(&codes).Error; err != nil {
+		// 并发生成冲突：逐条重试写入（唯一键约束跳过冲突项）
+		for _, c := range codes {
+			_ = r.db.Create(&c).Error
+		}
+	}
+	return len(codes), nil
+}
+
+// FindInviteCode 按码查询邀请码；不存在返回 (nil, nil)。
+func (r *Repo) FindInviteCode(code string) (*InviteCode, error) {
+	var c InviteCode
+	err := r.db.Where("code = ?", code).First(&c).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// ClaimInviteCode 原子占用邀请码（一次性）：未使用且未过期才更新成功。
+// 条件 UPDATE 保证并发下唯一消费者（ACC-44）。
+func (r *Repo) ClaimInviteCode(code string, uid int64) (bool, error) {
+	res := r.db.Model(&InviteCode{}).
+		Where("code = ? AND used_by IS NULL AND (expires_at IS NULL OR expires_at > NOW())", code).
+		Updates(map[string]any{"used_by": uid, "used_at": time.Now()})
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected == 1, nil
 }
