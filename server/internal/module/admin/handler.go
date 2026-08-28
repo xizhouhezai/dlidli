@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -11,11 +12,18 @@ import (
 )
 
 type Handler struct {
-	svc *Service
+	svc      *Service
+	inviteGen func(ctx context.Context, adminID int64, count int, expiresDays int) ([]string, error)
 }
 
 func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
+}
+
+// WithInviteGen 注入邀请码生成器（由 router 从 account 服务桥接，避免 admin 反向依赖 account）。
+func (h *Handler) WithInviteGen(gen func(ctx context.Context, adminID int64, count int, expiresDays int) ([]string, error)) *Handler {
+	h.inviteGen = gen
+	return h
 }
 
 // RegisterRoutes 注册后台路由（/api/v1/admin）。
@@ -80,6 +88,8 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, adminAuth gin.HandlerFunc)
 			authed.POST("/configs", perm("config:edit"), h.createConfig)
 			authed.PUT("/configs/:id", perm("config:edit"), h.updateConfig)
 			authed.DELETE("/configs/:id", perm("config:edit"), h.deleteConfig)
+			// 内测邀请码（ACC-44，M1-REL-04）
+			authed.POST("/invite-codes", perm("config:edit"), h.generateInviteCodes)
 			// 数据字典（M2-SYS-02）
 			authed.GET("/dicts", perm("dict:view"), h.listDicts)
 			authed.POST("/dicts", perm("dict:edit"), h.createDict)
@@ -116,6 +126,36 @@ func (h *Handler) login(c *gin.Context) {
 // @Security BearerAuth
 // @Success  200 {object} response.Body
 // @Router   /admin/dashboard/stats [get]
+// generateInviteCodes 批量生成内测邀请码
+// @Summary  生成内测邀请码
+// @Tags     管理后台-运营
+// @Accept   json
+// @Produce  json
+// @Param    body body object true "count; expire_days(0=永久)"
+// @Success  200 {object} response.Body
+// @Router   /admin/invite-codes [post]
+func (h *Handler) generateInviteCodes(c *gin.Context) {
+	if h.inviteGen == nil {
+		response.Fail(c, errcode.ErrInvalidParams.WithMsg("邀请码生成未启用"))
+		return
+	}
+	var req struct {
+		Count       int `json:"count" binding:"required,min=1,max=100"`
+		ExpireDays  int `json:"expire_days"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	adminID := c.GetInt64(middleware.CtxUserID)
+	codes, err := h.inviteGen(c.Request.Context(), adminID, req.Count, req.ExpireDays)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"codes": codes, "count": len(codes)})
+}
+
 func (h *Handler) dashboardStats(c *gin.Context) {
 	stats, err := h.svc.DashboardStats(c.Request.Context())
 	if err != nil {

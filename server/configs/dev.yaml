@@ -4,6 +4,8 @@ app:
   port: 8000
   # 审核工作台已上线：走真实"先审后播"，在 /admin/review 人工过审
   autoApprove: false
+  # 内测邀请码注册开关（ACC-44，M1-REL-04；默认关闭，内测期可开）
+  inviteCodeRequired: false
   allowOrigins:
     - http://localhost:5173
     - http://localhost:5174

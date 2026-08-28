@@ -105,7 +105,7 @@ func (s *Service) SendSmsCode(ctx context.Context, phone string) (debugCode stri
 }
 
 // LoginBySms 验证码登录：未注册手机号自动注册。
-func (s *Service) LoginBySms(ctx context.Context, phone, code string) (*TokenPair, error) {
+func (s *Service) LoginBySms(ctx context.Context, phone, code, inviteCode string) (*TokenPair, error) {
 	key := "sms:code:" + phone
 	saved, err := s.rdb.Get(ctx, key).Result()
 	if err == redis.Nil || saved != code {
@@ -145,6 +145,11 @@ func (s *Service) LoginBySms(ctx context.Context, phone, code string) (*TokenPai
 		}); err != nil {
 			return nil, err
 		}
+		// 内测邀请码（ACC-44）：占用失败补偿删除已建账号
+		if err := s.requireInvite(ctx, inviteCode, user.ID); err != nil {
+			_ = s.repo.DeleteUser(user.ID)
+			return nil, err
+		}
 	} else {
 		user, err = s.repo.FindUserByID(auth.UserID)
 		if err != nil {
@@ -156,7 +161,7 @@ func (s *Service) LoginBySms(ctx context.Context, phone, code string) (*TokenPai
 
 // RegisterByEmail 邮箱注册（ACC-02）：校验格式/查重 → 创建待激活账号 → 生成激活 token 并 mock 发送激活邮件。
 // dev 环境返回 debug 激活链接（真实邮件服务接入后移除）。
-func (s *Service) RegisterByEmail(ctx context.Context, email, password string) (debugURL string, err error) {
+func (s *Service) RegisterByEmail(ctx context.Context, email, password, inviteCode string) (debugURL string, err error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	if !emailRe.MatchString(email) {
 		return "", errcode.ErrInvalidParams.WithMsg("邮箱格式不正确")
@@ -191,6 +196,11 @@ func (s *Service) RegisterByEmail(ctx context.Context, email, password string) (
 	if err := s.repo.CreateUserWithAuth(user, auth); err != nil {
 		return "", err
 	}
+	// 内测邀请码（ACC-44）：占用失败补偿删除已建账号
+	if err := s.requireInvite(ctx, inviteCode, user.ID); err != nil {
+		_ = s.repo.DeleteUser(user.ID)
+		return "", err
+	}
 	token, err := randomToken()
 	if err != nil {
 		return "", err
@@ -204,6 +214,73 @@ func (s *Service) RegisterByEmail(ctx context.Context, email, password string) (
 		return debugURL, nil
 	}
 	return "", nil
+}
+
+// GenerateInviteCodes 批量生成内测邀请码（ACC-44，admin 调用）。
+func (s *Service) GenerateInviteCodes(ctx context.Context, adminID int64, count int, expiresDays int) ([]string, error) {
+	if count <= 0 || count > 100 {
+		return nil, errcode.ErrInvalidParams.WithMsg("生成数量须在 1-100 之间")
+	}
+	var expiresAt *time.Time
+	if expiresDays > 0 {
+		t := time.Now().Add(time.Duration(expiresDays) * 24 * time.Hour)
+		expiresAt = &t
+	}
+	codes := make([]InviteCode, 0, count)
+	for i := 0; i < count; i++ {
+		codes = append(codes, InviteCode{Code: randomInviteCode(), CreatedBy: adminID, ExpiresAt: expiresAt})
+	}
+	if _, err := s.repo.CreateInviteCodes(codes); err != nil {
+		return nil, err
+	}
+	got := make([]string, 0, count)
+	for _, c := range codes {
+		got = append(got, c.Code)
+	}
+	return got, nil
+}
+
+// requireInvite 内测开关（ACC-44）：开启时校验并占用一次性邀请码。
+// 先校验状态（不存在/已使用/已过期），再按 uid 原子占用；占用失败（并发竞态）返回已被使用。
+func (s *Service) requireInvite(ctx context.Context, code string, uid int64) error {
+	if !s.cfg.App.InviteCodeRequired {
+		return nil
+	}
+	if code == "" {
+		return errcode.ErrInvalidParams.WithMsg("内测期间请填写邀请码")
+	}
+	c, err := s.repo.FindInviteCode(code)
+	if err != nil {
+		return err
+	}
+	if c == nil {
+		return errcode.ErrInvalidParams.WithMsg("邀请码不存在")
+	}
+	if c.UsedBy != nil {
+		return errcode.ErrInvalidParams.WithMsg("邀请码已被使用")
+	}
+	if c.expiredAt(time.Now()) {
+		return errcode.ErrInvalidParams.WithMsg("邀请码已过期")
+	}
+	ok, err := s.repo.ClaimInviteCode(code, uid)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errcode.ErrInvalidParams.WithMsg("邀请码已被使用")
+	}
+	return nil
+}
+
+// randomInviteCode 生成 8 位邀请码（去掉易混淆 0/O/1/I）。
+func randomInviteCode() string {
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	b := make([]byte, 8)
+	for i := range b {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
+		b[i] = alphabet[n.Int64()]
+	}
+	return string(b)
 }
 
 // ActivateEmail 激活邮箱账号（ACC-02）：校验激活 token → 置 activated=1 → 一次性消费。
