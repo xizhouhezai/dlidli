@@ -24,6 +24,22 @@
       "style": {
         "navigationBarTitleText": "个人中心"
       }
+    },
+    {
+      "path": "pages/messages/messages",
+      "style": {
+        "navigationBarTitleText": "消息中心"
+      }
+    },
+    {
+      "path": "pages/im/im",
+      "style": {
+        "navigationBarTitleText": "私信",
+        "navigationStyle": "custom",
+        "titleNView": {
+          "buttons": [{ "type": "menu", "index": "0" }]
+        }
+      }
     }
   ],
   "globalStyle": {
