@@ -51,3 +51,16 @@ export const api = createApiClient({
   onTokenExpired: refreshAccess,
   adapter: uniAdapter,
 })
+
+/** 登录成功后持久化令牌（H5 个人中心登录入口用） */
+export function saveLogin(access: string, refresh: string) {
+  tokens.save(access, refresh)
+}
+
+export function clearLogin() {
+  tokens.clear()
+}
+
+export function hasLogin(): boolean {
+  return !!tokens.getAccess()
+}

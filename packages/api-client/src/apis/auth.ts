@@ -22,8 +22,8 @@ export function createAuthApi(http: HttpClient) {
     sendSmsCode: (phone: string) =>
       http.post<{ debug_code?: string }>('/api/v1/auth/sms-code', { phone }),
 
-    loginBySms: (phone: string, code: string) =>
-      http.post<TokenPair>('/api/v1/auth/login/sms', { phone, code }),
+    loginBySms: (phone: string, code: string, inviteCode = '') =>
+      http.post<TokenPair>('/api/v1/auth/login/sms', { phone, code, invite_code: inviteCode }),
 
     loginByPassword: (account: string, password: string, captchaId: string, captchaCode: string) =>
       http.post<TokenPair>('/api/v1/auth/login/password', {
@@ -35,14 +35,18 @@ export function createAuthApi(http: HttpClient) {
 
     /** 邮箱注册（ACC-02）：创建待激活账号；dev 环境后端返回 debug_activate_url 便于联调 */
     registerEmail: (email: string, password: string, inviteCode = '') =>
-      http.post<{ activated: boolean; debug_activate_url?: string }>('/api/v1/auth/register/email', {
-        email,
-        password,
-        invite_code: inviteCode,
-      }),
+      http.post<{ activated: boolean; debug_activate_url?: string }>(
+        '/api/v1/auth/register/email',
+        {
+          email,
+          password,
+          invite_code: inviteCode,
+        },
+      ),
 
     /** 激活邮箱账号（ACC-02）：一次性 token */
-    activate: (token: string) => http.post<{ activated: boolean }>('/api/v1/auth/activate', { token }),
+    activate: (token: string) =>
+      http.post<{ activated: boolean }>('/api/v1/auth/activate', { token }),
 
     /** 获取图形验证码（返回 id + 内联 SVG） */
     captcha: () => http.get<{ id: string; svg: string }>('/api/v1/auth/captcha'),
