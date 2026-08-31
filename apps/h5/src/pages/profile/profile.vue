@@ -100,6 +100,10 @@ function goVideo(bvid: string) {
   uni.navigateTo({ url: '/pages/video/video?bvid=' + bvid })
 }
 
+function goMessages() {
+  uni.navigateTo({ url: '/pages/messages/messages' })
+}
+
 onShow(() => {
   loggedIn.value = hasLogin()
   if (loggedIn.value) loadMine()
@@ -147,6 +151,14 @@ onShow(() => {
           <text class="mine__meta">Lv{{ profile?.level }} · {{ profile?.coin }} 硬币</text>
         </view>
         <text class="mine__logout" @tap="doLogout">退出</text>
+      </view>
+
+      <!-- 快捷入口 -->
+      <view class="quick">
+        <view class="quick__item" @tap="goMessages">
+          <text class="quick__icon i-mingcute-mail-line" />
+          <text class="quick__label">我的消息</text>
+        </view>
       </view>
 
       <!-- 我的投稿 -->
@@ -297,6 +309,35 @@ onShow(() => {
 .mine__logout {
   font-size: 26rpx;
   color: v.$text-3;
+}
+
+.quick {
+  display: flex;
+  background: v.$surface;
+  border-radius: 16rpx;
+  margin-top: 24rpx;
+  padding: 24rpx;
+  gap: 24rpx;
+}
+
+.quick__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: 16rpx 32rpx;
+  border-radius: 12rpx;
+  background: v.$bg;
+}
+
+.quick__icon {
+  font-size: 48rpx;
+  color: v.$primary;
+}
+
+.quick__label {
+  font-size: 22rpx;
+  color: v.$text-2;
 }
 
 .section {
