@@ -38,6 +38,12 @@
       }
     },
     {
+      "path": "pages/space/space",
+      "style": {
+        "navigationBarTitleText": "个人空间"
+      }
+    },
+    {
       "path": "pages/im/im",
       "style": {
         "navigationBarTitleText": "私信",
