@@ -104,6 +104,10 @@ function goMessages() {
   uni.navigateTo({ url: '/pages/messages/messages' })
 }
 
+function goCollection() {
+  uni.navigateTo({ url: '/pages/collection/collection' })
+}
+
 onShow(() => {
   loggedIn.value = hasLogin()
   if (loggedIn.value) loadMine()
@@ -158,6 +162,10 @@ onShow(() => {
         <view class="quick__item" @tap="goMessages">
           <text class="quick__icon i-mingcute-mail-line" />
           <text class="quick__label">我的消息</text>
+        </view>
+        <view class="quick__item" @tap="goCollection">
+          <text class="quick__icon i-mingcute-star-line" />
+          <text class="quick__label">我的收藏</text>
         </view>
       </view>
 
