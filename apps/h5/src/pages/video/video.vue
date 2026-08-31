@@ -81,6 +81,10 @@ async function doFav() {
   }
 }
 
+function goSpace(uid: string) {
+  uni.navigateTo({ url: '/pages/space/space?uid=' + uid })
+}
+
 function doShare() {
   if (!detail.value) return
   uni.setClipboardData({
@@ -144,7 +148,7 @@ async function sendDanmaku() {
       </view>
 
       <!-- UP 主 -->
-      <view class="up">
+      <view class="up" @tap="goSpace(detail.owner.id)">
         <image class="up__avatar" :src="detail.owner.avatar || DEFAULT_AVATAR" mode="aspectFill" />
         <view class="up__info">
           <text class="up__name">{{ detail.owner.nickname }}</text>
