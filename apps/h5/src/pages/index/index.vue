@@ -78,10 +78,19 @@ function openVideo(bvid: string) {
 function goSearch() {
   uni.navigateTo({ url: '/pages/search/search' })
 }
+
+function goProfile() {
+  uni.navigateTo({ url: '/pages/profile/profile' })
+}
 </script>
 
 <template>
   <view class="home">
+    <!-- 个人中心入口 -->
+    <view class="profile-entry" @tap="goProfile">
+      <text class="profile-entry__icon i-mingcute-user-2-line" />
+    </view>
+
     <!-- 搜索入口 -->
     <view class="search-entry" @tap="goSearch">
       <text class="search-entry__icon i-mingcute-search-2-line" />
@@ -143,11 +152,32 @@ function goSearch() {
 }
 
 /* 搜索入口 */
+.profile-entry {
+  position: absolute;
+  right: 24rpx;
+  top: 16rpx;
+  z-index: 10;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: v.$surface;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-entry__icon {
+  font-size: 32rpx;
+  color: v.$primary;
+}
+
 .search-entry {
   display: flex;
   align-items: center;
   gap: 12rpx;
   margin: 16rpx 24rpx;
+  margin-right: 100rpx;
   padding: 16rpx 24rpx;
   border-radius: 32rpx;
   background: v.$surface;
