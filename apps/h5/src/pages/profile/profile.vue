@@ -108,6 +108,10 @@ function goCollection() {
   uni.navigateTo({ url: '/pages/collection/collection' })
 }
 
+function goHistory() {
+  uni.navigateTo({ url: '/pages/history/history' })
+}
+
 onShow(() => {
   loggedIn.value = hasLogin()
   if (loggedIn.value) loadMine()
@@ -166,6 +170,10 @@ onShow(() => {
         <view class="quick__item" @tap="goCollection">
           <text class="quick__icon i-mingcute-star-line" />
           <text class="quick__label">我的收藏</text>
+        </view>
+        <view class="quick__item" @tap="goHistory">
+          <text class="quick__icon i-mingcute-history-line" />
+          <text class="quick__label">观看历史</text>
         </view>
       </view>
 

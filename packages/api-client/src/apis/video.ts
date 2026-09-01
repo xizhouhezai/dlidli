@@ -122,6 +122,13 @@ export function createVideoApi(http: HttpClient) {
         page_size: pageSize,
       }),
 
+    /** 观看历史（最近观看倒序，Redis zset） */
+    history: (page = 1, pageSize = 20) =>
+      http.get<{ list: VideoCard[] }>('/api/v1/videos/history', {
+        page,
+        page_size: pageSize,
+      }),
+
     remove: (bvid: string) => http.delete<null>(`/api/v1/videos/${bvid}`),
 
     /** 首页轮播 Banner（运营位配置，空列表时前端回退最热） */
