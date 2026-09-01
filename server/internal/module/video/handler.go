@@ -27,7 +27,8 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 	g := v1.Group("/videos")
 	{
 		g.GET("", h.publicList)
-		g.GET("/mine", auth, h.mine) // 需在 /:bvid 之前注册同级静态路由
+		g.GET("/mine", auth, h.mine)       // 需在 /:bvid 之前注册同级静态路由
+		g.GET("/history", auth, h.history) // 观看历史，同样需在 /:bvid 之前
 		g.GET("/:bvid", h.publicDetail)
 		g.GET("/:bvid/parts", h.parts)
 		g.POST("", auth, h.submit)
@@ -167,6 +168,24 @@ func (h *Handler) mine(c *gin.Context) {
 		return
 	}
 	response.OK(c, gin.H{"list": cards, "total": total})
+}
+
+// history 观看历史（最近观看倒序）
+// @Summary  观看历史
+// @Tags     视频
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /videos/history [get]
+func (h *Handler) history(c *gin.Context) {
+	uid := c.GetInt64(middleware.CtxUserID)
+	page, size := pagination(c)
+	cards, err := h.svc.History(c.Request.Context(), uid, page, size)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"list": cards})
 }
 
 // @Summary  上报播放（游客也计数）

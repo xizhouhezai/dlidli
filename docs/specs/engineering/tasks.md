@@ -51,7 +51,7 @@
   - 覆盖：—（工程）
 - [x] M2-H5-03 播放页（含弹幕展示/发送、互动栏）（原生 video 播 HLS+有效播放上报+UP主/三连数据/简介已完成；互动栏已完成：点赞/投币/收藏/分享四按钮+弹幕发送栏） `2026-07-30`
   - 覆盖：—（工程）
-- [ ] M2-H5-04 个人中心/空间/历史/收藏（**分步**：2026-08-28 已交付「个人中心页 + 短信登录入口 + 首页入口」——pages/profile/profile.vue：未登录内嵌短信登录（dev 自动填充 debug_code）、已登录展示用户卡片/我的投稿(/videos/mine)/我的收藏夹(/users/me/collections)/退出，api 层补 saveLogin/clearLogin/hasLogin；typecheck + uni build 全通；2026-08-28 再交付「收藏页」——pages/collection/collection.vue（收藏视频/收藏夹 Tab，api.interaction.favorites + listCollections），个人中心加入口；2026-08-28 再交付「空间页」——pages/space/space.vue（relation.profile/stat + video.list({uid})，UP 主卡片+投稿网格+下拉刷新/触底分页，视频页 UP 主区可跳空间）；余：历史）
+- [x] M2-H5-04 个人中心/空间/历史/收藏（**完整交付 2026-08-28**：个人中心页+短信登录入口+首页入口（profile.vue：未登录短信登录 dev 自动 debug_code、已登录用户卡片/我的投稿/收藏夹/退出，api 补 saveLogin/clearLogin/hasLogin）；收藏页（collection.vue：收藏视频/收藏夹 Tab，interaction.favorites+listCollections）；空间页（space.vue：relation.profile/stat + video.list({uid})，UP 卡片+投稿网格+下拉刷新/触底分页，视频页 UP 区可跳空间）；历史页（history.vue：新增后端 GET /videos/history（SaveProgress 同步写 Redis zset 记录观看时间戳）+ api-client video.history，最近观看倒序分页）；typecheck + uni build 全通） `2026-08-28`
   - 覆盖：—（工程）
 - [ ] M2-H5-05 消息中心 + 动态页（**分步**：2026-08-28 已交付「消息中心 + 私信对话」——pages/messages/messages.vue（通知/私信 Tab：通知列表+未读/全部已读，私信会话列表+未读徽标，点会话进 im 页）+ pages/im/im.vue（自定义导航+消息气泡+发送输入，纯 HTTP 不接 WS 实时）；typecheck + uni build 全通；余：动态页）
   - 覆盖：—（工程）
@@ -113,9 +113,9 @@
 | --- | :-: | :-: |
 | M0 | 13 | 13 |
 | M1 | 4 | 4 |
-| M2 | 6 | 3 |
+| M2 | 6 | 4 |
 | M3 | 16 | 9 |
 | M4 | 3 | 0 |
-| **合计** | **42** | **29** |
+| **合计** | **42** | **30** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

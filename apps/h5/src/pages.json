@@ -44,6 +44,12 @@
       }
     },
     {
+      "path": "pages/history/history",
+      "style": {
+        "navigationBarTitleText": "观看历史"
+      }
+    },
+    {
       "path": "pages/im/im",
       "style": {
         "navigationBarTitleText": "私信",
