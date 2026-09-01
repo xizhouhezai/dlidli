@@ -515,7 +515,41 @@ func (s *Service) SaveProgress(ctx context.Context, uid int64, bv string, positi
 	if err := s.rdb.HSet(ctx, key, fmt.Sprintf("%d", videoID), position).Err(); err != nil {
 		return err
 	}
+	// 观看历史：zset（member=videoID，score=最近观看时间戳），供 /videos/history 倒序展示
+	hisKey := fmt.Sprintf("his:u:%d", uid)
+	_ = s.rdb.ZAdd(ctx, hisKey, redis.Z{Score: float64(time.Now().Unix()), Member: strconv.FormatInt(videoID, 10)}).Err()
+	_ = s.rdb.Expire(ctx, hisKey, progressTTL).Err()
 	return s.rdb.Expire(ctx, key, progressTTL).Err()
+}
+
+// History 观看历史（最近观看倒序，Redis zset，90d TTL；无记录返回空列表）。
+func (s *Service) History(ctx context.Context, uid int64, page, size int) ([]Card, error) {
+	if page < 1 {
+		page = 1
+	}
+	if size <= 0 || size > 50 {
+		size = 20
+	}
+	key := fmt.Sprintf("his:u:%d", uid)
+	start := (page - 1) * size
+	ids, err := s.rdb.ZRevRange(ctx, key, int64(start), int64(start+size-1)).Result()
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return []Card{}, nil
+	}
+	idArr := make([]int64, 0, len(ids))
+	for _, m := range ids {
+		if id, err := strconv.ParseInt(m, 10, 64); err == nil {
+			idArr = append(idArr, id)
+		}
+	}
+	cards, err := s.CardsByIDs(ctx, idArr)
+	if err != nil {
+		return nil, err
+	}
+	return cards, nil
 }
 
 // GetProgress 读取观看进度（无记录返回 0）。
