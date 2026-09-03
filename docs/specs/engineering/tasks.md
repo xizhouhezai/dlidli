@@ -97,6 +97,8 @@
   - 覆盖：—（工程）
 - [x] M3-ENG-13 跨端令牌逻辑收敛进 api-client（新增 token.ts：TokenStorage 抽象 + createLocalStorageTokens + refreshTokens 共享静默续期；web 改用共享实现删除自建刷新，h5 补齐此前缺失的 401 静默续期能力；admin 保持管理员会话独立无刷新设计；api-client 保持端无关不引入 uni 全局） `2026-08-25`
   - 覆盖：—（工程）
+- [x] M3-ENG-14 一键启动所有服务（scripts/dev-all.mjs + 根 `dev:all` 脚本）：依赖探测（MySQL 3307/Redis 6379，可用 DLIDLI_* 覆盖）→ 数据库迁移（go run ./cmd/migrate）→ go build 后端二进制再启动 API（避免 go run 子进程树难清理）→ 并发生起 web/admin/h5（可选 --docs 起文档站）→ 轮询 /health 就绪确认 → Ctrl+C 统一 taskkill /T 清理全部子进程；带彩色标签日志；--check-only / --skip-migrate / --no-h5 / --strict 开关；实测 MySQL+Redis 就绪、迁移完成、API /health 200、web(5173)/admin(5175)/h5(5176) vite ready 全通） `2026-09-03`
+  - 覆盖：—（工程）
 
 ## M4（W49+）App
 
@@ -114,8 +116,8 @@
 | M0 | 13 | 13 |
 | M1 | 4 | 4 |
 | M2 | 6 | 4 |
-| M3 | 16 | 9 |
+| M3 | 17 | 10 |
 | M4 | 3 | 0 |
-| **合计** | **42** | **30** |
+| **合计** | **43** | **31** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
