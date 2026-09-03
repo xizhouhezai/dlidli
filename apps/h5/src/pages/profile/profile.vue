@@ -6,7 +6,7 @@ import { ApiError, type VideoCard, type CollectionItem } from '@dlidli/api-clien
 import { api, hasLogin, saveLogin, clearLogin } from '@/api'
 
 const DEFAULT_AVATAR = '/static/default-avatar.png'
-const DEFAULT_COVER = '/static/default-cover.svg'
+const DEFAULT_COVER = '/static/default-cover.png'
 
 // —— 登录态 ——
 const loggedIn = ref(false)
