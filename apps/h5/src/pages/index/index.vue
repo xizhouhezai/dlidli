@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
 import { formatCount, formatDuration } from '@dlidli/shared'
 import type { CategoryItem, VideoCard } from '@dlidli/api-client'
 import { api } from '@/api'
 
 const PAGE_SIZE = 10
-const DEFAULT_COVER = '/static/default-cover.svg'
+const DEFAULT_COVER = '/static/default-cover.png'
 const DEFAULT_AVATAR = '/static/default-avatar.png'
 
 const categories = ref<CategoryItem[]>([])
@@ -16,6 +15,7 @@ const videos = ref<VideoCard[]>([])
 const page = ref(1)
 const hasMore = ref(true)
 const loading = ref(true)
+const refreshing = ref(false)
 
 async function loadList(reset = true) {
   if (reset) {
@@ -48,16 +48,22 @@ onMounted(async () => {
   loadList()
 })
 
-onPullDownRefresh(async () => {
-  await loadList(true)
-  uni.stopPullDownRefresh()
-})
+/** 列表顶部下拉刷新：scroll-view 内置 refresher（H5 需在此手动置 true 显示转圈，完成后置 false 收起） */
+async function onRefresh() {
+  refreshing.value = true
+  try {
+    await loadList(true)
+  } finally {
+    refreshing.value = false
+  }
+}
 
-onReachBottom(() => {
+/** 内部 scroll-view 触底加载更多 */
+function onScrollLower() {
   if (!hasMore.value || loading.value) return
   page.value++
   loadList(false)
-})
+}
 
 function pickCategory(id: number) {
   if (activeCategory.value === id) return
@@ -124,25 +130,34 @@ function goProfile() {
       </view>
     </view>
 
-    <!-- 视频双列网格 -->
-    <view class="grid">
-      <view v-for="v in videos" :key="v.bvid" class="card" @tap="openVideo(v.bvid)">
-        <view class="card__cover">
-          <image class="card__img" :src="v.cover || DEFAULT_COVER" mode="aspectFill" />
-          <text v-if="v.duration > 0" class="card__dur">{{ formatDuration(v.duration) }}</text>
-        </view>
-        <text class="card__title">{{ v.title }}</text>
-        <view class="card__meta">
-          <image class="card__avatar" :src="v.owner.avatar || DEFAULT_AVATAR" mode="aspectFill" />
-          <text class="card__up">{{ v.owner.nickname }}</text>
-          <text class="card__views">{{ formatCount(v.stat.view) }}观看</text>
+    <!-- 视频列表：独立滚动区域（头部完全固定不参与滚动） -->
+    <scroll-view
+      scroll-y
+      class="grid-scroll"
+      :refresher-enabled="true"
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+      @scrolltolower="onScrollLower"
+    >
+      <view class="grid">
+        <view v-for="v in videos" :key="v.bvid" class="card" @tap="openVideo(v.bvid)">
+          <view class="card__cover">
+            <image class="card__img" :src="v.cover || DEFAULT_COVER" mode="aspectFill" />
+            <text v-if="v.duration > 0" class="card__dur">{{ formatDuration(v.duration) }}</text>
+          </view>
+          <text class="card__title">{{ v.title }}</text>
+          <view class="card__meta">
+            <image class="card__avatar" :src="v.owner.avatar || DEFAULT_AVATAR" mode="aspectFill" />
+            <text class="card__up">{{ v.owner.nickname }}</text>
+            <text class="card__views">{{ formatCount(v.stat.view) }}观看</text>
+          </view>
         </view>
       </view>
-    </view>
 
-    <view v-if="loading" class="tip">加载中…</view>
-    <view v-else-if="videos.length === 0" class="tip">这里还没有视频</view>
-    <view v-else-if="!hasMore" class="tip">没有更多了</view>
+      <view v-if="loading" class="tip">加载中…</view>
+      <view v-else-if="videos.length === 0" class="tip">这里还没有视频</view>
+      <view v-else-if="!hasMore" class="tip">没有更多了</view>
+    </scroll-view>
   </view>
 </template>
 
@@ -150,18 +165,28 @@ function goProfile() {
 @use '../../styles/variables' as v;
 
 .home {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: v.$bg;
 }
 
-/* 固定头部：页面滚动时吸顶，仅视频列表滚动 */
+/* 固定头部（完全固定，不参与滚动） */
 .page-header {
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 20;
   background: v.$bg;
   padding-bottom: 4rpx;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+/* 视频列表独立滚动区：占据头部下方剩余空间，仅此区域滚动 */
+.grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 搜索入口 */

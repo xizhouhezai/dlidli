@@ -5,7 +5,7 @@ import { ApiError, type VideoCard, type CollectionItem } from '@dlidli/api-clien
 import { api, hasLogin } from '@/api'
 import { formatCount, formatDuration } from '@dlidli/shared'
 
-const DEFAULT_COVER = '/static/default-cover.svg'
+const DEFAULT_COVER = '/static/default-cover.png'
 const PAGE_SIZE = 20
 
 const tab = ref<'fav' | 'folder'>('fav')
