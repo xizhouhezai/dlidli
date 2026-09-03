@@ -86,39 +86,42 @@ function goProfile() {
 
 <template>
   <view class="home">
-    <!-- 顶部操作栏：搜索框 + 个人中心（同高垂直居中，占满一行） -->
-    <view class="top-bar">
-      <view class="top-bar__search" @tap="goSearch">
-        <text class="top-bar__icon i-mingcute-search-2-line" />
-        <text class="top-bar__text">搜索视频、UP 主</text>
+    <!-- 固定头部：搜索框 + 个人中心 + 分区 + 排序（页面滚动时吸顶，仅视频列表滚动） -->
+    <view class="page-header">
+      <!-- 顶部操作栏：搜索框 + 个人中心（同高垂直居中，占满一行） -->
+      <view class="top-bar">
+        <view class="top-bar__search" @tap="goSearch">
+          <text class="top-bar__icon i-mingcute-search-2-line" />
+          <text class="top-bar__text">搜索视频、UP 主</text>
+        </view>
+        <view class="top-bar__profile" @tap="goProfile">
+          <text class="top-bar__icon top-bar__icon--user i-mingcute-user-2-line" />
+        </view>
       </view>
-      <view class="top-bar__profile" @tap="goProfile">
-        <text class="top-bar__icon top-bar__icon--user i-mingcute-user-2-line" />
+
+      <!-- 分区 + 排序 -->
+      <scroll-view class="cat-bar" scroll-x :show-scrollbar="false">
+        <text class="cat-chip" :class="{ active: activeCategory === 0 }" @tap="pickCategory(0)"
+          >推荐</text
+        >
+        <text
+          v-for="c in categories"
+          :key="c.id"
+          class="cat-chip"
+          :class="{ active: activeCategory === c.id }"
+          @tap="pickCategory(c.id)"
+          >{{ c.name }}</text
+        >
+      </scroll-view>
+
+      <view class="sort-bar">
+        <text class="sort-tab" :class="{ active: sort === 'new' }" @tap="switchSort('new')"
+          >最新</text
+        >
+        <text class="sort-tab" :class="{ active: sort === 'hot' }" @tap="switchSort('hot')"
+          >最热</text
+        >
       </view>
-    </view>
-
-    <!-- 分区 + 排序 -->
-    <scroll-view class="cat-bar" scroll-x :show-scrollbar="false">
-      <text class="cat-chip" :class="{ active: activeCategory === 0 }" @tap="pickCategory(0)"
-        >推荐</text
-      >
-      <text
-        v-for="c in categories"
-        :key="c.id"
-        class="cat-chip"
-        :class="{ active: activeCategory === c.id }"
-        @tap="pickCategory(c.id)"
-        >{{ c.name }}</text
-      >
-    </scroll-view>
-
-    <view class="sort-bar">
-      <text class="sort-tab" :class="{ active: sort === 'new' }" @tap="switchSort('new')"
-        >最新</text
-      >
-      <text class="sort-tab" :class="{ active: sort === 'hot' }" @tap="switchSort('hot')"
-        >最热</text
-      >
     </view>
 
     <!-- 视频双列网格 -->
@@ -149,6 +152,16 @@ function goProfile() {
 .home {
   min-height: 100vh;
   background: v.$bg;
+}
+
+/* 固定头部：页面滚动时吸顶，仅视频列表滚动 */
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: v.$bg;
+  padding-bottom: 4rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 
 /* 搜索入口 */
