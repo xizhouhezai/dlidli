@@ -86,15 +86,15 @@ function goProfile() {
 
 <template>
   <view class="home">
-    <!-- 个人中心入口 -->
-    <view class="profile-entry" @tap="goProfile">
-      <text class="profile-entry__icon i-mingcute-user-2-line" />
-    </view>
-
-    <!-- 搜索入口 -->
-    <view class="search-entry" @tap="goSearch">
-      <text class="search-entry__icon i-mingcute-search-2-line" />
-      <text class="search-entry__text">搜索视频、UP 主</text>
+    <!-- 顶部操作栏：搜索框 + 个人中心（同高垂直居中，占满一行） -->
+    <view class="top-bar">
+      <view class="top-bar__search" @tap="goSearch">
+        <text class="top-bar__icon i-mingcute-search-2-line" />
+        <text class="top-bar__text">搜索视频、UP 主</text>
+      </view>
+      <view class="top-bar__profile" @tap="goProfile">
+        <text class="top-bar__icon top-bar__icon--user i-mingcute-user-2-line" />
+      </view>
     </view>
 
     <!-- 分区 + 排序 -->
@@ -152,13 +152,29 @@ function goProfile() {
 }
 
 /* 搜索入口 */
-.profile-entry {
-  position: absolute;
-  right: 24rpx;
-  top: 16rpx;
-  z-index: 10;
-  width: 64rpx;
-  height: 64rpx;
+/* 顶部操作栏：搜索框 + 个人中心，同高垂直居中，顶部留边距 */
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 28rpx 24rpx 16rpx;
+}
+
+.top-bar__search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  height: 72rpx;
+  padding: 0 24rpx;
+  border-radius: 36rpx;
+  background: v.$surface;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+}
+
+.top-bar__profile {
+  width: 72rpx;
+  height: 72rpx;
   border-radius: 50%;
   background: v.$surface;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
@@ -167,28 +183,17 @@ function goProfile() {
   justify-content: center;
 }
 
-.profile-entry__icon {
+.top-bar__icon {
+  font-size: 28rpx;
+  color: v.$text-3;
+}
+
+.top-bar__icon--user {
   font-size: 32rpx;
   color: v.$primary;
 }
 
-.search-entry {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  margin: 16rpx 24rpx;
-  margin-right: 100rpx;
-  padding: 16rpx 24rpx;
-  border-radius: 32rpx;
-  background: v.$surface;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
-}
-
-.search-entry__icon {
-  font-size: 28rpx;
-}
-
-.search-entry__text {
+.top-bar__text {
   font-size: 26rpx;
   color: v.$text-3;
 }
