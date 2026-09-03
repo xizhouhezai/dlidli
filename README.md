@@ -23,8 +23,19 @@ dlidli/
 # 安装依赖
 pnpm install
 
-# 启动文档站（产品需求 / 架构 / 进度都在这里）
-pnpm docs:dev
+# 一键启动所有服务（自动迁移 + 后端 API :8000 + Web :5173 + Admin :5175 + H5 :5176）
+pnpm dev:all
+# 附加开关：--docs 加文档站 | --skip-migrate 跳过迁移 | --no-h5 不启 H5 | --check-only 仅检查依赖
+# 依赖：本机 MySQL(3307)/Redis(6379) 或 docker compose -f server/deploy/docker-compose.yaml up -d mysql redis
+
+# 或按需分别启动
+pnpm web:dev    # Web 前端
+pnpm admin:dev  # 管理后台
+pnpm h5:dev     # H5 移动端
+pnpm docs:dev   # 文档站（产品需求 / 架构 / 进度都在这里）
+
+# 单独启动后端（server 目录）
+cd server && go run ./cmd/migrate && go run ./cmd/api
 ```
 
 ## 文档导航

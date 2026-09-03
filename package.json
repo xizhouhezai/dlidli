@@ -15,6 +15,9 @@
     "admin:lint": "pnpm --filter @dlidli/admin lint",
     "h5:dev": "pnpm --filter @dlidli/h5 dev",
     "h5:build": "pnpm --filter @dlidli/h5 build",
+    "dev:all": "node scripts/dev-all.mjs",
+    "dev:all:docs": "node scripts/dev-all.mjs --docs",
+    "dev:all:check": "node scripts/dev-all.mjs --check-only",
     "format": "prettier --write apps packages --ignore-unknown",
     "format:check": "prettier --check apps packages --ignore-unknown",
     "prepare": "husky"
