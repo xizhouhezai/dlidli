@@ -6,7 +6,7 @@ import { api } from '@/api'
 import { formatCount, formatDuration } from '@dlidli/shared'
 
 const DEFAULT_AVATAR = '/static/default-avatar.png'
-const DEFAULT_COVER = '/static/default-cover.svg'
+const DEFAULT_COVER = '/static/default-cover.png'
 const PAGE_SIZE = 10
 
 const uid = ref('')

@@ -5,7 +5,7 @@ import { ApiError, type VideoCard } from '@dlidli/api-client'
 import { api, hasLogin } from '@/api'
 import { formatCount, formatDuration } from '@dlidli/shared'
 
-const DEFAULT_COVER = '/static/default-cover.svg'
+const DEFAULT_COVER = '/static/default-cover.png'
 const PAGE_SIZE = 20
 
 const loggedIn = ref(false)

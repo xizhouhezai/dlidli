@@ -4,7 +4,7 @@ import { formatCount, formatDuration } from '@dlidli/shared'
 import type { VideoCard, UserBrief } from '@dlidli/api-client'
 import { api } from '@/api'
 
-const DEFAULT_COVER = '/static/default-cover.svg'
+const DEFAULT_COVER = '/static/default-cover.png'
 const DEFAULT_AVATAR = '/static/default-avatar.png'
 
 const keyword = ref('')
