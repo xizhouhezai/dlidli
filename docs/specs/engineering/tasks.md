@@ -53,7 +53,7 @@
   - 覆盖：—（工程）
 - [x] M2-H5-04 个人中心/空间/历史/收藏（**完整交付 2026-08-28**：个人中心页+短信登录入口+首页入口（profile.vue：未登录短信登录 dev 自动 debug_code、已登录用户卡片/我的投稿/收藏夹/退出，api 补 saveLogin/clearLogin/hasLogin）；收藏页（collection.vue：收藏视频/收藏夹 Tab，interaction.favorites+listCollections）；空间页（space.vue：relation.profile/stat + video.list({uid})，UP 卡片+投稿网格+下拉刷新/触底分页，视频页 UP 区可跳空间）；历史页（history.vue：新增后端 GET /videos/history（SaveProgress 同步写 Redis zset 记录观看时间戳）+ api-client video.history，最近观看倒序分页）；typecheck + uni build 全通） `2026-08-28`
   - 覆盖：—（工程）
-- [ ] M2-H5-05 消息中心 + 动态页（**分步**：2026-08-28 已交付「消息中心 + 私信对话」——pages/messages/messages.vue（通知/私信 Tab：通知列表+未读/全部已读，私信会话列表+未读徽标，点会话进 im 页）+ pages/im/im.vue（自定义导航+消息气泡+发送输入，纯 HTTP 不接 WS 实时）；typecheck + uni build 全通；余：动态页）
+- [x] M2-H5-05 消息中心 + 动态页（**完整交付 2026-09-03**：消息中心+私信对话（messages.vue 通知/私信 Tab + im.vue 自定义导航/气泡/发送）+ 动态页（feed.vue：发动态输入+关注动态流（api.dynamic.feed cursor 分页）+转发视频卡片点击进播放+列表顶部下拉刷新+触底加载，个人中心入口；复用完全固定头部+内部 scroll-view 布局）；typecheck + uni build 全通） `2026-09-03`
   - 覆盖：—（工程）
 - [ ] M2-H5-06 微信内浏览器适配 + 分享 JSSDK
   - 覆盖：—（工程）
@@ -115,9 +115,9 @@
 | --- | :-: | :-: |
 | M0 | 13 | 13 |
 | M1 | 4 | 4 |
-| M2 | 6 | 4 |
+| M2 | 6 | 5 |
 | M3 | 17 | 10 |
 | M4 | 3 | 0 |
-| **合计** | **43** | **31** |
+| **合计** | **43** | **32** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

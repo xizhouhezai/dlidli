@@ -50,6 +50,12 @@
       }
     },
     {
+      "path": "pages/feed/feed",
+      "style": {
+        "navigationBarTitleText": "动态"
+      }
+    },
+    {
       "path": "pages/im/im",
       "style": {
         "navigationBarTitleText": "私信",
