@@ -112,6 +112,10 @@ function goHistory() {
   uni.navigateTo({ url: '/pages/history/history' })
 }
 
+function goFeed() {
+  uni.navigateTo({ url: '/pages/feed/feed' })
+}
+
 onShow(() => {
   loggedIn.value = hasLogin()
   if (loggedIn.value) loadMine()
@@ -174,6 +178,10 @@ onShow(() => {
         <view class="quick__item" @tap="goHistory">
           <text class="quick__icon i-mingcute-history-line" />
           <text class="quick__label">观看历史</text>
+        </view>
+        <view class="quick__item" @tap="goFeed">
+          <text class="quick__icon i-mingcute-send-line" />
+          <text class="quick__label">动态</text>
         </view>
       </view>
 
