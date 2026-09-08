@@ -16,14 +16,25 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-// RegisterRoutes 注册通知路由（全部需登录）。
+// RegisterRoutes 注册通知路由（全部需登录；WS 经 Auth 中间件支持 query token）。
 func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth gin.HandlerFunc) {
 	g := v1.Group("/notifications", auth)
 	{
 		g.GET("", h.list)
 		g.GET("/unread-count", h.unreadCount)
 		g.POST("/read", h.markAllRead)
+		g.GET("/ws", h.ws)
 	}
+}
+
+// @Summary  通知实时连接（WebSocket，query token）
+// @Tags     通知
+// @Security BearerAuth
+// @Success  101 {string} string "Switching Protocols"
+// @Router   /notifications/ws [get]
+func (h *Handler) ws(c *gin.Context) {
+	uid := c.GetInt64(middleware.CtxUserID)
+	h.svc.WS(c, uid)
 }
 
 // @Summary  通知列表

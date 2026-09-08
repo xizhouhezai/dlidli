@@ -131,7 +131,10 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		danmakuSvc := danmaku.NewService(danmaku.NewRepo(res.DB), videoSvc, accountSvc, growthSvc, res.Redis, danmakuHub, cfg.JWT.Secret, log)
 		danmaku.NewHandler(danmakuSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
+		// 通知实时推送 Hub（M2-MSG-02 comet）：按用户房间推送，Origin 白名单防跨站
+		notifyHub := notify.NewHub(cfg.App.AllowOrigins, log)
 		notifySvc := notify.NewService(notify.NewRepo(res.DB), accountSvc, log)
+		notifySvc.SetHub(notifyHub)
 		notify.NewHandler(notifySvc).RegisterRoutes(v1, authedRateLimited)
 
 		interactionSvc := interaction.NewService(interaction.NewRepo(res.DB), videoSvc, accountSvc, notifySvc, growthSvc, log)
