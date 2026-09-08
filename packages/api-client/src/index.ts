@@ -67,7 +67,7 @@ export type {
 } from './apis/admin'
 export type { UserBrief, RelationStat } from './apis/relation'
 export type { FeedItem } from './apis/dynamic'
-export type { NotifyItem } from './apis/notify'
+export type { NotifyItem, NotifyWsFrame } from './apis/notify'
 export type { GrowthSummary, GrowthTask, AssetLogItem } from './apis/growth'
 export type { SubmitReportReq, ReportTargetType, ReportReasonType } from './apis/report'
 export type { CreatorOverview, CreatorVideoStat, TrendPoint, SettlementItem } from './apis/creator'
