@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { formatPubdate } from '@dlidli/shared'
 import type { NotifyItem } from '@dlidli/api-client'
@@ -39,11 +39,27 @@ async function load(reset = true) {
   }
 }
 
+// 通知实时推送（M2-MSG-02）：页面打开期间收到新通知即插入列表头，并标记已读
+function onRealtime(item: NotifyItem) {
+  if (!item || list.value.some((n) => n.id === item.id)) return
+  list.value = [{ ...item, is_read: false }, ...list.value]
+  api.notify.markAllRead().catch(() => {})
+}
+
 onMounted(async () => {
   await load()
   // 进页即全部已读（本地不改 is_read 样式，保留"新消息"视觉一轮）
   api.notify.markAllRead().catch(() => {})
+  window.addEventListener('notify-received', onRealtimeEvent)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('notify-received', onRealtimeEvent)
+})
+
+function onRealtimeEvent(e: Event) {
+  onRealtime((e as CustomEvent<NotifyItem>).detail)
+}
 
 function open(n: NotifyItem) {
   if (n.link) router.push(n.link)

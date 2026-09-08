@@ -40,12 +40,87 @@ onMounted(() => {
   unreadTimer = setInterval(pollUnread, 60_000)
   // 私信实时收消息时刷新头部未读（MessagesView 派发）
   window.addEventListener('msg-unread-changed', pollUnread)
+  connectNotifyWs()
 })
 
 onUnmounted(() => {
   if (unreadTimer) clearInterval(unreadTimer)
   window.removeEventListener('msg-unread-changed', pollUnread)
+  closeNotifyWs()
 })
+
+// —— 通知实时推送（M2-MSG-02 comet）：WS 在线即推，60s 轮询仅作兜底 ——
+let notifyWs: WebSocket | null = null
+let notifyWsTimer: ReturnType<typeof setTimeout> | null = null
+let notifyWsRetry = 0
+let notifyWsClosed = false
+
+function closeNotifyWs() {
+  notifyWsClosed = true
+  if (notifyWsTimer) clearTimeout(notifyWsTimer)
+  notifyWsTimer = null
+  notifyWs?.close()
+  notifyWs = null
+}
+
+function connectNotifyWs() {
+  if (notifyWsClosed || !userStore.token) return
+  const token = localStorage.getItem('dlidli_token')
+  if (!token) return
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  try {
+    notifyWs = new WebSocket(`${proto}//${location.host}${api.notify.wsUrl()}?token=${token}`)
+  } catch {
+    scheduleNotifyReconnect()
+    return
+  }
+  notifyWs.onopen = () => {
+    notifyWsRetry = 0
+  }
+  notifyWs.onmessage = (ev) => {
+    try {
+      const frame = JSON.parse(ev.data as string)
+      if (frame?.type === 'notify') {
+        unread.value += 1
+        // 通知页监听后刷新列表头（避免整页重载）
+        window.dispatchEvent(new CustomEvent('notify-received', { detail: frame.data }))
+      }
+    } catch {
+      // 非法帧忽略
+    }
+  }
+  notifyWs.onclose = () => {
+    notifyWs = null
+    scheduleNotifyReconnect()
+  }
+  notifyWs.onerror = () => {
+    notifyWs?.close()
+  }
+}
+
+function scheduleNotifyReconnect() {
+  if (notifyWsClosed || !userStore.token) return
+  if (notifyWsTimer) return
+  // 指数退避，上限 30s；轮询仍兜底
+  const delay = Math.min(30_000, 1000 * 2 ** Math.min(notifyWsRetry++, 5))
+  notifyWsTimer = setTimeout(() => {
+    notifyWsTimer = null
+    connectNotifyWs()
+  }, delay)
+}
+
+// 登录态变化时重连/断开
+watch(
+  () => userStore.token,
+  (t) => {
+    if (t) {
+      notifyWsClosed = false
+      connectNotifyWs()
+    } else {
+      closeNotifyWs()
+    }
+  },
+)
 
 watch(
   () => route.fullPath,

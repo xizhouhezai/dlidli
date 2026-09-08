@@ -12,6 +12,12 @@ export interface NotifyItem {
   created_at: string
 }
 
+/** 通知实时推送帧（M2-MSG-02 comet，WS 单向推送） */
+export interface NotifyWsFrame {
+  type: 'notify'
+  data: NotifyItem
+}
+
 /** 站内通知接口。 */
 export function createNotifyApi(http: HttpClient) {
   return {
@@ -24,5 +30,8 @@ export function createNotifyApi(http: HttpClient) {
     unreadCount: () => http.get<{ count: number }>('/api/v1/notifications/unread-count'),
 
     markAllRead: () => http.post<null>('/api/v1/notifications/read'),
+
+    /** 通知实时连接（WS，query token） */
+    wsUrl: () => '/api/v1/notifications/ws',
   }
 }
