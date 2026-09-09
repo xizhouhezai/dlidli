@@ -4,6 +4,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { formatCount, formatPubdate } from '@dlidli/shared'
 import type { VideoDetail } from '@dlidli/api-client'
 import { api } from '@/api'
+import { isWeChat, setupWeChatShare } from '@/utils/wechat'
 
 const DEFAULT_AVATAR = '/static/default-avatar.png'
 
@@ -11,6 +12,8 @@ const detail = ref<VideoDetail | null>(null)
 const playUrl = ref('')
 const loading = ref(true)
 const notFound = ref(false)
+/** 微信内置浏览器：iOS 限制 autoplay，统一引导用户手动起播 */
+const wechat = isWeChat()
 let bvid = ''
 let viewReported = false
 
@@ -28,6 +31,16 @@ async function load() {
     const def = d.streams?.[0]
     if (def) playUrl.value = def.url
     uni.setNavigationBarTitle({ title: d.title })
+    // 微信内浏览器：设置分享卡片（签名未启用时静默降级；标题取 document.title 兜底）
+    if (wechat) {
+      document.title = d.title
+      setupWeChatShare({
+        title: d.title,
+        desc: d.description?.slice(0, 40) || 'DliDli - 你感兴趣的视频都在 DliDli',
+        link: window.location.href,
+        imgUrl: d.cover || '',
+      })
+    }
   } catch {
     notFound.value = true
   } finally {
@@ -118,14 +131,17 @@ async function sendDanmaku() {
     <view v-if="notFound" class="tip">视频不存在或已下架</view>
 
     <template v-else-if="detail">
-      <!-- 播放器：uni video 原生支持 HLS -->
+      <!-- 播放器：uni video 原生支持 HLS；微信内 X5/iOS 需内联播放防全屏劫持，且不自动播放 -->
       <video
         v-if="playUrl"
         class="player"
         :src="playUrl"
-        autoplay
+        :autoplay="!wechat"
         :controls="true"
         :enable-danmu="false"
+        :playsinline="true"
+        :webkit-playsinline="true"
+        x5-video-player-type="h5-page"
         object-fit="contain"
         @timeupdate="(e: any) => onTimeUpdate(e)"
       />
