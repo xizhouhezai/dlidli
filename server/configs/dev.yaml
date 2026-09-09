@@ -44,3 +44,11 @@ transcode:
   # ffmpeg/ffprobe 缺省走 PATH；特殊环境用环境变量覆盖：
   #   DLIDLI_TRANSCODE_FFMPEGPATH / DLIDLI_TRANSCODE_FFPROBEPATH
 
+# 搜索索引（M2-SRH-01/02）：esUrl 配置后启用 ES 检索与索引同步 Worker，
+# 未配置时搜索自动降级 MySQL LIKE（本机无 ES 时保持注释即可）。
+# search:
+#   esUrl: http://127.0.0.1:9200
+#   index: dlidli_videos
+#   pollSeconds: 3
+#   batchSize: 100
+
