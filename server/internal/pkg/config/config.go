@@ -19,6 +19,7 @@ type Config struct {
 	RateLimit RateLimit
 	Transcode Transcode
 	WeChat    WeChat
+	Search    Search
 }
 
 type App struct {
@@ -37,6 +38,15 @@ type App struct {
 type WeChat struct {
 	AppID     string // 公众号 appId
 	AppSecret string // 公众号 appSecret
+}
+
+// Search 搜索索引配置（M2-SRH-01/02）：ESURL 为空时 ES 关闭，
+// 搜索自动降级 MySQL LIKE；索引同步 Worker 不启动。
+type Search struct {
+	ESURL       string // Elasticsearch 地址，如 http://127.0.0.1:9200
+	Index       string // 索引名，默认 dlidli_videos
+	PollSeconds int    // Worker 轮询间隔（秒），默认 3
+	BatchSize   int    // 每批消费条数，默认 100
 }
 
 type Log struct {
@@ -110,6 +120,15 @@ func Load(path string) (*Config, error) {
 	if cfg.Transcode.FfprobePath == "" {
 		cfg.Transcode.FfprobePath = "ffprobe"
 	}
+	if cfg.Search.Index == "" {
+		cfg.Search.Index = "dlidli_videos"
+	}
+	if cfg.Search.PollSeconds <= 0 {
+		cfg.Search.PollSeconds = 3
+	}
+	if cfg.Search.BatchSize <= 0 {
+		cfg.Search.BatchSize = 100
+	}
 	if err := validateProd(&cfg); err != nil {
 		return nil, err
 	}
@@ -143,6 +162,10 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("transcode.workers", 0)
 	v.SetDefault("transcode.ffmpegpath", "")
 	v.SetDefault("transcode.ffprobepath", "")
+	v.SetDefault("search.esurl", "")
+	v.SetDefault("search.index", "")
+	v.SetDefault("search.pollseconds", 0)
+	v.SetDefault("search.batchsize", 0)
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。

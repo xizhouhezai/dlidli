@@ -5,9 +5,9 @@
 
 ## M2（W13-W24）
 
-- [ ] M2-SRH-01 基建：Elasticsearch 部署 + IK 分词 + 索引设计（本地无 Docker，MVP 已用 MySQL LIKE 替代，接口层可平滑切换）
-  - 覆盖：SRH-01、SRH-02（基建前置）
-- [ ] M2-SRH-02 后端：稿件索引同步（Kafka 消费者）
+- [x] M2-SRH-01 基建：Elasticsearch 部署 + IK 分词 + 索引设计（0031 迁移 `search_index_outbox`；`searchindex` 模块：索引映射 title/description/tags/owner_name 等，IK 分词优先、未安装自动降级 standard；Worker 启动时幂等 `EnsureIndex`。检索入口 `GET /search` ES 优先、异常/未配置自动降级 MySQL LIKE，接口层平滑切换（search.Handler 注入 Reader）） `2026-09-09`
+  - 覆盖：SRH-01、SRH-02（基建前置）、SRH-01-ES（平滑切换）
+- [x] M2-SRH-02 后端：稿件索引同步（MySQL Outbox，替代原规划 Kafka 消费者：发布/下架/删除事务内登记 `search_index_outbox`，同稿件待处理折叠为最新动作；进程内 Worker 周期批量推送 ES（upsert/delete），失败重试、超 5 次标记失败；发布钩子/删除/管理定档/审核通过全路径接入。**E2E 实测**：假 ES（内存 http 9200）→ 下架触发 delete、恢复触发 upsert → outbox 全部消费（status=1）→ 搜索 API 走 ES 命中 15 条含完整卡片回查、中文"动画"命中 12 条；停 ES 后搜索自动降级 LIKE 仍返回；单测：ES 客户端（httptest 假 ES 校验增删查/幂等删除/未启用报错）+ Worker（折叠/重试成功/超限失败/未启用不入队）全绿，`go build/vet/test` 全量通过） `2026-09-09`
   - 覆盖：SRH-01（索引时效）
 - [x] M2-SRH-03 后端：搜索接口（视频标题/UP 主昵称，MySQL LIKE + 分页；排序/筛选/联想/热搜随 ES 接入补） `2026-07-29`
   - 覆盖：SRH-01（MVP 形态）
@@ -37,8 +37,8 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M2 | 4 | 2 |
+| M2 | 4 | 4 |
 | M3 | 7 | 7 |
-| **合计** | **11** | **9** |
+| **合计** | **11** | **11** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

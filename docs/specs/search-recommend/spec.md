@@ -6,6 +6,7 @@
 >
 > 变更记录：
 > - 2026-08-21 自 PRD `search-recommend.md`（V1.0 草案）迁移为 SDD；补录 REC-01~04（推荐场景）、REC-10~14（推荐体验规则），原 §3.1/§3.3 未编号
+> - 2026-09-09 SRH-01/02 基建落地：ES 检索（IK 分词优先，未安装降级 standard）+ MySQL Outbox 索引同步（M2-SRH-01/02）；ES 未配置/不可用时自动降级 MySQL LIKE（验收标准补 SRH-01-ES）
 
 ## 1. 背景与用户故事
 
@@ -22,6 +23,7 @@
 | ID | 需求 | 验收标准（EARS） | 优先级 |
 | --- | --- | --- | --- |
 | SRH-01 | 综合搜索 | **WHEN** 用户输入关键词 **THE SYSTEM SHALL** 搜索视频（标题/简介/标签），Tab 切换视频 / UP 主（V2+：动态、直播） | P1 |
+| SRH-01-ES | 检索引擎平滑切换 | **WHERE** Elasticsearch 已配置 **THE SYSTEM SHALL** 优先走 ES 检索（分词/相关度），**WHEN** ES 不可用或未配置 **THE SYSTEM SHALL** 自动降级 MySQL LIKE 检索 | P1（基建） |
 | SRH-02 | 排序与筛选 | **THE SYSTEM SHALL** 支持排序（综合/最多播放/最新发布/最多弹幕）与筛选（分区、时长、发布时间） | P1 |
 | SRH-03 | 搜索联想 | **WHEN** 用户输入 **THE SYSTEM SHALL** 即时联想（Prefix + 拼音）并高亮匹配 | P1 |
 | SRH-04 | 搜索历史 | **THE SYSTEM SHALL** 本地 + 云端同步历史，可单删/清空 | P1 |
