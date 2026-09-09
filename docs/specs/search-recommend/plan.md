@@ -11,8 +11,8 @@
 
 | 决策点 | 决策 | 理由 | 备选方案 |
 | --- | --- | --- | --- |
-| 搜索引擎 | MVP MySQL LIKE（视频标题/UP 主昵称），ES 部署后接口层切换 | 本地无 Docker；检索接口已隔离 | 首版即 ES（部署依赖重） |
-| 索引同步 | 规划：稿件发布/编辑/删除经 Kafka 同步 ES 索引（延迟 < 10s） | 与写路径解耦 | 双写（一致性难保） |
+| 搜索引擎 | MVP MySQL LIKE（视频标题/UP 主昵称）；2026-09-09 落地 ES：`search.enabled`（ESURL 非空即启用）→ 优先 ES 检索，异常/未启用自动降级 LIKE | 本地无 Docker；接口层已隔离（search.Handler 注入 Reader） | 首版即 ES（部署依赖重） |
+| 索引同步 | **落地：MySQL Outbox**（`search_index_outbox` 表，发布/下架/删除事务内登记，最新动作折叠；进程内 Worker 周期批量推送 ES，失败指数重试、超 5 次标记失败）；原规划 Kafka 消费者，单体阶段以 Outbox 达成最终一致与可重试，规模化后再迁 Kafka | 与写路径解耦、可重试、无新增 Kafka 运维依赖 | Kafka 消费者（一致性难保的双写 / 运维重） |
 | 综合排序 | 规划：文本相关性 × 质量分（播放/互动）× 时效衰减 | 多因子平衡 | 单因子（体验差） |
 | 行为日志 | `user_behavior` MySQL 落库（1曝光 2点击 3播放 4互动），POST /behaviors 批量上报 | ClickHouse 预留；结算/已看过滤/推荐共用 | 直接上 ClickHouse（运维成本） |
 | 热度榜 | 加权分：播放×1+赞×3+币×5+藏×4+评×4+弹幕×2+转发×3；全站/分区榜，Redis 5min 缓存 | 可解释可调参 | 神经网络排序（无数据积累） |
@@ -49,7 +49,7 @@ Redis：热度榜缓存（5min）、推荐结果短缓存。
 
 ## 6. 风险与待定项
 
-- [ ] Elasticsearch 部署 + IK 分词 + 索引同步（M2-SRH-01/02，当前 LIKE 替代）
+- [x] Elasticsearch 部署 + IK 分词 + 索引同步（M2-SRH-01/02 完成：索引映射 IK 优先/standard 降级；`GET /search` 走 ES 优先 + LIKE 降级；索引同步 MySQL Outbox + Worker） `2026-09-09`
 - [ ] 搜索联想/历史/热搜（SRH-03~05 随 ES）
 - [ ] 新用户兴趣分区引导（REC-04 冷启动选分区）
 - [ ] 向量召回与精排模型（V2.5+ 演进）

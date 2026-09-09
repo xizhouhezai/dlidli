@@ -15,6 +15,7 @@ import (
 
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/module/growth"
+	"github.com/dlidli/server/internal/module/searchindex"
 	"github.com/dlidli/server/internal/module/upload"
 	"github.com/dlidli/server/internal/pkg/bvid"
 	"github.com/dlidli/server/internal/pkg/config"
@@ -52,6 +53,8 @@ type Service struct {
 	log        *zap.Logger
 	// publishHook 稿件发布旁路回调（动态生成等），装配时注入
 	publishHook PublishHook
+	// searchHook 稿件检索索引变更回调（M2-SRH-02：upsert|delete），装配时注入
+	searchHook SearchHook
 }
 
 func NewService(repo *Repo, uploadSvc *upload.Service, accountSvc *account.Service, growthSvc *growth.Service, rdb *redis.Client, cfg *config.Config, log *zap.Logger) *Service {
@@ -234,10 +237,16 @@ func (s *Service) Submit(ctx context.Context, uid int64, req *SubmitReq) (*Detai
 		if err := s.repo.CreateWithParts(v, parts, streams, jobs); err != nil {
 			return nil, err
 		}
+		if v.Status == StatusPublished {
+			s.fireSearchChange(ctx, v.ID, searchindex.ActionUpsert)
+		}
 		return s.detail(ctx, v, true)
 	}
 	if err := s.repo.CreateWithStat(v, stream, jobs); err != nil {
 		return nil, err
+	}
+	if v.Status == StatusPublished {
+		s.fireSearchChange(ctx, v.ID, searchindex.ActionUpsert)
 	}
 	return s.detail(ctx, v, true)
 }
@@ -441,7 +450,7 @@ func (s *Service) CategoryOf(_ context.Context, videoID int64) int {
 }
 
 // AdminDelete 管理员删除稿件（举报处理用；软删除，作者与游客均不可见）。
-func (s *Service) AdminDelete(_ context.Context, bv string) error {
+func (s *Service) AdminDelete(ctx context.Context, bv string) error {
 	v, err := s.repo.FindByBvid(bv)
 	if err != nil {
 		return err
@@ -449,7 +458,11 @@ func (s *Service) AdminDelete(_ context.Context, bv string) error {
 	if v == nil || v.Status == StatusDeleted {
 		return errcode.ErrNotFound
 	}
-	return s.repo.SoftDelete(v)
+	if err := s.repo.SoftDelete(v); err != nil {
+		return err
+	}
+	s.fireSearchChange(ctx, v.ID, searchindex.ActionDelete)
+	return nil
 }
 
 // AdminList 管理端稿件列表（全状态 + 状态/分区/关键词筛选）。
@@ -470,7 +483,7 @@ func (s *Service) AdminList(ctx context.Context, categoryID int, status int8, ke
 }
 
 // AdminSetStatus 稿件管理定档：已发布 ↔ 已锁定（下架/恢复）。
-func (s *Service) AdminSetStatus(_ context.Context, bv string, status int8) error {
+func (s *Service) AdminSetStatus(ctx context.Context, bv string, status int8) error {
 	if status != StatusPublished && status != StatusLocked {
 		return errcode.ErrInvalidParams.WithMsg("仅支持下架（锁定）或恢复（发布）")
 	}
@@ -492,7 +505,15 @@ func (s *Service) AdminSetStatus(_ context.Context, bv string, status int8) erro
 	if status == StatusPublished {
 		fields["published_at"] = time.Now()
 	}
-	return s.repo.UpdateVideoFields(v.ID, fields)
+	if err := s.repo.UpdateVideoFields(v.ID, fields); err != nil {
+		return err
+	}
+	if status == StatusPublished {
+		s.fireSearchChange(ctx, v.ID, searchindex.ActionUpsert)
+	} else {
+		s.fireSearchChange(ctx, v.ID, searchindex.ActionDelete)
+	}
+	return nil
 }
 
 // ---- 观看进度（跨端续播）----
@@ -605,7 +626,78 @@ func (s *Service) SetPublishHook(h PublishHook) {
 	s.publishHook = h
 }
 
+// SearchHook 稿件检索索引变更回调（M2-SRH-02）：action 为 upsert|delete。
+type SearchHook func(videoID int64, action string)
+
+// SetSearchHook 注入检索索引钩子（router 装配时调用）。
+func (s *Service) SetSearchHook(h SearchHook) {
+	s.searchHook = h
+}
+
+// fireSearchChange 触发检索索引变更（旁路异步、panic 自隔离，失败不影响主流程）。
+func (s *Service) fireSearchChange(ctx context.Context, videoID int64, action string) {
+	if s.searchHook == nil {
+		return
+	}
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				s.log.Error("检索索引钩子 panic，已隔离", zap.Any("recover", r), zap.Int64("video", videoID))
+			}
+		}()
+		s.searchHook(videoID, action)
+	}()
+}
+
+// IndexDoc 加载稿件检索文档（供 searchindex 同步 Worker 使用）。
+// 稿件不存在或未发布返回 (nil, nil)（调用方据此幂等删除残留文档）。
+func (s *Service) IndexDoc(ctx context.Context, videoID int64) (*searchindex.Doc, error) {
+	v, err := s.repo.FindVideoByID(videoID)
+	if err != nil {
+		return nil, err
+	}
+	if v == nil || v.Status != StatusPublished {
+		return nil, nil
+	}
+	stats, err := s.repo.StatsByIDs([]int64{videoID})
+	if err != nil {
+		return nil, err
+	}
+	owners, err := s.accountSvc.Briefs(ctx, []int64{v.UserID})
+	if err != nil {
+		return nil, err
+	}
+	var tags []string
+	_ = json.Unmarshal([]byte(v.Tags), &tags)
+	var published int64
+	if v.PublishedAt != nil {
+		published = v.PublishedAt.Unix()
+	}
+	st := stats[videoID]
+	ownerName := ""
+	if o, ok := owners[v.UserID]; ok {
+		ownerName = o.Nickname
+	}
+	return &searchindex.Doc{
+		VideoID:     v.ID,
+		Bvid:        v.Bvid,
+		Title:       v.Title,
+		Description: v.Description,
+		Cover:       v.Cover,
+		CategoryID:  v.CategoryID,
+		Tags:        tags,
+		OwnerID:     v.UserID,
+		OwnerName:   ownerName,
+		Duration:    v.Duration,
+		PublishedAt: published,
+		ViewCnt:     st.ViewCnt,
+		LikeCnt:     st.LikeCnt,
+	}, nil
+}
+
 func (s *Service) firePublish(ctx context.Context, videoID, userID int64) {
+	// 检索索引同步（M2-SRH-02）：发布 → upsert（Outbox 异步，失败重试）
+	s.fireSearchChange(ctx, videoID, searchindex.ActionUpsert)
 	if s.publishHook != nil {
 		// 钩子为外部注入的旁路逻辑，异步执行并 panic 自隔离（Recovery 中间件不覆盖 worker goroutine）
 		go func() {
@@ -698,7 +790,7 @@ func (s *Service) Search(ctx context.Context, keyword string, page, size int) ([
 }
 
 // Delete 删除稿件（仅作者本人；软删除）。
-func (s *Service) Delete(_ context.Context, uid int64, bv string) error {
+func (s *Service) Delete(ctx context.Context, uid int64, bv string) error {
 	v, err := s.repo.FindByBvid(bv)
 	if err != nil {
 		return err
@@ -709,7 +801,11 @@ func (s *Service) Delete(_ context.Context, uid int64, bv string) error {
 	if v.UserID != uid {
 		return errcode.ErrForbidden
 	}
-	return s.repo.SoftDelete(v)
+	if err := s.repo.SoftDelete(v); err != nil {
+		return err
+	}
+	s.fireSearchChange(ctx, v.ID, searchindex.ActionDelete)
+	return nil
 }
 
 // ---- 读模型拼装 ----

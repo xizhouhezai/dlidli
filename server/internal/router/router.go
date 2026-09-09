@@ -25,6 +25,7 @@ import (
 	"github.com/dlidli/server/internal/module/relation"
 	"github.com/dlidli/server/internal/module/report"
 	"github.com/dlidli/server/internal/module/search"
+	"github.com/dlidli/server/internal/module/searchindex"
 	"github.com/dlidli/server/internal/module/upload"
 	"github.com/dlidli/server/internal/module/video"
 	"github.com/dlidli/server/internal/module/wechat"
@@ -155,6 +156,19 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// 稿件发布 → 自动生成投稿动态（旁路钩子，失败仅日志）
 		videoSvc.SetPublishHook(dynamicSvc.OnVideoPublished)
 
+		// 搜索索引同步（M2-SRH-01/02）：MySQL Outbox → ES Worker；
+		// ESURL 未配置时搜索降级 MySQL LIKE，Worker 不启动
+		searchIdx := searchindex.NewService(
+			searchindex.NewRepo(res.DB),
+			searchindex.NewES(cfg.Search.ESURL, cfg.Search.Index),
+			videoSvc,
+			log,
+		)
+		videoSvc.SetSearchHook(func(videoID int64, action string) {
+			_ = searchIdx.Enqueue(context.Background(), videoID, action)
+		})
+		searchIdx.StartWorker(context.Background(), time.Duration(cfg.Search.PollSeconds)*time.Second)
+
 		adminSvc := admin.NewService(admin.NewRepo(res.DB), videoSvc, accountSvc, cfg, log)
 		admin.NewHandler(adminSvc).WithInviteGen(accountSvc.GenerateInviteCodes).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret))
 
@@ -192,7 +206,9 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		banner.NewHandler(bannerSvc).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret),
 			func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) })
 
-		search.NewHandler(videoSvc, accountSvc).RegisterRoutes(v1)
+		searchHandler := search.NewHandler(videoSvc, accountSvc)
+		searchHandler.SetIndex(searchIdx)
+		searchHandler.RegisterRoutes(v1)
 	} else {
 		log.Warn("MySQL/Redis 未就绪，业务模块路由未注册")
 	}
