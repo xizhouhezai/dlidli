@@ -27,6 +27,7 @@ import (
 	"github.com/dlidli/server/internal/module/search"
 	"github.com/dlidli/server/internal/module/upload"
 	"github.com/dlidli/server/internal/module/video"
+	"github.com/dlidli/server/internal/module/wechat"
 	"github.com/dlidli/server/internal/pkg/config"
 	"github.com/dlidli/server/internal/pkg/metrics"
 	"github.com/dlidli/server/internal/pkg/response"
@@ -136,6 +137,10 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		notifySvc := notify.NewService(notify.NewRepo(res.DB), accountSvc, log)
 		notifySvc.SetHub(notifyHub)
 		notify.NewHandler(notifySvc).RegisterRoutes(v1, authedRateLimited)
+
+		// 微信 JSSDK 签名（M2-H5-06）：appId 未配置时接口返回未启用，前端静默降级
+		wechatSvc := wechat.NewService(cfg.WeChat.AppID, cfg.WeChat.AppSecret, res.Redis, log)
+		wechat.NewHandler(wechatSvc).RegisterRoutes(v1)
 
 		interactionSvc := interaction.NewService(interaction.NewRepo(res.DB), videoSvc, accountSvc, notifySvc, growthSvc, log)
 		interaction.NewHandler(interactionSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)

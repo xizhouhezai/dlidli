@@ -18,6 +18,7 @@ type Config struct {
 	Storage   Storage
 	RateLimit RateLimit
 	Transcode Transcode
+	WeChat    WeChat
 }
 
 type App struct {
@@ -29,6 +30,13 @@ type App struct {
 	InviteCodeRequired bool
 	// AutoApprove 仅限开发环境：稿件提交后自动过审（审核工作台 M1-ADM 上线前的联调便利）
 	AutoApprove bool
+}
+
+// WeChat 微信公众号配置（M2-H5-06 分享 JSSDK）：appId/secret 用于 jsapi_ticket 签名。
+// 未配置时签名接口返回未启用错误，前端静默降级为复制链接。
+type WeChat struct {
+	AppID     string // 公众号 appId
+	AppSecret string // 公众号 appSecret
 }
 
 type Log struct {

@@ -55,7 +55,7 @@
   - 覆盖：—（工程）
 - [x] M2-H5-05 消息中心 + 动态页（**完整交付 2026-09-03**：消息中心+私信对话（messages.vue 通知/私信 Tab + im.vue 自定义导航/气泡/发送）+ 动态页（feed.vue：发动态输入+关注动态流（api.dynamic.feed cursor 分页）+转发视频卡片点击进播放+列表顶部下拉刷新+触底加载，个人中心入口；复用完全固定头部+内部 scroll-view 布局）；typecheck + uni build 全通） `2026-09-03`
   - 覆盖：—（工程）
-- [ ] M2-H5-06 微信内浏览器适配 + 分享 JSSDK
+- [x] M2-H5-06 微信内浏览器适配 + 分享 JSSDK（`apps/h5/src/utils/wechat.ts`：UA 检测 isWeChat/版本 + jweixin-1.6.0 动态加载 + wx.config 分享卡片（后端签名未启用时静默降级，卡片标题取 document.title 兜底）；视频页：`playsinline`/`webkit-playsinline`/`x5-video-player-type="h5-page"` 防 iOS/微信 X5 全屏劫持，微信内禁 autoplay 引导手动起播，加载后配置分享卡片（title/desc/link/imgUrl）；后端新增 `wechat` 模块：jsapi_ticket/access_token Redis 缓存（6600s 提前过期）+ 官方 SHA1 签名算法 + `GET /wechat/jssdk-sign?url=`（未配置 appId 返回"微信分享未启用"），config 加 `wechat.appId/appSecret`（环境变量可覆盖）；签名算法/nonce/未启用 3 个单测，20 个测试包全绿，签名接口实测返回未启用降级） `2026-09-08`
   - 覆盖：—（工程）
 
 ## M3（W25-W48）小程序与架构演进
@@ -115,9 +115,9 @@
 | --- | :-: | :-: |
 | M0 | 13 | 13 |
 | M1 | 4 | 4 |
-| M2 | 6 | 5 |
+| M2 | 6 | 6 |
 | M3 | 17 | 10 |
 | M4 | 3 | 0 |
-| **合计** | **43** | **32** |
+| **合计** | **43** | **33** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
