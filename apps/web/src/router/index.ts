@@ -107,6 +107,12 @@ const router = createRouter({
           component: () => import('@/views/lab/PelicanView.vue'),
           meta: { title: '提示词实验室' },
         },
+        {
+          path: 'pelican-night',
+          name: 'pelican-night',
+          component: () => import('@/views/lab/PelicanNightView.vue'),
+          meta: { title: '提示词实验室 · 夜骑' },
+        },
       ],
     },
     // 管理后台已拆为独立应用 apps/admin（dev :5175）
