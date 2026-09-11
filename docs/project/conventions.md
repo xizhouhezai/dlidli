@@ -16,6 +16,25 @@ release/*   ── 发布分支：release/v0.2.0，从 develop 切出做发布�
 hotfix/*    ── 线上紧急修复，从 main 切出
 ```
 
+### 铁律：本地只保留 `main` 与 `develop`，工作分支用完即删
+
+- **本地仓库任何时刻只应有 `main` 和 `develop` 两个分支**；`feature/*`、`optimize/*`、`fix/*`、`release/*`、`hotfix/*` 一律**不留本地**。
+- **删除时机 = 打完 tag 并推送之后**：发布动作一完成，立即删除本次涉及的本地工作分支与本地 release 分支（远程分支保留，作为发布留痕，不删）。
+- **保留远程分支**：`release/vX.Y.Z` 等分支推送到远程后**不删除**，它们与 tag 共同构成发布档案；清理只针对本地。
+- 分支成果合入 `main`/`develop` 并打 tag 后，即使删掉本地分支也可随时找回：`git checkout -b <分支名> <tag 或 commit>`。
+- 删除前必须确认**已完全合入**（不得用 `-D` 强删）：`git branch -d` 会在未合并时报错，这是安全网。
+- 日常自检（应只输出 `main`、`develop`）：
+  ```bash
+  git branch
+  # 清理所有除 main/develop 外的本地分支（均已合并时）
+  git branch | grep -vE '^\*?\s*(main|develop)$' | xargs -r git branch -d
+  ```
+  > Windows PowerShell 等价写法：
+  > ```powershell
+  > git for-each-ref --format='%(refname:short)' refs/heads |
+  >   Where-Object { $_ -notin @('main','develop') } | ForEach-Object { git branch -d $_ }
+  > ```
+
 ### 版本号规则（SemVer，任务完成必发 release）
 
 > 铁律：**无论大任务还是小任务，完成后都要发布一个 release 并打 tag**，版本号按改动大小调整（`vMAJOR.MINOR.PATCH`）：
@@ -45,8 +64,9 @@ git checkout -b fix/<短描述>              # 如 fix/category-status
 # 开发提交（fix: 类型）
 git checkout develop && git merge --no-ff fix/<...> && git push
 git checkout main    && git merge --no-ff fix/<...> && git push
-git branch -d fix/<...>
-# 然后按“发布步骤”切 release 打 PATCH tag
+# 然后按“发布步骤”切 release 打 PATCH tag；打完 tag 推送后再删本地分支（见“任务开发完整流程”第 5 步）
+git checkout main && git branch -d fix/<...> && git branch -d release/v<X.Y.Z>
+git branch                                # 应只剩 main、develop
 ```
 
 - 线上已发布版本的紧急修复走 hotfix/*（从 main 切出，修完回合 main+develop）；开发期 bug 走 fix/*。
@@ -61,8 +81,9 @@ git checkout -b optimize/<短描述>          # 如 optimize/admin-menu-icon
 # 开发提交（多用 fix/refactor/style/chore/docs 类型）
 git checkout develop && git merge --no-ff optimize/<...> && git push
 git checkout main    && git merge --no-ff optimize/<...> && git push
-git branch -d optimize/<...>
-# 然后按下方“发布步骤”切 release 打 PATCH tag
+# 然后按下方“发布步骤”切 release 打 PATCH tag；打完 tag 推送后再删本地分支（见“任务开发完整流程”第 5 步）
+git checkout main && git branch -d optimize/<...> && git branch -d release/v<X.Y.Z>
+git branch                                # 应只剩 main、develop
 ```
 
 - 与 feature 的区别：仅分支命名（feature 带任务编号，optimize 带短描述）与版本位（feature=MINOR，optimize=PATCH）；合入与发布流程一致。
@@ -80,7 +101,6 @@ git branch -d optimize/<...>
    ```bash
    git checkout develop && git merge --no-ff feature/<...> && git push
    git checkout main    && git merge --no-ff feature/<...> && git push
-   git branch -d feature/<...>                              # 删除已合分支
    ```
 4. **发布 → 切 release 分支并打 tag**
    ```bash
@@ -88,10 +108,19 @@ git branch -d optimize/<...>
    # 只做版本号/CHANGELOG/阶段性修复，不加新功能
    git checkout main && git merge --no-ff release/v<X.Y.Z>
    git tag -a v<X.Y.Z> -m "release v<X.Y.Z>" && git push --follow-tags
-   git push origin release/v<X.Y.Z>
+   git push origin release/v<X.Y.Z>          # 远程 release 分支保留，作为发布留痕
+   ```
+5. **收尾 → 删除本地工作分支（tag 推送后立即执行）**
+   ```bash
+   git checkout main
+   git branch -d feature/<...>
+   git branch -d release/v<X.Y.Z>
+   git branch                                 # 应只剩 main、develop
    ```
 
 > 约定：feature 始终从 `develop` 切出；任务完成同时合回 `develop` 和 `main`；**无论大小任务，完成后都切 `release/vX.Y.Z` 合 `main` 并打 tag**（版本位按上方 SemVer 规则：feature=MINOR、optimize/fix=PATCH、破坏性=MAJOR）。单人开发可直推，团队协作走 PR（CI 全绿 + ≥ 1 人 Review）。
+>
+> **收尾铁律**：**打完 tag 并推送后，必须删除本次的本地工作分支与本地 release 分支**，本地始终保持只有 `main` 与 `develop`；远程分支一律保留（见上文"本地只保留 main 与 develop"）。
 
 ### 提交规范（Conventional Commits）
 
