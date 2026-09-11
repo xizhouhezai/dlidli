@@ -101,6 +101,12 @@ const router = createRouter({
           component: () => import('@/views/account/GrowthView.vue'),
           meta: { title: '成长中心', requiresAuth: true },
         },
+        {
+          path: 'pelican',
+          name: 'pelican',
+          component: () => import('@/views/lab/PelicanView.vue'),
+          meta: { title: '提示词实验室' },
+        },
       ],
     },
     // 管理后台已拆为独立应用 apps/admin（dev :5175）
