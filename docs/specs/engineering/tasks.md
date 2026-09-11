@@ -99,6 +99,8 @@
   - 覆盖：—（工程）
 - [x] M3-ENG-14 一键启动所有服务（scripts/dev-all.mjs + 根 `dev:all` 脚本）：依赖探测（MySQL 3307/Redis 6379，可用 DLIDLI_* 覆盖）→ 数据库迁移（go run ./cmd/migrate）→ go build 后端二进制再启动 API（避免 go run 子进程树难清理）→ 并发生起 web/admin/h5（可选 --docs 起文档站）→ 轮询 /health 就绪确认 → Ctrl+C 统一 taskkill /T 清理全部子进程；带彩色标签日志；--check-only / --skip-migrate / --no-h5 / --strict 开关；实测 MySQL+Redis 就绪、迁移完成、API /health 200、web(5173)/admin(5175)/h5(5176) vite ready 全通） `2026-09-03`
   - 覆盖：—（工程）
+- [x] M3-ENG-15 Web 提示词实验室页（`/pelican`，提示词产物演示）：新增独立页面 views/lab/PelicanView.vue（提示词原文可一键复制 + 内联手绘 SVG），SVG 全手绘无外部依赖——白色鹈鹕（长橙喙/下垂喉囊/前伸翅膀/橙蹼足）+ 蔚蓝色自行车 + 周围风景（太阳/云朵/远山/树木/带虚线公路）；骑行动画由 CSS 关键帧驱动（车轮旋转 0.8s / 云朵漂移 22s / 公路虚线流动 0.9s / 速度线脉动 1s / 车身起伏 1.7s），`prefers-reduced-motion` 下自动静止；路由免登录；经真实浏览器校验动画生效、vue-tsc + eslint(0 error) + vite build 全绿 `2026-09-11`
+  - 覆盖：—（工程）
 
 ## M4（W49+）App
 
@@ -116,8 +118,8 @@
 | M0 | 13 | 13 |
 | M1 | 4 | 4 |
 | M2 | 6 | 6 |
-| M3 | 17 | 10 |
+| M3 | 18 | 11 |
 | M4 | 3 | 0 |
-| **合计** | **43** | **33** |
+| **合计** | **44** | **34** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
