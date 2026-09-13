@@ -73,10 +73,14 @@
 
 - [ ] M3-ENG-01 微服务拆分：互动/计数服务独立（gRPC）
   - 覆盖：—（工程）
+  - 阻塞记录（2026-09-13）：本机无独立服务部署环境/协议基线；当前单体模块边界尚未完成 gRPC proto、服务契约与跨服务事务设计，不能安全地只拆目录或伪造完成；待先完成 ADR、proto 与联调环境后实施。
 - [ ] M3-ENG-02 Kubernetes 迁移 + HPA
   - 覆盖：—（工程）
+  - 阻塞记录（2026-09-13）：本机无 Docker、kubectl、Helm、kind/minikube，也无可用集群；可后续补充 Deployment/Service/HPA 清单，但无法完成部署验收与压测，暂不虚标完成。
 - [ ] M3-ENG-03 分表实施（comment/danmaku/user_action）
   - 覆盖：—（工程）
+  - 阻塞记录（2026-09-13）：现有三表仍是单表 GORM 查询；`comment`/`danmaku` 主键为雪花 ID，`user_action` 存在跨分片唯一键（user_id, oid, obj_type, action）。在未确定分片键、路由层、中间查询聚合、全局唯一性与迁移回滚方案前，直接执行 MySQL 分区/拆表会破坏现有查询与约束。本机 MySQL 可用，但缺少已评审的分片契约，暂保留为设计阻塞。
+  - 下一步设计：先补 ADR + shard router 抽象与双写/回填脚本，再按 user_action→comment→danmaku 分阶段迁移。
 - [x] M3-ENG-04 链路追踪全覆盖（OpenTelemetry）：新增可选 OTLP/HTTP TracerProvider 与 Gin server-span 中间件；支持 `traceparent`/`baggage` 入站上下文传播、HTTP 路由/状态/耗时/request-id 属性、5xx span error、批量导出与优雅 shutdown；`TRACING_ENDPOINT` 为空时 noop，不改变本地默认行为；补 tracing 单测，go test/vet/build 全绿 `2026-09-13`
   - 覆盖：—（工程）
 - [x] M3-ENG-05 后端核心层单测补全 + 中间件组合顺序缺陷修复（middleware：TraceID/Auth/OptionalAuth/AdminAuth/CORS/Recovery/PlaySignGuard/限流 fail-open/组合中间件；pkg：storage 本地驱动含跨平台路径穿越防护、config 默认值、contentmod 规则机审、moderate 词库热加载；**修复** v0.23.1 引入的 Chain 组合顺序缺陷——Auth 尾部 c.Next() 直通业务导致限流器后置执行，改为单一 AuthedRateLimited 中间件保证限流先于业务；go build/vet/test 全绿） `2026-08-25`
