@@ -79,7 +79,7 @@
   - 阻塞记录（2026-09-13）：本机无 Docker、kubectl、Helm、kind/minikube，也无可用集群；可后续补充 Deployment/Service/HPA 清单，但无法完成部署验收与压测，暂不虚标完成。
 - [ ] M3-ENG-03 分表实施（comment/danmaku/user_action）
   - 覆盖：—（工程）
-  - 已完成前置（2026-09-13）：分表 ADR、`internal/pkg/shard` 安全路由基础与影子表 DDL 生成器已落地；固定 16 分片、`comment/danmaku` 按对象键、`user_action` 按 user_id、表名白名单、稳定 FNV-1a 哈希与 `CREATE TABLE ... LIKE` 生成均有单测。现有 repository 仍保持单表读写，避免半迁移。
+  - 已完成前置（2026-09-13）：分表 ADR、`internal/pkg/shard` 安全路由基础、影子表 DDL 生成器与离线 assignment 校验器已落地；固定 16 分片、`comment/danmaku` 按对象键、`user_action` 按 user_id、表名白名单、稳定 FNV-1a 哈希、`CREATE TABLE ... LIKE` 生成与路由一致性校验均有单测。现有 repository 仍保持单表读写，避免半迁移。
   - 阻塞记录：数据迁移仍需双写/回填环境、生产量级数据与可回滚窗口；在未完成 repository 路由、跨片聚合和一致性校验前，不标记为生产分表完成。决策记录见 [`docs/architecture/adr-m3-eng-03-sharding.md`](../../architecture/adr-m3-eng-03-sharding.md)。
 - [x] M3-ENG-04 链路追踪全覆盖（OpenTelemetry）：新增可选 OTLP/HTTP TracerProvider 与 Gin server-span 中间件；支持 `traceparent`/`baggage` 入站上下文传播、HTTP 路由/状态/耗时/request-id 属性、5xx span error、批量导出与优雅 shutdown；`TRACING_ENDPOINT` 为空时 noop，不改变本地默认行为；补 tracing 单测，go test/vet/build 全绿 `2026-09-13`
   - 覆盖：—（工程）
