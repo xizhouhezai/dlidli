@@ -68,6 +68,7 @@
   - 覆盖：—（工程）
 - [ ] M3-MP-03 微信卡片分享 + 类目资质提审：播放页已接入 `onShareAppMessage`（好友卡片）与 `onShareTimeline`（朋友圈），分享路径携带 `bvid`、封面使用视频封面并带默认封面兜底；真实分享菜单/卡片验证与视频类目资质提审仍需真实小程序 AppID、开发者账号及资质，待外部条件具备后验收 `2026-09-11`
   - 覆盖：—（工程）
+  - 真实验收清单：[`docs/architecture/miniprogram-release-checklist.md`](../../architecture/miniprogram-release-checklist.md)
 
 ### 基建演进（ENG）
 
