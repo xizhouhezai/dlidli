@@ -4,6 +4,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { formatCount, formatDuration, type User } from '@dlidli/shared'
 import { ApiError, type VideoCard, type CollectionItem } from '@dlidli/api-client'
 import { api, hasLogin, saveLogin, clearLogin } from '@/api'
+import { wxLoginCode } from '@/utils/wxlogin'
 
 const DEFAULT_AVATAR = '/static/default-avatar.png'
 const DEFAULT_COVER = '/static/default-cover.png'
@@ -76,6 +77,21 @@ function doLogout() {
   profile.value = null
   mineList.value = []
   collections.value = []
+}
+
+// 微信小程序一键登录（M3-MP-01）：wx.login 取 code → 后端 code2session → 登录/自动注册
+const wxLoading = ref(false)
+async function doWxLogin() {
+  wxLoading.value = true
+  try {
+    const code = await wxLoginCode()
+    const pair = await api.auth.loginByWeChat(code)
+    await loginSuccess(pair)
+  } catch (e) {
+    uni.showToast({ title: e instanceof ApiError ? e.message : '微信登录失败', icon: 'none' })
+  } finally {
+    wxLoading.value = false
+  }
 }
 
 async function loadMine() {
@@ -151,6 +167,13 @@ onShow(() => {
           </button>
         </view>
         <button class="login-panel__btn" :loading="loginLoading" @tap="doLogin">登录</button>
+        <!-- 微信小程序：一键授权登录（M3-MP-01）；仅 mp-weixin 编译目标可见 -->
+        <!-- #ifdef MP-WEIXIN -->
+        <button class="login-panel__wx" :loading="wxLoading" @tap="doWxLogin">
+          <text class="i-mingcute-wechat-line" />
+          微信一键登录
+        </button>
+        <!-- #endif -->
       </view>
     </view>
 
@@ -293,6 +316,21 @@ onShow(() => {
   line-height: 88rpx;
   border-radius: 12rpx;
   background: v.$primary;
+  color: #fff;
+  font-size: 30rpx;
+}
+
+// 微信小程序一键登录（M3-MP-01）：微信品牌绿，与短信登录主按钮区分
+.login-panel__wx {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  margin-top: 20rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 12rpx;
+  background: #07c160;
   color: #fff;
   font-size: 30rpx;
 }

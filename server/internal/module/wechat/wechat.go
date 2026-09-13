@@ -23,10 +23,53 @@ import (
 const (
 	ticketURL   = "https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token=%s"
 	tokenURL    = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s"
+	code2Sess   = "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code"
 	ticketCache = "wx:jsapi_ticket"
 	tokenCache  = "wx:access_token"
 	cacheTTL    = 6600 * time.Second // 官方 7200s，提前 10 分钟过期防边界
 )
+
+// SessionResult 小程序静默登录换取的用户标识（M3-MP-01）。
+// UnionID 仅在主体已绑定开放平台时返回，可能为空。
+type SessionResult struct {
+	OpenID     string `json:"open_id"`
+	UnionID    string `json:"union_id,omitempty"`
+	SessionKey string `json:"session_key,omitempty"`
+}
+
+// MPEnabled 是否已配置小程序凭据。
+func (s *Service) MPEnabled() bool { return s.mpAppID != "" && s.mpAppSecret != "" }
+
+// Code2Session 用小程序 wx.login 的 code 换取 openid（M3-MP-01）。
+// 未配置小程序凭据时返回"微信登录未启用"；微信侧返回 errcode 时归为授权失败。
+func (s *Service) Code2Session(ctx context.Context, code string) (*SessionResult, error) {
+	if !s.MPEnabled() {
+		return nil, errcode.ErrWxLoginDisabled
+	}
+	if code == "" {
+		return nil, errcode.ErrInvalidParams.WithMsg("缺少 code")
+	}
+	res, err := httpGetJSON(fmt.Sprintf(code2Sess,
+		url.QueryEscape(s.mpAppID), url.QueryEscape(s.mpAppSecret), url.QueryEscape(code)))
+	if err != nil {
+		return nil, err
+	}
+	// 微信错误码（如 40029 code 无效 / 45011 频率限制）
+	if c, ok := res["errcode"].(float64); ok && c != 0 {
+		if s.log != nil {
+			s.log.Warn("微信 code2session 失败",
+				zap.Float64("errcode", c), zap.Any("errmsg", res["errmsg"]))
+		}
+		return nil, errcode.ErrWxCodeInvalid
+	}
+	openID, _ := res["openid"].(string)
+	if openID == "" {
+		return nil, errcode.ErrWxCodeInvalid
+	}
+	unionID, _ := res["unionid"].(string)
+	sessionKey, _ := res["session_key"].(string)
+	return &SessionResult{OpenID: openID, UnionID: unionID, SessionKey: sessionKey}, nil
+}
 
 // SignResult wx.config 所需签名参数。
 type SignResult struct {
@@ -143,15 +186,26 @@ func randomNonce() string {
 	return string(b)
 }
 
-// Service 微信 JSSDK 服务。
+// Service 微信 JSSDK/小程序服务。
 type Service struct {
-	appID     string
-	appSecret string
-	rdb       *redis.Client
-	log       *zap.Logger
+	appID       string
+	appSecret   string
+	mpAppID     string
+	mpAppSecret string
+	rdb         *redis.Client
+	log         *zap.Logger
 }
 
 // NewService 构建服务；redis 未就绪时签名不可用（返回错误）。
 func NewService(appID, appSecret string, rdb *redis.Client, log *zap.Logger) *Service {
 	return &Service{appID: appID, appSecret: appSecret, rdb: rdb, log: log}
+}
+
+// NewServiceWithMP 构建服务并配置小程序凭据（M3-MP-01 code2session 登录）。
+func NewServiceWithMP(appID, appSecret, mpAppID, mpAppSecret string, rdb *redis.Client, log *zap.Logger) *Service {
+	return &Service{
+		appID: appID, appSecret: appSecret,
+		mpAppID: mpAppID, mpAppSecret: mpAppSecret,
+		rdb: rdb, log: log,
+	}
 }

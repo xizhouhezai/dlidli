@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "uni",
+    "dev:mp": "uni -p mp-weixin",
     "build": "uni build",
+    "build:mp": "uni build -p mp-weixin",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
@@ -18,6 +20,8 @@
   "devDependencies": {
     "@dcloudio/types": "^3.4.8",
     "@dcloudio/uni-cli-shared": "3.0.0-5010520260709002",
+    "@dcloudio/uni-mp-vue": "3.0.0-5010520260709002",
+    "@dcloudio/uni-mp-weixin": "3.0.0-5010520260709002",
     "@dcloudio/uni-stacktracey": "3.0.0-5010520260709002",
     "@dcloudio/vite-plugin-uni": "3.0.0-5010520260709002",
     "@iconify-json/mingcute": "^1.2.7",

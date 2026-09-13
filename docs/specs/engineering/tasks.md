@@ -62,11 +62,11 @@
 
 ### 小程序（MP）
 
-- [ ] M3-MP-01 编译目标 mp-weixin 适配（登录改微信授权）
+- [x] M3-MP-01 编译目标 mp-weixin 适配（登录改微信授权）：H5 uni-app 工程新增 mp-weixin 平台依赖与 `dev:mp`/`build:mp` 脚本；`apps/miniprogram` README 明确共享工程与构建产物导入方式；profile 页在 MP-WEIXIN 条件编译下提供微信一键登录；后端新增 `POST /auth/login/wechat`，通过小程序 `code2session` 换 openid 后查找/自动注册账号并签发 JWT；配置支持 `DLIDLI_WECHAT_MPAPPID`/`DLIDLI_WECHAT_MPAPPSECRET`，凭据缺失优雅降级。H5 与 mp-weixin 构建、Go vet/test 全绿 `2026-09-11`
   - 覆盖：—（工程）
-- [ ] M3-MP-02 核心页面：首页/搜索/播放/个人中心
+- [x] M3-MP-02 核心页面：首页/搜索/播放/个人中心：复用 H5 uni-app 页面作为共享源码，在 `mp-weixin` 目标下生成 `pages/index`、`pages/search`、`pages/video`、`pages/profile` 四个页面产物；主包构建产物约 203KB，页面编译无错误 `2026-09-11`
   - 覆盖：—（工程）
-- [ ] M3-MP-03 微信卡片分享 + 类目资质提审
+- [ ] M3-MP-03 微信卡片分享 + 类目资质提审：播放页已接入 `onShareAppMessage`（好友卡片）与 `onShareTimeline`（朋友圈），分享路径携带 `bvid`、封面使用视频封面并带默认封面兜底；真实分享菜单/卡片验证与视频类目资质提审仍需真实小程序 AppID、开发者账号及资质，待外部条件具备后验收 `2026-09-11`
   - 覆盖：—（工程）
 
 ### 基建演进（ENG）
@@ -120,8 +120,8 @@
 | M0 | 13 | 13 |
 | M1 | 4 | 4 |
 | M2 | 6 | 6 |
-| M3 | 19 | 12 |
+| M3 | 19 | 14 |
 | M4 | 3 | 0 |
-| **合计** | **45** | **35** |
+| **合计** | **45** | **37** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
