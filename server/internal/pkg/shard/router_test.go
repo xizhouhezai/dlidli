@@ -46,6 +46,26 @@ func TestTableForAllowlist(t *testing.T) {
 	}
 }
 
+func TestShadowDDLIsAllowlistedAndDeterministic(t *testing.T) {
+	statements, err := ShadowDDL(BaseComment)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(statements) != int(Count) {
+		t.Fatalf("expected %d statements, got %d", Count, len(statements))
+	}
+	if statements[0] != "CREATE TABLE IF NOT EXISTS `comment_00` LIKE `comment`;" || statements[15] != "CREATE TABLE IF NOT EXISTS `comment_15` LIKE `comment`;" {
+		t.Fatalf("unexpected DDL: first=%q last=%q", statements[0], statements[15])
+	}
+	if _, err := ShadowDDL("comment;DROP TABLE user"); err == nil {
+		t.Fatal("unapproved base should fail DDL generation")
+	}
+	all, err := ShadowDDLAll()
+	if err != nil || len(all) == 0 {
+		t.Fatalf("expected combined DDL, err=%v", err)
+	}
+}
+
 func TestTableForStringMatchesHashRoute(t *testing.T) {
 	name1, err := TableForString(BaseDanmaku, "video-42")
 	if err != nil {
