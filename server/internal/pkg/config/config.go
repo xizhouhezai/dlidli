@@ -20,6 +20,7 @@ type Config struct {
 	Transcode Transcode
 	WeChat    WeChat
 	Search    Search
+	Tracing   Tracing
 }
 
 type App struct {
@@ -53,6 +54,12 @@ type Search struct {
 	Index       string // 索引名，默认 dlidli_videos
 	PollSeconds int    // Worker 轮询间隔（秒），默认 3
 	BatchSize   int    // 每批消费条数，默认 100
+}
+
+// Tracing OpenTelemetry 链路追踪配置（M3-ENG-04）。Endpoint 为空时关闭导出。
+type Tracing struct {
+	Endpoint    string
+	ServiceName string
 }
 
 type Log struct {
@@ -176,6 +183,8 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("wechat.appsecret", "")
 	v.SetDefault("wechat.mpappid", "")
 	v.SetDefault("wechat.mpappsecret", "")
+	v.SetDefault("tracing.endpoint", "")
+	v.SetDefault("tracing.servicename", "dlidli-api")
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。

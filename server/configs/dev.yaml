@@ -53,6 +53,11 @@ wechat:
   mpAppId: ""
   mpAppSecret: ""
 
+# OpenTelemetry（M3-ENG-04）：为空时关闭 OTLP 导出；可用环境变量覆盖。
+# tracing:
+#   endpoint: http://127.0.0.1:4318
+#   serviceName: dlidli-api
+
 # 搜索索引（M2-SRH-01/02）：esUrl 配置后启用 ES 检索与索引同步 Worker，
 # 未配置时搜索自动降级 MySQL LIKE（本机无 ES 时保持注释即可）。
 # search:

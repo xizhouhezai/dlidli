@@ -32,6 +32,7 @@ import (
 	"github.com/dlidli/server/internal/pkg/config"
 	"github.com/dlidli/server/internal/pkg/metrics"
 	"github.com/dlidli/server/internal/pkg/response"
+	"github.com/dlidli/server/internal/pkg/tracing"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
@@ -47,6 +48,7 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 
 	e := gin.New()
 	e.Use(
+		tracing.Middleware(),
 		middleware.TraceID(),
 		metrics.Middleware(),
 		middleware.AccessLog(log),
