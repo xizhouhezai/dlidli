@@ -112,8 +112,25 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 	if res.DB != nil && res.Redis != nil {
 		growthSvc := growth.NewService(growth.NewRepo(res.DB), res.Redis, log)
 
+		// 微信 JSSDK 签名（M2-H5-06）+ 小程序 code2session（M3-MP-01）：
+		// 凭据未配置时对应能力返回未启用，前端静默降级。需先于 account 创建，
+		// 以便把 code→openid 能力注入账号登录（单向桥接，account 不反向依赖 wechat）。
+		wechatSvc := wechat.NewServiceWithMP(
+			cfg.WeChat.AppID, cfg.WeChat.AppSecret,
+			cfg.WeChat.MPAppID, cfg.WeChat.MPAppSecret,
+			res.Redis, log,
+		)
+
 		accountSvc := account.NewService(account.NewRepo(res.DB), res.Redis, cfg, log, growthSvc)
-		account.NewHandler(accountSvc, res.Storage).RegisterRoutes(v1, authedRateLimited)
+		account.NewHandler(accountSvc, res.Storage).
+			WithWxSession(func(ctx context.Context, code string) (string, error) {
+				sess, err := wechatSvc.Code2Session(ctx, code)
+				if err != nil {
+					return "", err
+				}
+				return sess.OpenID, nil
+			}).
+			RegisterRoutes(v1, authedRateLimited)
 
 		uploadTmp := filepath.Join(cfg.Storage.LocalDir, "chunks")
 		uploadSvc := upload.NewService(upload.NewRepo(res.DB), res.Redis, res.Storage, uploadTmp, log)
@@ -139,8 +156,7 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		notifySvc.SetHub(notifyHub)
 		notify.NewHandler(notifySvc).RegisterRoutes(v1, authedRateLimited)
 
-		// 微信 JSSDK 签名（M2-H5-06）：appId 未配置时接口返回未启用，前端静默降级
-		wechatSvc := wechat.NewService(cfg.WeChat.AppID, cfg.WeChat.AppSecret, res.Redis, log)
+		// 微信 JSSDK 签名路由（M2-H5-06；wechatSvc 已在 account 之前创建）
 		wechat.NewHandler(wechatSvc).RegisterRoutes(v1)
 
 		interactionSvc := interaction.NewService(interaction.NewRepo(res.DB), videoSvc, accountSvc, notifySvc, growthSvc, log)

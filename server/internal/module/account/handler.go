@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"regexp"
 	"strconv"
 
@@ -16,10 +17,19 @@ var phoneRe = regexp.MustCompile(`^1\d{10}$`)
 type Handler struct {
 	svc   *Service
 	store storage.Storage
+	// code2session 注入点：由 router 从 wechat 模块桥接，避免 account 反向依赖 wechat（M3-MP-01）。
+	// 未注入（nil）时 /auth/login/wechat 返回"微信登录未启用"。
+	wxSession func(ctx context.Context, code string) (string, error)
 }
 
 func NewHandler(svc *Service, store storage.Storage) *Handler {
 	return &Handler{svc: svc, store: store}
+}
+
+// WithWxSession 注入微信 code2session 换取 openid 的能力（M3-MP-01，由 router 桥接）。
+func (h *Handler) WithWxSession(fn func(ctx context.Context, code string) (string, error)) *Handler {
+	h.wxSession = fn
+	return h
 }
 
 // RegisterRoutes 注册账号域路由。
@@ -31,6 +41,7 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth gin.HandlerFunc) {
 		g.POST("/activate", h.activateEmail)
 		g.POST("/login/sms", h.loginBySms)
 		g.POST("/login/password", h.loginByPassword)
+		g.POST("/login/wechat", h.loginByWeChat)
 		g.GET("/captcha", h.captcha)
 		g.POST("/refresh", h.refresh)
 		g.POST("/logout", h.logout)
@@ -149,6 +160,40 @@ func (h *Handler) loginBySms(c *gin.Context) {
 		return
 	}
 	pair, err := h.svc.LoginBySms(c.Request.Context(), req.Phone, req.Code, req.InviteCode)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, pair)
+}
+
+// loginByWeChat 微信小程序登录（M3-MP-01）：wx.login 的 code → openid → 登录/自动注册。
+// @Summary  微信小程序登录
+// @Tags     账号-认证
+// @Accept   json
+// @Produce  json
+// @Param    body body object true "code: wx.login 返回的临时凭证; invite_code: 内测邀请码(可选)"
+// @Success  200 {object} response.Body "data: {access_token, refresh_token, user}"
+// @Router   /auth/login/wechat [post]
+func (h *Handler) loginByWeChat(c *gin.Context) {
+	var req struct {
+		Code       string `json:"code" binding:"required"`
+		InviteCode string `json:"invite_code"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	if h.wxSession == nil {
+		response.Fail(c, errcode.ErrWxLoginDisabled)
+		return
+	}
+	openID, err := h.wxSession(c.Request.Context(), req.Code)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	pair, err := h.svc.LoginByWeChat(c.Request.Context(), openID, req.InviteCode)
 	if err != nil {
 		response.Fail(c, err)
 		return

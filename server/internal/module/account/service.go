@@ -159,6 +159,49 @@ func (s *Service) LoginBySms(ctx context.Context, phone, code, inviteCode string
 	return s.issueTokens(ctx, user)
 }
 
+// LoginByWeChat 微信小程序登录（M3-MP-01）：openid 已存在则登录，否则自动注册。
+// openid 非 PII（无展示与精确查询需求），按 ACC-43 约定明文存储 + 确定性哈希索引。
+// wxSession 由 wechat 模块 code2session 提供（此处只依赖 openid，避免 account 反向依赖 wechat）。
+func (s *Service) LoginByWeChat(ctx context.Context, openID, inviteCode string) (*TokenPair, error) {
+	if openID == "" {
+		return nil, errcode.ErrInvalidParams.WithMsg("缺少 openid")
+	}
+	auth, err := s.repo.FindAuth(IdentityWeChat, openID)
+	if err != nil {
+		return nil, err
+	}
+
+	var user *User
+	if auth == nil {
+		// 自动注册（与手机/邮箱一致的注册礼：Lv1 + 5 硬币）
+		user = &User{
+			ID:       snowflake.NextID(),
+			Nickname: defaultNickname(),
+			Level:    1,
+			Coin:     5,
+		}
+		if err := s.repo.CreateUserWithAuth(user, &UserAuth{
+			IdentityType:   IdentityWeChat,
+			Identifier:     openID,
+			IdentifierHash: encrypt.IdentifierHash(IdentityWeChat, openID),
+			Activated:      1, // 微信授权即已验证，无需激活
+		}); err != nil {
+			return nil, err
+		}
+		// 内测邀请码（ACC-44）：占用失败补偿删除已建账号
+		if err := s.requireInvite(ctx, inviteCode, user.ID); err != nil {
+			_ = s.repo.DeleteUser(user.ID)
+			return nil, err
+		}
+	} else {
+		user, err = s.repo.FindUserByID(auth.UserID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return s.issueTokens(ctx, user)
+}
+
 // RegisterByEmail 邮箱注册（ACC-02）：校验格式/查重 → 创建待激活账号 → 生成激活 token 并 mock 发送激活邮件。
 // dev 环境返回 debug 激活链接（真实邮件服务接入后移除）。
 func (s *Service) RegisterByEmail(ctx context.Context, email, password, inviteCode string) (debugURL string, err error) {

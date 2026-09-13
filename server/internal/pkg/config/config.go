@@ -33,11 +33,17 @@ type App struct {
 	AutoApprove bool
 }
 
-// WeChat 微信公众号配置（M2-H5-06 分享 JSSDK）：appId/secret 用于 jsapi_ticket 签名。
-// 未配置时签名接口返回未启用错误，前端静默降级为复制链接。
+// WeChat 微信公众号/小程序配置：
+//   - appId/appSecret：公众号，用于 H5 分享 JSSDK 的 jsapi_ticket 签名（M2-H5-06）
+//   - mpAppId/mpAppSecret：小程序，用于 code2session 静默授权登录（M3-MP-01）
+//
+// 各自未配置时对应能力返回未启用错误，前端静默降级。
 type WeChat struct {
 	AppID     string // 公众号 appId
 	AppSecret string // 公众号 appSecret
+	// MPAppID/MPAppSecret 小程序凭据（M3-MP-01）。未配置时 /auth/login/wechat 返回"微信登录未启用"。
+	MPAppID     string
+	MPAppSecret string
 }
 
 // Search 搜索索引配置（M2-SRH-01/02）：ESURL 为空时 ES 关闭，
@@ -166,6 +172,10 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("search.index", "")
 	v.SetDefault("search.pollseconds", 0)
 	v.SetDefault("search.batchsize", 0)
+	v.SetDefault("wechat.appid", "")
+	v.SetDefault("wechat.appsecret", "")
+	v.SetDefault("wechat.mpappid", "")
+	v.SetDefault("wechat.mpappsecret", "")
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。
