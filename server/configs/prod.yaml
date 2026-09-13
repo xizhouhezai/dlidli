@@ -40,3 +40,8 @@ transcode:
   workers: 2
   # ffmpeg/ffprobe 缺省走 PATH；特殊环境用环境变量覆盖：
   #   DLIDLI_TRANSCODE_FFMPEGPATH / DLIDLI_TRANSCODE_FFPROBEPATH
+
+# OpenTelemetry（M3-ENG-04）：生产通过 DLIDLI_TRACING_ENDPOINT 启用 OTLP/HTTP。
+# tracing:
+#   endpoint: http://otel-collector:4318
+#   serviceName: dlidli-api
