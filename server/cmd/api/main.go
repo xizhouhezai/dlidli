@@ -15,6 +15,7 @@ import (
 	"github.com/dlidli/server/internal/pkg/config"
 	"github.com/dlidli/server/internal/pkg/logger"
 	"github.com/dlidli/server/internal/pkg/snowflake"
+	"github.com/dlidli/server/internal/pkg/tracing"
 	"github.com/dlidli/server/internal/router"
 	"go.uber.org/zap"
 )
@@ -50,6 +51,18 @@ func main() {
 
 	res := infra.Init(cfg, log)
 	defer res.Close()
+
+	traceProvider, err := tracing.Setup(context.Background(), cfg.Tracing.ServiceName, cfg.Tracing.Endpoint)
+	if err != nil {
+		log.Fatal("初始化 OpenTelemetry 失败", zap.Error(err))
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := traceProvider.Shutdown(ctx); err != nil {
+			log.Error("关闭 OpenTelemetry 失败", zap.Error(err))
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.App.Port),

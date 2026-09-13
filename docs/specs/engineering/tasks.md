@@ -77,7 +77,7 @@
   - 覆盖：—（工程）
 - [ ] M3-ENG-03 分表实施（comment/danmaku/user_action）
   - 覆盖：—（工程）
-- [ ] M3-ENG-04 链路追踪全覆盖（OpenTelemetry）
+- [x] M3-ENG-04 链路追踪全覆盖（OpenTelemetry）：新增可选 OTLP/HTTP TracerProvider 与 Gin server-span 中间件；支持 `traceparent`/`baggage` 入站上下文传播、HTTP 路由/状态/耗时/request-id 属性、5xx span error、批量导出与优雅 shutdown；`TRACING_ENDPOINT` 为空时 noop，不改变本地默认行为；补 tracing 单测，go test/vet/build 全绿 `2026-09-13`
   - 覆盖：—（工程）
 - [x] M3-ENG-05 后端核心层单测补全 + 中间件组合顺序缺陷修复（middleware：TraceID/Auth/OptionalAuth/AdminAuth/CORS/Recovery/PlaySignGuard/限流 fail-open/组合中间件；pkg：storage 本地驱动含跨平台路径穿越防护、config 默认值、contentmod 规则机审、moderate 词库热加载；**修复** v0.23.1 引入的 Chain 组合顺序缺陷——Auth 尾部 c.Next() 直通业务导致限流器后置执行，改为单一 AuthedRateLimited 中间件保证限流先于业务；go build/vet/test 全绿） `2026-08-25`
   - 覆盖：—（工程）
@@ -120,8 +120,8 @@
 | M0 | 13 | 13 |
 | M1 | 4 | 4 |
 | M2 | 6 | 6 |
-| M3 | 19 | 14 |
+| M3 | 20 | 15 |
 | M4 | 3 | 0 |
-| **合计** | **45** | **37** |
+| **合计** | **46** | **38** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
