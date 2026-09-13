@@ -44,6 +44,15 @@ transcode:
   # ffmpeg/ffprobe 缺省走 PATH；特殊环境用环境变量覆盖：
   #   DLIDLI_TRANSCODE_FFMPEGPATH / DLIDLI_TRANSCODE_FFPROBEPATH
 
+# 微信公众号（H5 JSSDK）与小程序凭据均建议用环境变量注入。
+# DLIDLI_WECHAT_APPID / DLIDLI_WECHAT_APPSECRET
+# DLIDLI_WECHAT_MPAPPID / DLIDLI_WECHAT_MPAPPSECRET
+wechat:
+  appId: ""
+  appSecret: ""
+  mpAppId: ""
+  mpAppSecret: ""
+
 # 搜索索引（M2-SRH-01/02）：esUrl 配置后启用 ES 检索与索引同步 Worker，
 # 未配置时搜索自动降级 MySQL LIKE（本机无 ES 时保持注释即可）。
 # search:

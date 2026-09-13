@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { formatCount, formatPubdate } from '@dlidli/shared'
 import type { VideoDetail } from '@dlidli/api-client'
 import { api } from '@/api'
@@ -47,6 +47,22 @@ async function load() {
     loading.value = false
   }
 }
+
+// 微信小程序卡片分享（M3-MP-03）：页面级配置在 mp-weixin 编译目标生效，H5/Web 自动忽略。
+// 需要真实 AppID 才能在开发者工具/真机验证分享菜单与卡片落地。
+// #ifdef MP-WEIXIN
+onShareAppMessage(() => ({
+  title: detail.value?.title || 'DliDli 视频',
+  path: `/pages/video/video?bvid=${encodeURIComponent(bvid)}`,
+  imageUrl: detail.value?.cover || '/static/default-cover.png',
+}))
+
+onShareTimeline(() => ({
+  title: detail.value?.title || 'DliDli 视频',
+  query: `bvid=${encodeURIComponent(bvid)}`,
+  imageUrl: detail.value?.cover || '/static/default-cover.png',
+}))
+// #endif
 
 // 有效播放上报（>5s，一次）
 function onTimeUpdate(e: { detail: { currentTime: number } }) {

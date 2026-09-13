@@ -47,6 +47,9 @@ var (
 	ErrUserMuted        = New(20010, "账号已被禁言，暂无法发布内容")
 	ErrAccountExists    = New(20011, "该邮箱已注册")
 	ErrAccountInactive  = New(20012, "账号未激活，请先查收激活邮件")
+	// 微信小程序登录（M3-MP-01）
+	ErrWxLoginDisabled = New(20013, "微信登录未启用")
+	ErrWxCodeInvalid   = New(20014, "微信授权失败，请重试")
 )
 
 // 视频/上传错误码（3xxxx）

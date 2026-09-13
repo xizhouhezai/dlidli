@@ -25,6 +25,13 @@ export function createAuthApi(http: HttpClient) {
     loginBySms: (phone: string, code: string, inviteCode = '') =>
       http.post<TokenPair>('/api/v1/auth/login/sms', { phone, code, invite_code: inviteCode }),
 
+    /**
+     * 微信小程序登录（M3-MP-01）：code 为 wx.login 返回的临时凭证，
+     * 后端 code2session 换 openid 后登录/自动注册。
+     */
+    loginByWeChat: (code: string, inviteCode = '') =>
+      http.post<TokenPair>('/api/v1/auth/login/wechat', { code, invite_code: inviteCode }),
+
     loginByPassword: (account: string, password: string, captchaId: string, captchaCode: string) =>
       http.post<TokenPair>('/api/v1/auth/login/password', {
         account,
