@@ -66,6 +66,24 @@ func TestShadowDDLIsAllowlistedAndDeterministic(t *testing.T) {
 	}
 }
 
+func TestValidateAssignments(t *testing.T) {
+	key := uint64(42)
+	good, err := TableFor(BaseComment, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	counts, err := ValidateAssignments([]Assignment{{SourceTable: BaseComment, Key: key, TargetTable: good}})
+	if err != nil || counts[BaseComment] != 1 {
+		t.Fatalf("expected valid assignment, counts=%v err=%v", counts, err)
+	}
+	if _, err := ValidateAssignments([]Assignment{{SourceTable: BaseComment, Key: key, TargetTable: "comment_15"}}); err == nil {
+		t.Fatal("route mismatch should fail")
+	}
+	if _, err := ValidateAssignments([]Assignment{{SourceTable: "comment;drop", Key: key, TargetTable: "comment_00"}}); err == nil {
+		t.Fatal("unapproved source table should fail")
+	}
+}
+
 func TestTableForStringMatchesHashRoute(t *testing.T) {
 	name1, err := TableForString(BaseDanmaku, "video-42")
 	if err != nil {
