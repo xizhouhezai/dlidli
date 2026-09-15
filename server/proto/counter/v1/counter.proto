@@ -1,0 +1,70 @@
+// 计数服务契约（M3-ENG-01）。
+//
+// 计数服务拥有 video_stat，按事件幂等累加，不反向依赖互动服务。
+// 设计要点：column 使用白名单枚举而非字符串，避免把调用方输入带入 SQL 列名。
+syntax = "proto3";
+
+package dlidli.counter.v1;
+
+option go_package = "github.com/dlidli/server/internal/gen/counter/v1;counterv1";
+
+// 计数服务：视频统计的幂等累加与批量读取。
+service CounterService {
+  // 幂等累加：相同 event_id 重复调用只生效一次。
+  rpc ApplyDelta(ApplyDeltaRequest) returns (ApplyDeltaResponse);
+
+  // 读取单个视频统计。
+  rpc GetStat(GetStatRequest) returns (StatSnapshot);
+
+  // 批量读取（首页/列表页，避免 N+1 往返）。
+  rpc BatchGetStats(BatchGetStatsRequest) returns (BatchGetStatsResponse);
+}
+
+// 计数列白名单。新增列必须在此登记，服务端拒绝未登记值。
+enum CounterColumn {
+  COUNTER_COLUMN_UNSPECIFIED = 0;
+  COUNTER_COLUMN_PLAY = 1;     // 播放
+  COUNTER_COLUMN_LIKE = 2;     // 点赞
+  COUNTER_COLUMN_COIN = 3;     // 投币
+  COUNTER_COLUMN_FAV = 4;      // 收藏
+  COUNTER_COLUMN_COMMENT = 5;  // 评论
+  COUNTER_COLUMN_DANMAKU = 6;  // 弹幕
+  COUNTER_COLUMN_SHARE = 7;    // 分享
+}
+
+// 视频统计快照。
+message StatSnapshot {
+  int64 video_id = 1;
+  int64 play_cnt = 2;
+  int64 like_cnt = 3;
+  int64 coin_cnt = 4;
+  int64 fav_cnt = 5;
+  int64 comment_cnt = 6;
+  int64 danmaku_cnt = 7;
+  int64 share_cnt = 8;
+}
+
+message ApplyDeltaRequest {
+  // 幂等键：调用方生成（建议 UUID 或 "<source>:<biz_id>:<column>"）。
+  string event_id = 1;
+  int64 video_id = 2;
+  CounterColumn column = 3;
+  int64 delta = 4;  // 正负均可；服务端对结果做下限 0 保护
+}
+
+message ApplyDeltaResponse {
+  bool applied = 1;   // false 表示 event_id 已处理过（幂等命中）
+  int64 current = 2;  // 该列当前值
+}
+
+message GetStatRequest {
+  int64 video_id = 1;
+}
+
+message BatchGetStatsRequest {
+  repeated int64 video_ids = 1;
+}
+
+message BatchGetStatsResponse {
+  repeated StatSnapshot stats = 1;
+}

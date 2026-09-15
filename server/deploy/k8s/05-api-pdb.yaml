@@ -1,0 +1,16 @@
+# PodDisruptionBudget（M3-ENG-02）：保证滚动/驱逐期间最小可用副本。
+# 与 Deployment 的 maxUnavailable=0 配合，避免运维操作打满可用性缺口。
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: dlidli-api
+  namespace: dlidli
+  labels:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dlidli
+      app.kubernetes.io/component: api

@@ -64,6 +64,17 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
+	// 存活探针（M3-ENG-02）：只表示"进程还能服务"，恒返回 200。
+	// 必须与 /health 区分：/health 在依赖不可用时返回 503，那是**就绪**语义；
+	// 若把它当 liveness 探针，MySQL/Redis 抖动会导致 Pod 被反复重启（雪崩）。
+	e.GET("/livez", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"code":     0,
+			"message":  "ok",
+			"trace_id": c.GetString(response.CtxTraceID),
+		})
+	})
+
 	// 健康检查（供负载均衡/监控拨测）
 	// 服务存活(进程运行)恒返回 200；业务就绪(MySQL/Redis 可用、业务路由已注册)返回 ready=true，
 	// 否则返回 503，便于监控区分"进程活着但业务不可用"。
