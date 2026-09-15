@@ -1,0 +1,41 @@
+# API HPA（M3-ENG-02）：按 CPU 与自定义指标伸缩。
+#
+# 注意：HPA 依赖 metrics-server。本地 Docker Desktop / kind 默认未安装，
+# 因此本清单的"生效验证"需要先安装 metrics-server（见 README 步骤）。
+# 未安装时 HPA 会报 unable to get metrics，属于预期现象。
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: dlidli-api
+  namespace: dlidli
+  labels:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: dlidli-api
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+    scaleDown:
+      # 缩容更保守，避免抖动导致反复启停
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60

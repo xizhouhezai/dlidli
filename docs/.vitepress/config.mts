@@ -177,7 +177,15 @@ export default defineConfig({
             { text: '后端架构（Go）', link: '/architecture/backend' },
             { text: '前端架构（Web/H5/小程序）', link: '/architecture/frontend' },
             { text: '数据模型设计', link: '/architecture/data-model' },
-            { text: '视频处理流水线', link: '/architecture/video-pipeline' }
+            { text: '视频处理流水线', link: '/architecture/video-pipeline' },
+            { text: '小程序发布验收清单', link: '/architecture/miniprogram-release-checklist' }
+          ]
+        },
+        {
+          text: '架构决策记录（ADR）',
+          items: [
+            { text: 'M3-ENG-01 互动/计数服务拆分（gRPC）', link: '/architecture/adr-m3-eng-01-grpc-split' },
+            { text: 'M3-ENG-03 互动明细分表路由', link: '/architecture/adr-m3-eng-03-sharding' }
           ]
         }
       ],

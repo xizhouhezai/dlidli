@@ -1,0 +1,170 @@
+// 互动服务契约（M3-ENG-01）。
+//
+// 该 proto 是互动域的唯一契约来源：单体侧通过 internal/client 调用，
+// 拆分后由 cmd/interaction-svc 提供网络 gRPC 实现。
+// 字段编号一旦发布不得复用；新增字段一律追加。
+syntax = "proto3";
+
+package dlidli.interaction.v1;
+
+option go_package = "github.com/dlidli/server/internal/gen/interaction/v1;interactionv1";
+
+// 互动服务：评论/回复、点赞、投币、收藏明细与三连状态。
+service InteractionService {
+  // 发布评论或回复；root_id/parent_id 为空表示一级评论。
+  rpc AddComment(AddCommentRequest) returns (CommentItem);
+
+  // 一级评论分页（附前 2 条回复预览）。
+  rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse);
+
+  // 楼中楼分页。
+  rpc ListReplies(ListRepliesRequest) returns (ListRepliesResponse);
+
+  // 删除评论（作者本人或稿件 UP 主）。
+  rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse);
+
+  // 视频点赞开关。
+  rpc ToggleLike(ToggleLikeRequest) returns (ToggleLikeResponse);
+
+  // 评论点赞开关。
+  rpc ToggleCommentLike(ToggleCommentLikeRequest) returns (ToggleCommentLikeResponse);
+
+  // 投币（不可重复投、不可投自己）。
+  rpc Coin(CoinRequest) returns (CoinResponse);
+
+  // 收藏开关。
+  rpc ToggleFav(ToggleFavRequest) returns (ToggleFavResponse);
+
+  // 三连状态聚合（播放页一次取齐，避免多次往返）。
+  rpc GetTripleState(GetTripleStateRequest) returns (TripleState);
+}
+
+// 评论状态。
+enum CommentStatus {
+  COMMENT_STATUS_UNSPECIFIED = 0;
+  COMMENT_STATUS_NORMAL = 1;   // 正常
+  COMMENT_STATUS_SHADOW = 2;   // 影子屏蔽：仅发送者可见
+  COMMENT_STATUS_DELETED = 3;  // 已删除
+}
+
+// 互动对象类型。
+enum ObjType {
+  OBJ_TYPE_UNSPECIFIED = 0;
+  OBJ_TYPE_VIDEO = 1;
+  OBJ_TYPE_COMMENT = 2;
+}
+
+// 用户摘要（评论作者）。
+message UserBrief {
+  int64 id = 1;
+  string nickname = 2;
+  string avatar = 3;
+  int32 level = 4;
+}
+
+// 评论条目。replies 仅在一级评论且请求附带预览时有值。
+message CommentItem {
+  int64 id = 1;
+  string content = 2;
+  UserBrief user = 3;
+  int64 like_cnt = 4;
+  int64 reply_cnt = 5;
+  bool is_top = 6;
+  bool is_self = 7;
+  int64 created_at_unix_ms = 8;
+  repeated CommentItem replies = 9;
+}
+
+// 三连状态。
+message TripleState {
+  bool liked = 1;
+  int32 coin_count = 2;   // 已投币数：0=未投，1/2=已投
+  bool faved = 3;
+}
+
+message AddCommentRequest {
+  int64 uid = 1;
+  string bvid = 2;
+  string content = 3;
+  int64 root_id = 4;    // 0 表示一级评论
+  int64 parent_id = 5;  // 0 表示直接回复根评论
+}
+
+message ListCommentsRequest {
+  int64 viewer_uid = 1;  // 0 表示游客
+  string bvid = 2;
+  string sort = 3;       // "new" | "hot"
+  int32 page = 4;
+  int32 size = 5;
+}
+
+message ListCommentsResponse {
+  repeated CommentItem items = 1;
+  int64 total = 2;
+}
+
+message ListRepliesRequest {
+  int64 viewer_uid = 1;
+  int64 root_id = 2;
+  int32 page = 3;
+  int32 size = 4;
+}
+
+message ListRepliesResponse {
+  repeated CommentItem items = 1;
+  int64 total = 2;
+}
+
+message DeleteCommentRequest {
+  int64 uid = 1;
+  int64 comment_id = 2;
+}
+
+message DeleteCommentResponse {}
+
+message ToggleLikeRequest {
+  int64 uid = 1;
+  string bvid = 2;
+}
+
+message ToggleLikeResponse {
+  bool liked = 1;
+  int32 like_delta = 2;  // +1 / -1，供前端本地修正计数
+}
+
+message ToggleCommentLikeRequest {
+  int64 uid = 1;
+  int64 comment_id = 2;
+}
+
+message ToggleCommentLikeResponse {
+  bool liked = 1;
+  int32 like_delta = 2;
+}
+
+message CoinRequest {
+  int64 uid = 1;
+  string bvid = 2;
+  int32 count = 3;  // 自制 ≤1，转载 ≤2
+}
+
+message CoinResponse {
+  int32 coin_delta = 1;
+  int32 coin_count = 2;
+}
+
+message ToggleFavRequest {
+  int64 uid = 1;
+  string bvid = 2;
+  int64 collection_id = 3;  // 0 表示默认收藏夹
+}
+
+message ToggleFavResponse {
+  bool faved = 1;
+  int32 fav_delta = 2;
+}
+
+message GetTripleStateRequest {
+  int64 uid = 1;  // 0 表示游客（返回全 false / 0）
+  string bvid = 2;
+}

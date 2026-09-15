@@ -50,7 +50,8 @@
   "quickapp": {},
   /* 小程序特有相关 */
   "mp-weixin": {
-    "appid": "",
+    /* 个人主体小程序 AppID（M3-MP-03）；仅本地测试，未申请视频类目 */
+    "appid": "wx5a8b4b33acc3ec20",
     "setting": {
       "urlCheck": false
     },

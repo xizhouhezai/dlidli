@@ -1,0 +1,8 @@
+# DliDli 命名空间（M3-ENG-02）
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dlidli
+  labels:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/part-of: dlidli
