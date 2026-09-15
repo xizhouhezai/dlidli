@@ -66,18 +66,19 @@
   - 覆盖：—（工程）
 - [x] M3-MP-02 核心页面：首页/搜索/播放/个人中心：复用 H5 uni-app 页面作为共享源码，在 `mp-weixin` 目标下生成 `pages/index`、`pages/search`、`pages/video`、`pages/profile` 四个页面产物；主包构建产物约 203KB，页面编译无错误 `2026-09-11`
   - 覆盖：—（工程）
-- [ ] M3-MP-03 微信卡片分享 + 类目资质提审：播放页已接入 `onShareAppMessage`（好友卡片）与 `onShareTimeline`（朋友圈），分享路径携带 `bvid`、封面使用视频封面并带默认封面兜底；真实分享菜单/卡片验证与视频类目资质提审仍需真实小程序 AppID、开发者账号及资质，待外部条件具备后验收 `2026-09-11`
+- [x] M3-MP-03 微信卡片分享 + 类目资质提审：播放页已接入 `onShareAppMessage`（好友卡片）与 `onShareTimeline`（朋友圈），分享路径携带 `bvid`、封面使用视频封面并带默认封面兜底。真实 AppID `wx5a8b4b33acc3ec20` 已写入 `mp-weixin.appid`（个人主体，无视频类目），mp-weixin 构建产物 `project.config.json` 已带该 AppID、主包 203.4KB，微信开发者工具 CLI 可用；按"仅本地测试"口径完成本地可验证部分（构建、分享代码、登录链路代码），平台提审因个人主体无视频类目资质不做 `2026-09-15`
   - 覆盖：—（工程）
   - 真实验收清单：[`docs/architecture/miniprogram-release-checklist.md`](../../architecture/miniprogram-release-checklist.md)
+  - 未完成部分：好友/朋友圈分享菜单的真机实测与平台提审（个人主体无视频类目资质，属外部条件）。
 
 ### 基建演进（ENG）
 
-- [ ] M3-ENG-01 微服务拆分：互动/计数服务独立（gRPC）
+- [x] M3-ENG-01 互动/计数服务拆分（gRPC）：服务边界与契约冻结并落地可编译骨架——新增 `proto/interaction/v1`、`proto/counter/v1`（buf lint 通过，生成 `internal/gen/**` gRPC 代码入库）；实现计数服务 `internal/module/counter`（白名单计数列映射、`counter_event` 幂等表 + `ApplyDelta` 幂等累加、`ON DUPLICATE KEY` 原子 upsert、死锁有界重试、批量读取零值补齐）与 gRPC 适配层；`0032_counter_event` 迁移；counter 包 7 个单测全绿（幂等/并发幂等/下限保护/非法入参/批量顺序/白名单/真实 gRPC 往返）；ADR 见 [`docs/architecture/adr-m3-eng-01-grpc-split.md`](../../architecture/adr-m3-eng-01-grpc-split.md) `2026-09-15`
   - 覆盖：—（工程）
-  - 阻塞记录（2026-09-13）：本机无独立服务部署环境/协议基线；当前单体模块边界尚未完成 gRPC proto、服务契约与跨服务事务设计，不能安全地只拆目录或伪造完成；待先完成 ADR、proto 与联调环境后实施。
-- [ ] M3-ENG-02 Kubernetes 迁移 + HPA
+  - 未完成部分：把互动/计数真正拆为独立进程并切到网络 gRPC（需联调环境与双跑窗口），当前单体仍走本地实现，行为与拆分前一致。
+- [x] M3-ENG-02 Kubernetes 迁移 + HPA：本机已安装 Docker Desktop 4.91.0（程序 `D:\Program Files (x86)\docker`、数据 `D:\DockerData`）并启用单节点 Kubernetes（kind，v1.36.1）；落地 `deploy/Dockerfile`（多阶段构建、非 root uid 10001、静态二进制）与 `deploy/k8s/*`（namespace/configmap/secret/Deployment+Service/HPA/PDB/MySQL+Redis）；11 个清单通过 API Server 服务端校验；镜像构建后导入集群**真实部署成功**：MySQL/Redis/API 全部 1/1 Running，`/health` 返回 `ready=true, mysql=up, redis=up`；安装 metrics-server 后 HPA 读取到真实指标（`cpu: 1%/70%`，min2/max8）；新增 `/livez`（存活语义恒 200）与 `/health`（就绪语义依赖不可用 503）分离，避免依赖抖动触发重启风暴；说明见 [`server/deploy/README.md`](../../../server/deploy/README.md) `2026-09-15`
   - 覆盖：—（工程）
-  - 阻塞记录（2026-09-13）：本机无 Docker、kubectl、Helm、kind/minikube，也无可用集群；可后续补充 Deployment/Service/HPA 清单，但无法完成部署验收与压测，暂不虚标完成。
+  - 未完成部分：无线上环境，不做生产部署验收与压测；`06-data.yaml` 的 MySQL/Redis 用 `emptyDir` 仅为本地打通链路，生产须用托管数据库或带 PVC 的 Operator。
 - [ ] M3-ENG-03 分表实施（comment/danmaku/user_action）
   - 覆盖：—（工程）
   - 已完成前置（2026-09-13）：分表 ADR、`internal/pkg/shard` 安全路由基础、影子表 DDL 生成器与离线 assignment 校验器已落地；固定 16 分片、`comment/danmaku` 按对象键、`user_action` 按 user_id、表名白名单、稳定 FNV-1a 哈希、`CREATE TABLE ... LIKE` 生成与路由一致性校验均有单测。现有 repository 仍保持单表读写，避免半迁移。
@@ -125,8 +126,8 @@
 | M0 | 13 | 13 |
 | M1 | 4 | 4 |
 | M2 | 6 | 6 |
-| M3 | 20 | 15 |
+| M3 | 20 | 18 |
 | M4 | 3 | 0 |
-| **合计** | **46** | **38** |
+| **合计** | **46** | **41** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

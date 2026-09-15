@@ -1,0 +1,39 @@
+# API 配置（M3-ENG-02）：仅放非敏感默认值。
+# 敏感值（DSN 密码、JWT Secret、小程序 Secret）一律走 02-secret.yaml。
+#
+# 环境变量前缀 DLIDLI_，按下划线对应 yaml 层级：
+#   DLIDLI_APP_ENV → app.env，DLIDLI_REDIS_ADDR → redis.addr
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dlidli-api-config
+  namespace: dlidli
+  labels:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: api
+data:
+  # 应用
+  DLIDLI_APP_ENV: "prod"
+  DLIDLI_APP_PORT: "8000"
+  DLIDLI_APP_AUTOAPPROVE: "false"
+  DLIDLI_APP_INVITECODEREQUIRED: "false"
+  DLIDLI_LOG_LEVEL: "info"
+
+  # 数据源主机/库名（密码在 Secret 中拼接；此处只放非敏感部分）
+  DLIDLI_MYSQL_HOST: "dlidli-mysql"
+  DLIDLI_MYSQL_PORT: "3306"
+  DLIDLI_MYSQL_DATABASE: "dlidli"
+  DLIDLI_MYSQL_MAXOPENCONNS: "50"
+  DLIDLI_MYSQL_MAXIDLECONNS: "10"
+  DLIDLI_REDIS_ADDR: "dlidli-redis:6379"
+  DLIDLI_REDIS_DB: "0"
+
+  # 限流
+  DLIDLI_RATELIMIT_ENABLED: "true"
+  DLIDLI_RATELIMIT_PERMINUTE: "30"
+
+  # 链路追踪（M3-ENG-04）：指向集群内 OTel Collector；留空则 noop
+  DLIDLI_TRACING_SERVICENAME: "dlidli-api"
+
+  # 小程序 AppID 非敏感（M3-MP-01）；Secret 走 Secret 对象
+  DLIDLI_WECHAT_MPAPPID: "wx5a8b4b33acc3ec20"

@@ -1,0 +1,139 @@
+# 集群内数据依赖（M3-ENG-02）：MySQL + Redis。
+#
+# 仅为**本地/单机验证**用途：使用 emptyDir，Pod 重建即丢数据。
+# 生产环境必须使用托管数据库或带 PVC 的 Operator（见 README 说明）。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dlidli-mysql
+  namespace: dlidli
+  labels:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: mysql
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dlidli
+      app.kubernetes.io/component: mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dlidli
+        app.kubernetes.io/component: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          args:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_unicode_ci
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dlidli-api-secret
+                  key: DLIDLI_MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: dlidli
+            - name: TZ
+              value: Asia/Shanghai
+          ports:
+            - name: mysql
+              containerPort: 3306
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -p\"$MYSQL_ROOT_PASSWORD\""]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dlidli-mysql
+  namespace: dlidli
+  labels:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: mysql
+spec:
+  selector:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dlidli-redis
+  namespace: dlidli
+  labels:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dlidli
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dlidli
+        app.kubernetes.io/component: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dlidli-redis
+  namespace: dlidli
+  labels:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: redis
+spec:
+  selector:
+    app.kubernetes.io/name: dlidli
+    app.kubernetes.io/component: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis

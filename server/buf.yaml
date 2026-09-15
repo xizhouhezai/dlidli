@@ -1,0 +1,17 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+  except:
+    # 本仓库 proto 放在 proto/<domain>/v1/ 下，包名为 dlidli.<domain>.v1，
+    # 与 STANDARD 期望的目录/包名严格对应关系存在偏差，故放开该规则。
+    - PACKAGE_DIRECTORY_MATCH
+    # 单资源读写直接复用领域消息（CommentItem / TripleState / StatSnapshot），
+    # 不额外包一层 XxxResponse，避免无意义的包装类型。
+    - RPC_RESPONSE_STANDARD_NAME
+    - RPC_REQUEST_RESPONSE_UNIQUE
+breaking:
+  use:
+    - FILE

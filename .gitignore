@@ -20,6 +20,11 @@ server/uploads_prod/
 tmp_*
 server/tmp_*
 
+# 会话归档解包与本地环境探测产物（含安装包，不入库）
+.session-extract/
+# pnpm 本地存储（若被置于仓库根目录）
+.pnpm-store/
+
 # env & local
 .env
 .env.local
