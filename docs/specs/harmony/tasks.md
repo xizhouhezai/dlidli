@@ -36,9 +36,25 @@
   - **实测抓到并修掉一处**：`send()` 的 catch 原先把**所有**异常都重写为「网络不可用」，把 `parse()` 抛出的业务错误一并吞掉——后果是 401 被降级成网络失败、触发 3 次无意义重试，且**续期分支永远不可达**。改为 `err instanceof ApiError` 时原样上抛（只把 `req.request` 的传输层异常定级为网络类），修后日志链路正确：`status=401 code=10003`（不重试）→ 续期不可用 → 清凭证 → `retryable=false`
   - 验证结论：`hvigorw assembleHap` **BUILD SUCCESSFUL**（ArkTS 零告警）；**模拟器实测三态**——① 成功：首页分区栏拉到后端真实 12 项（动画/游戏/科技数码…）；② 失败可重试：停掉后端 → 连接超时判为网络类（`errCode=2300028 → -2`）→ 退避重试 3 次 → 呈现「加载失败 / 网络超时，请重试」+ 重试按钮，**未白屏**；③ 恢复：后端起回后点「重试」（按 `dumpLayout` 实测矩形 `[549,1158][772,1278]` 取中心点击）→ 重新加载 12 项。**401 分支**用临时把接口指向需鉴权的 `/api/v1/users/me` 验证（验完已还原）：`code=10003` 不重试 → 无 refresh_token → 清凭证 → 文案「登录已过期，请重新登录」且**不出现重试按钮**（业务错误不可重试）
   - **模拟器访问宿主机的口径（本次实测）**：`http://10.0.2.2:8000` 直连宿主 loopback 可用（QEMU 用户态网络），明文 HTTP 未被系统拦截，无需 `hdc fport` 转发；该地址由 `ApiConfig.BASE_URL` 单点维护，真机联调改宿主局域网 IP 即可
-  - 未覆盖：401**续期成功后的重放**分支（需真实登录态才能造出有效 refresh_token，归 M4-HMY-04）；WS 弹幕通道（M4-HMY-07）
-- [ ] M4-HMY-04 登录与会话：手机号验证码与密码登录、令牌偏好存储、静默续期、退出清理
+  - 未覆盖：401**续期成功后的重放**分支（需真实登录态才能造出有效 refresh_token，归 M4-HMY-04，**已于 2026-09-21 由 M4-HMY-04 实测补齐**）；WS 弹幕通道（M4-HMY-07）
+- [x] M4-HMY-04 登录与会话：手机号验证码与密码登录、令牌偏好存储、静默续期、退出清理（2026-09-21 完成）
   - 覆盖：HMY-01、HMY-02
+  - 实现要点：契约以**服务端实现为准**核对——`GET /auth/captcha` 实返 `{id, svg}`（**内联 SVG 文本**，swagger 注释里的 `{captcha_id, image_base64}` 与实现不符，已在 `model/Auth.ets` 注明）；`/auth/sms-code` 在 dev 环境回显 `debug_code`。`model/Auth.ets` 落 `Profile`/`TokenPair`/`SmsCodeResult`/`CaptchaResult`；`service/AuthApi.ets` 覆盖验证码/短信/密码登录/刷新/登出/`users/me`，**鉴权前的自证类请求（验证码、登录）一律走 `postPublic`/`getPublic`**，不带 Authorization、不参与 401 续期，避免「未登录却先续期」；`store/Session.ets` 以 `@ObservedV2` + `@Trace` 单例承载登录态（`loggedIn`/`nickname`/`avatar`/`level`），`hydrate()` 先用 `TokenStore.ready()` 对齐异步回填再判定，并以 `AuthApi.me()` 校验令牌（401 时清凭证回落未登录）；`logout()` 先尽力调用服务端 `/auth/logout`（失败只记日志，不阻断本地清理）再清凭证。`common/utils/AppRouter.ets` 收口 `NavPathStack` 的路由入口（`RouteName.LOGIN` + `bind/push/pop`），`pages/Index.ets` 由 `Navigation(this.pathStack).navDestination(...)` 承接压栈页；`pages/auth/LoginPage.ets` 为 `NavDestination`（自带返回键），双模式（验证码/密码）、60s 倒计时、dev 回显验证码自动填充、密码模式失败后清空验证码并换图；`pages/profile/ProfilePage.ets` 拆未登录/已登录两态，退出走 `this.getUIContext().showAlertDialog`（`AlertDialog.show` 在 API 26 已废弃，改后 ArkTS 零告警）。`TokenStore` 新增 `ready()` 并让 `restore()` 幂等，解决「onCreate 异步回填与读登录态竞态」。新增端侧语义色 `state_danger`（`#F56C6C`，对齐 Web 端 ElMessage error 色；Web 侧无对应 SCSS 变量，为端侧新增 token）
+  - **图形验证码渲染：实测两条 ArkUI 路线均不可用，定案为端侧解析 SVG + Canvas 重绘**（`components/CaptchaImage.ets`）：
+    - ① ArkUI `Image` 对 SVG 的支持**不含 `<text>`**——同一份服务端 SVG 里 `<rect>`/`<line>` 正常渲染，`<text>` 恒不渲染（去掉 `font-family`、换字体仍不渲染）；
+    - ② 改 ArkWeb：`loadData` 会把入参直接拼进 `data:` URI，SVG 里 `fill="#f5f5f5"` 的 `#` 被当作 fragment 起始符截断 → 整页空白；换 `loadUrl` + base64 data URI 后 `onControllerAttached`/`onPageEnd` 均正常触发（svg 长度 872、页面加载结束），**但模拟器上 Web 不上屏**——同一页面里插纯色 `div` 也不渲染（chromium 侧 `BlankScreenDetector result_count 0`）；
+    - 定案：服务端 SVG 由本仓库自己生成、元素形态固定（`rect` + 4 `line` + 4 `text`），端侧正则解析后用 `Canvas` 重绘（`line` → `moveTo/lineTo/stroke`，`text` → 平移+旋转+`fillText`，基线语义与 SVG 的 `text x/y` 一致）。**本期零后端改动，接口形态不变**
+  - **实测抓到并修掉两处**：
+    - ① **`TextInput` 不回写状态**：输入框原经 `@Builder` 按值传参构造（`TextInput({ text: value })`），dev 回显验证码后提示文案已变、**输入框仍为空**；密码模式登录失败后 `captchaCode=''` 也**清不掉已输入的验证码**（换图后旧码残留）。根因是 builder 形参非状态引用、可编辑组件的文本不随外部状态回写。改为**内联 `TextInput({ text: $$this.xxx })` 双向绑定**后，自动填充与失败清空均正确
+    - ② 模拟器首次 `uitest uiInput inputText` 会弹「小艺输入法」隐私同意弹窗（系统级 IME 弹窗，非 App 问题），未点「同意」前输入不生效，会误判为输入框故障
+  - 验证结论：`hvigorw assembleHap` **BUILD SUCCESSFUL（ArkTS 零告警）**；模拟器实测（API 26 实例 `Pura X View`，后端本地 `http://10.0.2.2:8000`）逐项通过：
+    - **短信登录**：手机号 `13800138000` → 发送验证码（倒计时 60s 起、dev 回显码自动填入 `944963`、提示「验证码已发送，本地调试环境已自动填充」）→ 登录成功，自动注册落库（`user` 表 1 行、`dli_22465501`/Lv1），返回「我的」呈现已登录卡片（昵称 + Lv1）
+    - **登录态持久化**：`aa force-stop` 后重启 → 「我的」仍为已登录卡片（凭证经偏好存储回填 + `me()` 校验通过）
+    - **退出登录**：`showAlertDialog` 确认框（取消 / 退出登录）→ 确认后回未登录态；重启后仍为未登录（清理已落盘）
+    - **图形验证码**：端侧 Canvas 重绘结果与 Redis 答案**逐字符一致**（屏上 `W42J` ↔ Redis `w42j`；`6VYH` ↔ `6vyh`）；按实测反馈放大到 **150×50**（与后端 SVG 同为 3:1 等比，字号 22→27.5），点击可换图
+    - **密码登录**：验证码被后端接受——`/auth/login/password` 返回**「账号或密码错误」而非「验证码错误或已过期」**（服务端 `LoginByPassword` 首步即 `captcha.Verify`，该校验通过才可能落到密码比对），随后验证码字段自动清空并换新图
+    - **401 静默续期 + 重放（补齐 M4-HMY-03 的未覆盖分支）**：停机后篡改偏好存储里的 `auth.access_token` 签名→重启，日志链路完整：`凭证已恢复，登录态=true` → `业务失败：/api/v1/users/me status=401 code=10003`（不重试）→ `凭证已写入偏好存储` → `访问令牌已静默续期`；页面仍呈现已登录（重放成功）。**轮换已闭环**：磁盘 access_token 由被篡改值换为新 JWT，refresh_token 由 `bc7c…` 轮换为 `9615…`，Redis 旧 `sess:bc7c…` 已删除、仅存 `sess:9615…`
+  - 未覆盖：资料/我的投稿/观看历史/收藏（归 M4-HMY-09）；全部结论均在 API 26 模拟器取得，**真机待验**
 - [ ] M4-HMY-05 发现：首页信息流（LazyForEach 分页 + 下拉刷新 + 触底加载）、分区导航与最新/最热、搜索（含排序筛选与历史同步）
   - 覆盖：HMY-40、HMY-41
 - [ ] M4-HMY-06 播放页：AVPlayer HLS 播放、清晰度切换与倍速、进度记忆与跨端续播、有效播放上报、签名过期静默换签、触屏手势与横屏全屏、切后台处理
@@ -57,7 +73,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 10 | 2 |
-| **合计** | **10** | **2** |
+| M4 | 10 | 3 |
+| **合计** | **10** | **3** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

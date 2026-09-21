@@ -35,6 +35,10 @@
     {
       "name": "tabbar_mask",
       "value": "#D9121212"
+    },
+    {
+      "name": "state_danger",
+      "value": "#FF7875"
     }
   ]
 }

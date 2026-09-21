@@ -47,6 +47,10 @@
     {
       "name": "tabbar_mask",
       "value": "#D9F6F7F8"
+    },
+    {
+      "name": "state_danger",
+      "value": "#F56C6C"
     }
   ]
 }
