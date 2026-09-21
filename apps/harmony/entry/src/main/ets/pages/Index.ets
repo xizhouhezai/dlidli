@@ -1,9 +1,11 @@
 import { uiMaterial } from '@kit.ArkUI';
 import { DliFont, DliRadius, DliSize, DliSpace } from '../common/constants/Theme';
 import { DliMaterial } from '../common/constants/MaterialTokens';
+import { AppRouter, RouteName } from '../common/utils/AppRouter';
 import { HomePage } from './home/HomePage';
 import { SearchPage } from './search/SearchPage';
 import { ProfilePage } from './profile/ProfilePage';
+import { LoginPage } from './auth/LoginPage';
 
 /**
  * 应用壳层：Navigation（标题栏）+ Tabs（底部标签栏）。
@@ -15,8 +17,22 @@ import { ProfilePage } from './profile/ProfilePage';
 @ComponentV2
 struct Index {
   @Local currentIndex: number = 0;
+  @Local pathStack: NavPathStack = new NavPathStack();
   private titleBarMaterial: uiMaterial.ImmersiveMaterial | undefined = DliMaterial.titleBar();
   private tabBarMaterial: uiMaterial.ImmersiveMaterial | undefined = DliMaterial.tabBar();
+
+  aboutToAppear(): void {
+    // 子页经 AppRouter 跳转，避免把路由栈逐层传递
+    AppRouter.bind(this.pathStack);
+  }
+
+  /** 压栈页登记处：新增页面在此加一条分支 */
+  @Builder
+  destination(name: string) {
+    if (name === RouteName.LOGIN) {
+      LoginPage()
+    }
+  }
 
   @Builder
   titleBar() {
@@ -64,7 +80,7 @@ struct Index {
   }
 
   build() {
-    Navigation() {
+    Navigation(this.pathStack) {
       Tabs({ barPosition: BarPosition.End, index: this.currentIndex }) {
         TabContent() {
           HomePage()
@@ -94,6 +110,7 @@ struct Index {
       .height('100%')
     }
     .mode(NavigationMode.Stack)
+    .navDestination(this.destination)
     .title(this.titleBar(), { systemMaterial: this.titleBarMaterial })
     .titleMode(NavigationTitleMode.Mini)
     // 壳层是根内容，标题栏不应出现返回键（返回键由后续压栈的 NavDestination 自带）

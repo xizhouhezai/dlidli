@@ -57,8 +57,96 @@
       "value": "搜索建设中"
     },
     {
-      "name": "page_pending_profile",
-      "value": "个人中心建设中"
+      "name": "action_cancel",
+      "value": "取消"
+    },
+    {
+      "name": "login_title",
+      "value": "登录"
+    },
+    {
+      "name": "login_tab_sms",
+      "value": "验证码登录"
+    },
+    {
+      "name": "login_tab_password",
+      "value": "密码登录"
+    },
+    {
+      "name": "login_phone_hint",
+      "value": "请输入手机号"
+    },
+    {
+      "name": "login_code_hint",
+      "value": "6 位验证码"
+    },
+    {
+      "name": "login_account_hint",
+      "value": "手机号 / 邮箱"
+    },
+    {
+      "name": "login_password_hint",
+      "value": "请输入密码"
+    },
+    {
+      "name": "login_captcha_hint",
+      "value": "图形验证码"
+    },
+    {
+      "name": "login_send_code",
+      "value": "获取验证码"
+    },
+    {
+      "name": "login_submit",
+      "value": "登录"
+    },
+    {
+      "name": "login_hint_sms_sent",
+      "value": "验证码已发送"
+    },
+    {
+      "name": "login_hint_dev_filled",
+      "value": "验证码已发送，本地调试环境已自动填充"
+    },
+    {
+      "name": "login_need_phone",
+      "value": "请输入正确的手机号"
+    },
+    {
+      "name": "login_need_code",
+      "value": "请输入 6 位验证码"
+    },
+    {
+      "name": "login_need_account",
+      "value": "请输入手机号或邮箱"
+    },
+    {
+      "name": "login_need_password",
+      "value": "请输入至少 6 位密码"
+    },
+    {
+      "name": "login_need_captcha",
+      "value": "请输入图形验证码"
+    },
+    {
+      "name": "profile_guest",
+      "value": "未登录"
+    },
+    {
+      "name": "profile_login_hint",
+      "value": "登录后可同步观看历史、收藏与弹幕设置"
+    },
+    {
+      "name": "profile_login_entry",
+      "value": "登录 / 注册"
+    },
+    {
+      "name": "profile_logout",
+      "value": "退出登录"
+    },
+    {
+      "name": "profile_logout_confirm",
+      "value": "退出后需重新登录，确定退出当前账号吗？"
     }
   ]
 }

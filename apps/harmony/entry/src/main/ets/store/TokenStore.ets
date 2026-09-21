@@ -19,6 +19,7 @@ export class TokenStore {
   private static context: common.Context | null = null;
   private static accessToken: string = '';
   private static refreshToken: string = '';
+  private static restored: boolean = false;
 
   static init(context: common.Context): void {
     TokenStore.context = context;
@@ -44,6 +45,10 @@ export class TokenStore {
 
   /** 启动时回填内存镜像；读盘失败不阻断启动，按未登录处理 */
   static async restore(): Promise<void> {
+    if (TokenStore.restored) {
+      return;
+    }
+    TokenStore.restored = true;
     const store: preferences.Preferences | null = await TokenStore.open();
     if (store === null) {
       return;
@@ -56,6 +61,11 @@ export class TokenStore {
       return;
     }
     Logger.info(TAG, `凭证已恢复，登录态=${TokenStore.accessToken.length > 0}`);
+  }
+
+  /** 等待回填完成：restore() 在 onCreate 异步发起，读登录态前先对齐，避免读到尚未回填的空凭证 */
+  static async ready(): Promise<void> {
+    await TokenStore.restore();
   }
 
   static getAccessToken(): string {
