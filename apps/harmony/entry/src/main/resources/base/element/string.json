@@ -1,0 +1,52 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "DliDli 鸿蒙端观看主模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "DliDli"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "DliDli"
+    },
+    {
+      "name": "tab_home",
+      "value": "首页"
+    },
+    {
+      "name": "tab_search",
+      "value": "搜索"
+    },
+    {
+      "name": "tab_profile",
+      "value": "我的"
+    },
+    {
+      "name": "title_search",
+      "value": "搜索"
+    },
+    {
+      "name": "title_profile",
+      "value": "我的"
+    },
+    {
+      "name": "search_placeholder",
+      "value": "搜索视频、UP 主"
+    },
+    {
+      "name": "page_pending_home",
+      "value": "首页信息流建设中"
+    },
+    {
+      "name": "page_pending_search",
+      "value": "搜索建设中"
+    },
+    {
+      "name": "page_pending_profile",
+      "value": "个人中心建设中"
+    }
+  ]
+}

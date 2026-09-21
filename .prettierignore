@@ -5,3 +5,5 @@ docs/.vitepress/cache
 pnpm-lock.yaml
 server
 *.md
+# 鸿蒙工程由 DevEco/hvigor 管理，不适用 Prettier 规则
+apps/harmony
