@@ -51,6 +51,10 @@ struct Index {
         .padding({ left: DliSpace.MD, right: DliSpace.MD })
         .borderRadius(DliRadius.FULL)
         .backgroundColor($r('app.color.bg_surface'))
+        .onClick(() => {
+          // 标题栏搜索框是入口而非输入框：点击切到搜索页签（官方「一镜到底」不切层级的做法在端侧简化为切页签）
+          this.currentIndex = 1;
+        })
       } else {
         Text(this.currentIndex === 1 ? $r('app.string.title_search') : $r('app.string.title_profile'))
           .fontSize(DliFont.TITLE_SM)

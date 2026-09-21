@@ -1,15 +1,12 @@
 import { ApiError } from '../model/Api';
 import { Profile, TokenPair } from '../model/Auth';
 import { AuthApi } from '../service/AuthApi';
-import { ApiConfig } from '../common/constants/ApiConfig';
 import { ErrCode } from '../common/constants/ErrorMessages';
 import { TokenStore } from './TokenStore';
 import { Logger } from '../common/utils/Logger';
+import { resolveMediaUrl } from '../common/utils/MediaUrl';
 
 const TAG: string = 'Session';
-
-/** 后端本地存储驱动返回的绝对地址指向宿主机 loopback，模拟器/真机访问不到，需换成宿主地址 */
-const LOOPBACK_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/;
 
 /**
  * 会话状态（跨页共享，故为 @ObservedV2 单例）：令牌实体在 TokenStore，这里维护可供 UI 观察的登录态。
@@ -72,7 +69,7 @@ export class Session {
   private applyProfile(profile: Profile): void {
     this.loggedIn = true;
     this.nickname = profile.nickname;
-    this.avatar = Session.resolveAvatar(profile.avatar);
+    this.avatar = resolveMediaUrl(profile.avatar);
     this.level = profile.level;
   }
 
@@ -81,13 +78,6 @@ export class Session {
     this.nickname = '';
     this.avatar = '';
     this.level = 0;
-  }
-
-  private static resolveAvatar(avatar: string): string {
-    if (avatar.length === 0) {
-      return '';
-    }
-    return avatar.replace(LOOPBACK_ORIGIN, ApiConfig.BASE_URL);
   }
 }
 
