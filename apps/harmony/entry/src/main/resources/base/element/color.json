@@ -1,0 +1,52 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "brand_primary",
+      "value": "#FB7299"
+    },
+    {
+      "name": "brand_primary_light",
+      "value": "#FFD9E4"
+    },
+    {
+      "name": "brand_primary_hover",
+      "value": "#FC8BAB"
+    },
+    {
+      "name": "text_on_brand",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "bg_page",
+      "value": "#F6F7F8"
+    },
+    {
+      "name": "bg_surface",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "text_primary",
+      "value": "#18191C"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#61666D"
+    },
+    {
+      "name": "text_tertiary",
+      "value": "#9499A0"
+    },
+    {
+      "name": "border_default",
+      "value": "#E3E5E7"
+    },
+    {
+      "name": "tabbar_mask",
+      "value": "#D9F6F7F8"
+    }
+  ]
+}

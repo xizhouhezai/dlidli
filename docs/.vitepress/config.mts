@@ -139,6 +139,14 @@ export default defineConfig({
           ]
         },
         {
+          text: '原生鸿蒙端（HarmonyOS NEXT）',
+          items: [
+            { text: 'spec 需求', link: '/specs/harmony/spec' },
+            { text: 'plan 方案', link: '/specs/harmony/plan' },
+            { text: 'tasks 任务', link: '/specs/harmony/tasks' }
+          ]
+        },
+        {
           text: '工程与端侧（横切）',
           items: [
             { text: 'tasks 任务', link: '/specs/engineering/tasks' }
@@ -185,7 +193,8 @@ export default defineConfig({
           text: '架构决策记录（ADR）',
           items: [
             { text: 'M3-ENG-01 互动/计数服务拆分（gRPC）', link: '/architecture/adr-m3-eng-01-grpc-split' },
-            { text: 'M3-ENG-03 互动明细分表路由', link: '/architecture/adr-m3-eng-03-sharding' }
+            { text: 'M3-ENG-03 互动明细分表路由', link: '/architecture/adr-m3-eng-03-sharding' },
+            { text: 'M4-APP-01 鸿蒙端技术选型', link: '/architecture/adr-m4-app-01-harmony' }
           ]
         }
       ],
