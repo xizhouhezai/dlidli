@@ -112,12 +112,20 @@
 
 ## M4（W49+）App
 
-- [ ] M4-APP-01 技术选型决策（uni-app 打包 vs Flutter）
+- [x] M4-APP-01 端侧技术选型决策（鸿蒙端） `2026-09-21`
   - 覆盖：—（工程）
+  - 2026-09-21 决策：**采用 ArkTS/ArkUI 原生开发**，放弃 uni-app `app-harmony` 多目标复用路线。理由：原生体验与性能优先；跨端复用率实际不划算（`packages/player` 的 hls.js 依赖 MSE 在鸿蒙不可用，弹幕渲染与全部视图仍需重写）；系统能力接入更完整。记录见 [`docs/architecture/adr-m4-app-01-harmony.md`](../../architecture/adr-m4-app-01-harmony.md)
+  - 决策时已核实的事实：`@dcloudio/uni-app-harmony@3.0.0-5010520260709002` 存在且与 `apps/h5` 现有 uni-app 版本号一致；本机 DevEco Studio 6.1.1.300 / HarmonyOS SDK API 24 / hvigor 6.24.4 / ohpm 6.1.2 满足原生开发条件——即二选一为真实选择，非"只能原生"
+  - 端侧需求与实现任务已按 SDD 落到三件套：[spec](/specs/harmony/spec) / [plan](/specs/harmony/plan) / [tasks](/specs/harmony/tasks)，任务编号 M4-HMY-01~10，首期范围**观看端优先**
+  - 口径：仅模拟器/真机本地验证，不提交平台审核（对齐 M3-MP-03 小程序个人主体口径）
+  - 后续若接入 iOS/Android，其选型（Flutter 等）需另立任务，不在本项内
 - [ ] M4-APP-02 核心功能移植 + 离线缓存 + 推送
   - 覆盖：—（工程）
+  - 实现任务由 [harmony tasks](/specs/harmony/tasks) 承载（M4-HMY-01~10）；离线缓存与推送不在观看端首期范围，待后续版本
 - [ ] M4-APP-03 应用商店上架
   - 覆盖：—（工程）
+  - 当前口径：**仅模拟器/真机本地验证，不提审**
+  - 前置未决：视频类目资质与开发者主体要求待查证（鸿蒙存在个人开发者上架路径，与微信小程序必须企业主体不同）
 
 ## 进度
 
@@ -127,7 +135,7 @@
 | M1 | 4 | 4 |
 | M2 | 6 | 6 |
 | M3 | 20 | 18 |
-| M4 | 3 | 0 |
-| **合计** | **46** | **41** |
+| M4 | 3 | 1 |
+| **合计** | **46** | **42** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

@@ -22,6 +22,7 @@ specs/
 ├── admin/              # 内容审核与管理后台（含 RBAC）
 ├── monetization/       # 会员与商业化
 ├── live/               # 直播（V3 预研）
+├── harmony/            # 原生鸿蒙端（HarmonyOS NEXT，M4 观看端优先）
 └── engineering/        # 工程与端侧横切任务（不设独立 spec，以架构文档为基线）
 ```
 
@@ -55,7 +56,7 @@ spec 中的每条需求必须给出 EARS（Easy Approach to Requirements Syntax�
 
 ## 4. 编号体系与追溯链路
 
-**需求 ID**：沿用原 PRD 的分域前缀（`ACC-` `VID-` `PLY-` `DM-` `ITR-` `CMT-` `SHR-` `FLW-` `DYN-` `MSG-` `SRH-` `REC-` `CRT-` `ADT-` `VMG-` `UGV-` `OPS-` `ADMU-` `ROLE-` `PERM-` `SYS-` `VIP-` `CHG-` `PAY-` `ADV-` `LIV-`），同一子域内按 10 号留空插入。迁移时为原 PRD 未编号但已存在（部分已实现）的需求补录了新 ID，补录条目在 spec 中标注"迁移补录"。
+**需求 ID**：沿用原 PRD 的分域前缀（`ACC-` `VID-` `PLY-` `DM-` `ITR-` `CMT-` `SHR-` `FLW-` `DYN-` `MSG-` `SRH-` `REC-` `CRT-` `ADT-` `VMG-` `UGV-` `OPS-` `ADMU-` `ROLE-` `PERM-` `SYS-` `VIP-` `CHG-` `PAY-` `ADV-` `LIV-` `HMY-`），同一子域内按 10 号留空插入。迁移时为原 PRD 未编号但已存在（部分已实现）的需求补录了新 ID，补录条目在 spec 中标注"迁移补录"。`HMY-` 为 2026-09-21 新增的端侧前缀，仅用于**端侧特有或对实现有额外约束**的需求；端无关的业务需求不在 harmony spec 中重复编号，以"继承 + 被继承模块的需求 ID"表达。
 
 **任务 ID**：沿用原开发清单规则 `{阶段}-{模块}-{序号}`（如 `M1-VID-03`），与 git 分支命名（`feature/m1-vid-05-xxx`）及 PR 关联要求保持一致，见 [协作规范](/project/conventions)。
 
@@ -114,4 +115,5 @@ clarify ──> specify ──> plan ──> tasks ──> implement ──> che
 | [内容审核与管理后台](/specs/admin/spec) | [spec](/specs/admin/spec) | [plan](/specs/admin/plan) | [tasks](/specs/admin/tasks) | MVP 起 |
 | [会员与商业化](/specs/monetization/spec) | [spec](/specs/monetization/spec) | [plan](/specs/monetization/plan) | [tasks](/specs/monetization/tasks) | V3 |
 | [直播](/specs/live/spec) | [spec](/specs/live/spec) | [plan](/specs/live/plan) | [tasks](/specs/live/tasks) | V3 预研 |
+| [原生鸿蒙端（HarmonyOS NEXT）](/specs/harmony/spec) | [spec](/specs/harmony/spec) | [plan](/specs/harmony/plan) | [tasks](/specs/harmony/tasks) | M4（观看端优先） |
 | [工程与端侧（横切）](/specs/engineering/tasks) | — | — | [tasks](/specs/engineering/tasks) | M0-M4 |

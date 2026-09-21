@@ -185,6 +185,7 @@ packages/
 - 格式：`i-{集合}-{图标名}`，如 `i-mdi-thumb-up`、`i-carbon-search`、`i-tabler-bell`。
 - 同一功能全端统一图标名（避免 web 用 mdi、h5 用 carbon 导致视觉不一致）。
 - 品牌 Logo / 吉祥物保持 SVG 文件方案（方案 D），不走 Iconify。
+  - 品牌图形（应用图标 / favicon）单一矢量源：`apps/web/public/favicon.svg`，Web 端由它派生 `favicon.ico`、`apple-touch-icon.png`，鸿蒙端由它导出分层图标与启动图标位图；设计定版与实测见 [harmony plan §7.1](/specs/harmony/plan)。
 
 - TypeScript 严格模式；ESLint + Prettier + stylelint，CI 强制。
 - 提交规范：Conventional Commits + commitlint + husky。
