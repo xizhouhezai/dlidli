@@ -15,7 +15,8 @@ log:
   level: debug
 
 mysql:
-  dsn: "root:root@tcp(127.0.0.1:3307)/dlidli?charset=utf8mb4&parseTime=True&loc=Local"
+  # 对齐 deploy/docker-compose.yaml 的 mysql 映射（3306:3306，密码 dlidli123）
+  dsn: "root:dlidli123@tcp(127.0.0.1:3306)/dlidli?charset=utf8mb4&parseTime=True&loc=Local"
   maxOpenConns: 50
   maxIdleConns: 10
 

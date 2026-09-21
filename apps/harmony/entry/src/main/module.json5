@@ -10,6 +10,16 @@
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
+    "requestPermissions": [
+      {
+        // 网络层（M4-HMY-03）：REST 与后续 WS 弹幕通道均需要
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        // 用于区分「无网络」与「服务不可达」，据此决定是否给可重试失败态
+        "name": "ohos.permission.GET_NETWORK_INFO"
+      }
+    ],
     "metadata": [
       {
         // 沉浸光感应用级开关：default 等同开启，此处显式声明为 enable

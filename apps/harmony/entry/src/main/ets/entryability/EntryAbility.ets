@@ -1,12 +1,18 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { TokenStore } from '../store/TokenStore';
 
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+    // 凭证存储依赖 AbilityContext，需在建页面前注入；回填不阻塞首帧，未就绪时按未登录处理
+    TokenStore.init(this.context);
+    TokenStore.restore().then(() => {
+      hilog.info(DOMAIN, 'testTag', 'TokenStore restored, loggedIn=%{public}s', `${TokenStore.isLoggedIn()}`);
+    });
   }
 
   onDestroy(): void {

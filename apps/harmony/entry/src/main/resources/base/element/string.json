@@ -37,6 +37,18 @@
       "value": "搜索视频、UP 主"
     },
     {
+      "name": "state_error_title",
+      "value": "加载失败"
+    },
+    {
+      "name": "action_retry",
+      "value": "重试"
+    },
+    {
+      "name": "home_section_category",
+      "value": "分区"
+    },
+    {
       "name": "page_pending_home",
       "value": "首页信息流建设中"
     },
