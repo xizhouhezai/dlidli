@@ -64,7 +64,7 @@ apps/harmony/
 | `auth.refresh_token` | string | 刷新凭证（30d，可吊销） |
 | `danmaku.settings` | JSON | 不透明度/字号/显示区域/速度/开关（承 DM-11、DM-12） |
 | `playback.local_progress` | JSON | 本地进度缓存，服务端进度为准（承 PLY-04） |
-| `search.local_history` | JSON | 本地搜索历史副本，与云端同步（承 SRH-04） |
+| `search.local_history` | JSON | 本地搜索历史副本（最多 10 条，重复置顶）；**本期仅端侧**，承 SRH-04 的云端同步待后端接口就位 |
 
 > 服务端数据模型无变更，见 [数据模型设计](/architecture/data-model)。
 

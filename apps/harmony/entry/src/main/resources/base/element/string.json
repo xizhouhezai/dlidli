@@ -49,12 +49,92 @@
       "value": "分区"
     },
     {
-      "name": "page_pending_home",
-      "value": "首页信息流建设中"
+      "name": "home_category_all",
+      "value": "首页"
     },
     {
-      "name": "page_pending_search",
-      "value": "搜索建设中"
+      "name": "home_sort_recommend",
+      "value": "推荐"
+    },
+    {
+      "name": "home_sort_new",
+      "value": "最新"
+    },
+    {
+      "name": "home_sort_hot",
+      "value": "最热"
+    },
+    {
+      "name": "feed_empty",
+      "value": "这里还没有内容"
+    },
+    {
+      "name": "feed_refresh_failed",
+      "value": "刷新失败，请稍后重试"
+    },
+    {
+      "name": "feed_loading_more",
+      "value": "加载中"
+    },
+    {
+      "name": "feed_load_more_failed",
+      "value": "加载失败，点击重试"
+    },
+    {
+      "name": "feed_no_more",
+      "value": "没有更多了"
+    },
+    {
+      "name": "search_action",
+      "value": "搜索"
+    },
+    {
+      "name": "search_tab_video",
+      "value": "视频"
+    },
+    {
+      "name": "search_tab_user",
+      "value": "UP 主"
+    },
+    {
+      "name": "search_history_title",
+      "value": "搜索历史"
+    },
+    {
+      "name": "search_history_clear",
+      "value": "清空"
+    },
+    {
+      "name": "search_idle",
+      "value": "输入关键词，搜索视频与 UP 主"
+    },
+    {
+      "name": "search_empty_video",
+      "value": "没有找到相关视频，换个关键词试试"
+    },
+    {
+      "name": "search_empty_user",
+      "value": "没有找到相关用户"
+    },
+    {
+      "name": "search_need_keyword",
+      "value": "请输入关键词"
+    },
+    {
+      "name": "search_total",
+      "value": "共 %d 条"
+    },
+    {
+      "name": "user_no_signature",
+      "value": "TA 还没有签名"
+    },
+    {
+      "name": "video_pending",
+      "value": "播放页建设中，敬请期待"
+    },
+    {
+      "name": "space_pending",
+      "value": "个人空间建设中，敬请期待"
     },
     {
       "name": "action_cancel",

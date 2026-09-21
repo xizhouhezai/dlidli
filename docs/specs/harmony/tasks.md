@@ -55,8 +55,25 @@
     - **密码登录**：验证码被后端接受——`/auth/login/password` 返回**「账号或密码错误」而非「验证码错误或已过期」**（服务端 `LoginByPassword` 首步即 `captcha.Verify`，该校验通过才可能落到密码比对），随后验证码字段自动清空并换新图
     - **401 静默续期 + 重放（补齐 M4-HMY-03 的未覆盖分支）**：停机后篡改偏好存储里的 `auth.access_token` 签名→重启，日志链路完整：`凭证已恢复，登录态=true` → `业务失败：/api/v1/users/me status=401 code=10003`（不重试）→ `凭证已写入偏好存储` → `访问令牌已静默续期`；页面仍呈现已登录（重放成功）。**轮换已闭环**：磁盘 access_token 由被篡改值换为新 JWT，refresh_token 由 `bc7c…` 轮换为 `9615…`，Redis 旧 `sess:bc7c…` 已删除、仅存 `sess:9615…`
   - 未覆盖：资料/我的投稿/观看历史/收藏（归 M4-HMY-09）；全部结论均在 API 26 模拟器取得，**真机待验**
-- [ ] M4-HMY-05 发现：首页信息流（LazyForEach 分页 + 下拉刷新 + 触底加载）、分区导航与最新/最热、搜索（含排序筛选与历史同步）
+- [x] M4-HMY-05 发现：首页信息流（LazyForEach 分页 + 下拉刷新 + 触底加载）、分区导航与最新/最热、搜索（含排序筛选与历史同步）`2026-09-21`
   - 覆盖：HMY-40、HMY-41
+  - 实现要点：
+    - **端侧基础件**（`common/utils/`）：`Format.ets`（`formatCount` 万/亿、`formatDuration` mm:ss 与 h:mm:ss、`formatPubdate` 相对时间，对齐 `packages/shared/src/format.ts`，端侧不消费 TS 包故手写移植）、`MediaUrl.ets`（回环地址 → `ApiConfig.BASE_URL`，封面/头像同源改写）、`LazyDataSource.ets`（泛型 `IDataSource`，仅 `reset`/`append`/`count`，用逐条 `onDataAdd` 规避 `DataOperationType` 联合类型字面量）、`Toast.ets`（`showToast` 声明 `@throws`，包一层免调用点 try-catch）。`PreferenceStore.ets` 收口 `dlidli_prefs` 单一入口（`TokenStore` 改为复用，对外 API 不变）
+    - **模型与 API**：`model/Video.ets`（`OwnerBrief`/`StatBrief`/`VideoCard`/`VideoListResult`/`PagedResult<T>`，并注明 `/videos` **不返回 total**，`hasMore` 只能以「本页是否满页」判定）；`service/VideoApi.ets`（`listCategories` / `listVideos`（`page_size`）/ `listRecommended`（参数名为 `size`））；`service/SearchApi.ets`（`searchVideos`/`searchUsers`）
+    - **首页**：分区 chips（「首页」+ 一级分区，按 `parent_id === 0` 过滤）+ 排序页签 推荐/最新/最热（推荐仅全站可见；切到分区时自动落到最新）；`Grid` 双列 + `LazyForEach`，`Refresh({refreshing: $$this.refreshing})` 下拉刷新（刷新失败且已有内容时只弹 toast，不砸列表）、`onReachEnd` 触底加载下一页（失败保留 `page` 不变，重试即重取同页）；页脚 `LoadMoreHint` 作为跨两列的 `GridItem`（`columnStart(0)/columnEnd(1)`），呈现 加载中/加载失败点击重试/没有更多了；空态与失败重试走既有 `ErrorStateView`
+    - **搜索**：关键词搜索视频 / UP 主 + Tab 切换 + 分页；**搜索历史落端侧** `search.local_history`（最多 10 条、重复即置顶、逐条删除、一键清空、重启后仍在）；卡片与 UP 主行复用 `VideoCardItem` 版式，UP 主行展示头像/昵称/签名/等级
+    - **壳层**：首页标题栏搜索框点击切到搜索页签（入口非输入框）；删除已无引用的 `PlaceholderView.ets` 与 `page_pending_home`/`page_pending_search` 文案
+  - **待后端（本期零后端改动，两端无接口可用，均已实测确认）**：
+    - **SRH-02 排序/筛选**：`GET /api/v1/search` 只有 `keyword`/`type`/`page`/`page_size`，无 `sort`/筛选参数（M2-SRH-03 起即登记待补）→ 端侧不呈现排序筛选 UI，待后端扩参后接
+    - **SRH-04 历史云端同步**：全仓无搜索历史接口（Web 端同样无），故本期历史**仅端侧**，plan §3 的「与云端同步」待后端接口就位后再接
+  - **实测抓到并修掉两处**：
+    - ① **搜索历史面板不可达**：原按 `submitted` 是否为空决定展示历史面板，一旦搜过一次就再也回不到历史（清空关键词后提交会被「请输入关键词」拦下）。改为「已提交且有输入 → 结果，否则 → 历史」，并在输入框内加清空按钮（`sys.symbol.xmark_circle`）
+    - ② **空结果时 tab 行消失**：`resultHeader`（含 视频/UP 主 tab 与「共 N 条」）原只在与结果列表同一分支渲染，0 结果时没有 tab 可切（视频无果就无法去 UP 主 tab）。改为 tab 行独立于结果态渲染，「共 N 条」仅在 `total > 0` 时展示
+  - 验证结论：`hvigorw assembleHap` **BUILD SUCCESSFUL（ArkTS 零告警）**；`go test ./...` 与 `go vet ./...` 全绿（本期无后端改动，回归确认）；模拟器实测（API 26 实例，后端本地 `http://10.0.2.2:8000`）逐项通过：
+    - **数据口径**：dev 库原无稿件，种子数据 26 稿件 / 26 UP 主（覆盖 12 个一级分区，含空封面、超 1 小时时长、亿级播放等边界）——推荐链路的同 UP 打散要求一稿一主，故 UP 主数与稿件数 1:1
+    - **首页信息流**：推荐首屏 20 条 + 触底续 6 条后呈现「没有更多了」；分区切换（动画 → 3 条，推荐页签隐去并自动落最新）；最新/最热切换（最热按播放量降序，26.6万 > 24.3万 > 22.8万 逐屏验证）；下拉刷新（日志 7 次 page-1 重载且列表回顶）；封面走 `10.0.2.2` 正常出图、空封面为底色块占位、时长角标 `04:11`/`1:02:05` 两种格式、meta 行 `1.2亿 · 生活UP主05 · 5小时前`（万/亿与相对时间均正确）
+    - **搜索**：关键词 `测试` → 视频 tab 20 条 + 「共 26 条」→ 触底续 6 条 + 「没有更多了」；UP 主 tab 同样 20 + 6 且双 Tab 各 26 条；0 结果两种文案（视频/UP 主）与 tab 切换均正常；历史新增（`测试` → `UP主` 后 `UP主` 置顶）、单条删除、清空、**重启后历史仍在**（`aa force-stop` 后重进）；点卡片弹「播放页建设中，敬请期待」（播放页归 M4-HMY-06）
+  - 未覆盖：触底加载失败与刷新失败的**重试分支**未做停机实测（沿用 M4-HMY-03 已验证的 `ErrorStateView` 口径）；全部结论均在 API 26 模拟器取得，**真机待验**
 - [ ] M4-HMY-06 播放页：AVPlayer HLS 播放、清晰度切换与倍速、进度记忆与跨端续播、有效播放上报、签名过期静默换签、触屏手势与横屏全屏、切后台处理
   - 覆盖：HMY-10、HMY-11、HMY-12、HMY-13、HMY-14、HMY-15
 - [ ] M4-HMY-07 弹幕：分段拉取与预取、Canvas 轨道渲染、WS 实时下发与断线重连及 HTTP 回退、关键词/发送者屏蔽、展示设置、发送与频控、列表面板
@@ -73,7 +90,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 10 | 3 |
-| **合计** | **10** | **3** |
+| M4 | 10 | 4 |
+| **合计** | **10** | **4** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
