@@ -40,6 +40,5 @@ export struct ErrorStateView {
     .height('100%')
     .padding({ left: DliSpace.XL, right: DliSpace.XL })
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('app.color.bg_page'))
   }
 }

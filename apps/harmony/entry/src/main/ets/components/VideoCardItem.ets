@@ -2,10 +2,12 @@ import { VideoCard } from '../model/Video';
 import { resolveMediaUrl } from '../common/utils/MediaUrl';
 import { formatCount, formatDuration, formatPubdate } from '../common/utils/Format';
 import { DliFont, DliRadius, DliSpace } from '../common/constants/Theme';
+import { DliMaterial } from '../common/constants/MaterialTokens';
 
 /**
  * 信息流与搜索结果共用的视频卡片，版式对齐 Web 端 components/VideoCard.vue：
  * 封面 16:9 + 右下时长角标 + 两行标题 + meta（播放量 · UP 主 · 发布日期）。
+ * 卡片本身走沉浸光感材质（plan §2）：玻璃底浮在品牌氛围底之上。
  */
 @ComponentV2
 export struct VideoCardItem {
@@ -75,6 +77,10 @@ export struct VideoCardItem {
         .width('100%')
     }
     .width('100%')
+    .padding(DliSpace.SM)
+    .borderRadius(DliRadius.LG)
+    .backgroundColor(DliMaterial.surface())
+    .systemMaterial(DliMaterial.card())
     .alignItems(HorizontalAlign.Start)
     .onClick(() => {
       this.onTap(this.video.bvid);

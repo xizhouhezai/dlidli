@@ -5,7 +5,8 @@ import { VideoCardItem } from '../../components/VideoCardItem';
 import { LoadMoreHint } from '../../components/LoadMoreHint';
 import { ErrorStateView } from '../../components/ErrorStateView';
 import { LazyDataSource } from '../../common/utils/LazyDataSource';
-import { DliFont, DliRadius, DliSpace } from '../../common/constants/Theme';
+import { DliFont, DliRadius, DliSize, DliSpace } from '../../common/constants/Theme';
+import { DliMaterial } from '../../common/constants/MaterialTokens';
 import { ErrCode, ErrorMessages } from '../../common/constants/ErrorMessages';
 import { Logger } from '../../common/utils/Logger';
 import { showToast } from '../../common/utils/Toast';
@@ -144,7 +145,8 @@ export struct HomePage {
       .fontColor(this.categoryId === id ? $r('app.color.text_on_brand') : $r('app.color.text_secondary'))
       .padding({ left: DliSpace.MD, right: DliSpace.MD, top: 6, bottom: 6 })
       .borderRadius(DliRadius.FULL)
-      .backgroundColor(this.categoryId === id ? $r('app.color.brand_primary') : $r('app.color.bg_surface'))
+      // 小标签不挂材质（材质会压过 backgroundColor，在均匀浅底上又出不了轮廓）：选中品牌实色，未选中中性浅底
+      .backgroundColor(this.categoryId === id ? $r('app.color.brand_primary') : $r('app.color.surface_secondary'))
       .onClick(() => {
         this.selectCategory(id);
       })
@@ -221,7 +223,7 @@ export struct HomePage {
       .columnsTemplate('1fr 1fr')
       .columnsGap(DliSpace.MD)
       .rowsGap(DliSpace.LG)
-      .padding({ left: DliSpace.PAGE, right: DliSpace.PAGE, top: DliSpace.SM, bottom: DliSpace.XL })
+      .padding({ left: DliSpace.PAGE, right: DliSpace.PAGE, top: DliSpace.SM, bottom: DliSize.TAB_RESERVED })
       .scrollBar(BarState.Off)
       .onReachEnd(() => {
         this.loadMore();
@@ -280,6 +282,5 @@ export struct HomePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_page'))
   }
 }

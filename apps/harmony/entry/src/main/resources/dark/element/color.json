@@ -33,12 +33,40 @@
       "value": "#4A2A36"
     },
     {
-      "name": "tabbar_mask",
-      "value": "#D9121212"
-    },
-    {
       "name": "state_danger",
       "value": "#FF7875"
+    },
+    {
+      "name": "ambient_top",
+      "value": "#241419"
+    },
+    {
+      "name": "ambient_mid",
+      "value": "#1A1618"
+    },
+    {
+      "name": "ambient_blob",
+      "value": "#2EFB7299"
+    },
+    {
+      "name": "ambient_blob_alt",
+      "value": "#24FC8BAB"
+    },
+    {
+      "name": "ambient_blob_soft",
+      "value": "#1AFB7299"
+    },
+    {
+      "name": "bg_glass",
+      "value": "#B81C1C1E"
+    },
+    {
+      "name": "surface_secondary",
+      "value": "#262626"
+    },
+    {
+      "name": "material_edge",
+      "value": "#80FFFFFF"
     }
   ]
 }

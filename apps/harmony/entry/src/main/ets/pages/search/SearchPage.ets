@@ -8,7 +8,8 @@ import { LoadMoreHint } from '../../components/LoadMoreHint';
 import { ErrorStateView } from '../../components/ErrorStateView';
 import { LazyDataSource } from '../../common/utils/LazyDataSource';
 import { resolveMediaUrl } from '../../common/utils/MediaUrl';
-import { DliFont, DliRadius, DliSpace } from '../../common/constants/Theme';
+import { DliFont, DliRadius, DliSize, DliSpace } from '../../common/constants/Theme';
+import { DliMaterial } from '../../common/constants/MaterialTokens';
 import { ErrCode, ErrorMessages } from '../../common/constants/ErrorMessages';
 import { Logger } from '../../common/utils/Logger';
 import { showToast } from '../../common/utils/Toast';
@@ -195,7 +196,8 @@ export struct SearchPage {
       .height(36)
       .padding({ left: DliSpace.MD, right: DliSpace.MD })
       .borderRadius(DliRadius.FULL)
-      .backgroundColor($r('app.color.bg_surface'))
+      .backgroundColor(DliMaterial.surface())
+      .systemMaterial(DliMaterial.chip())
       .alignItems(VerticalAlign.Center)
 
       Text($r('app.string.search_action'))
@@ -247,7 +249,8 @@ export struct SearchPage {
             }
             .padding({ left: DliSpace.MD, right: DliSpace.MD, top: 6, bottom: 6 })
             .borderRadius(DliRadius.FULL)
-            .backgroundColor($r('app.color.bg_surface'))
+            // 小标签不挂材质：材质会压过 backgroundColor，而它在均匀浅底上又出不了轮廓，二者相抵会变成"没有底"
+            .backgroundColor($r('app.color.surface_secondary'))
             .margin({ right: DliSpace.SM, bottom: DliSpace.SM })
           }, (kw: string) => kw)
         }
@@ -329,7 +332,7 @@ export struct SearchPage {
     .columnsTemplate('1fr 1fr')
     .columnsGap(DliSpace.MD)
     .rowsGap(DliSpace.LG)
-    .padding({ left: DliSpace.PAGE, right: DliSpace.PAGE, top: DliSpace.SM, bottom: DliSpace.XL })
+    .padding({ left: DliSpace.PAGE, right: DliSpace.PAGE, top: DliSpace.SM, bottom: DliSize.TAB_RESERVED })
     .scrollBar(BarState.Off)
     .onReachEnd(() => {
       this.loadMore();
@@ -382,7 +385,8 @@ export struct SearchPage {
     .width('100%')
     .padding(DliSpace.MD)
     .borderRadius(DliRadius.MD)
-    .backgroundColor($r('app.color.bg_surface'))
+    .backgroundColor(DliMaterial.surface())
+    .systemMaterial(DliMaterial.card())
     .alignItems(VerticalAlign.Center)
     .onClick(() => {
       Logger.info(TAG, `点击 UP 主 ${user.id}（个人空间待 M4-HMY-09 接入）`);
@@ -412,7 +416,7 @@ export struct SearchPage {
     }
     .width('100%')
     .layoutWeight(1)
-    .padding({ left: DliSpace.PAGE, right: DliSpace.PAGE, bottom: DliSpace.XL })
+    .padding({ left: DliSpace.PAGE, right: DliSpace.PAGE, bottom: DliSize.TAB_RESERVED })
     .scrollBar(BarState.Off)
     .onReachEnd(() => {
       this.loadMore();
@@ -475,6 +479,5 @@ export struct SearchPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_page'))
   }
 }
