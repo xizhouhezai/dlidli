@@ -44,6 +44,14 @@ const DRAG_FULL_RANGE: number = 1;
 /** 亮度下限：允许压暗但不能到 0，否则用户看不到恢复的控件 */
 const BRIGHTNESS_MIN: number = 0.05;
 
+/**
+ * 控制层上下蒙层：控件是白字 + 半透明白轨，压在亮画面上会整体消失
+ * （实测白色画面下进度条与时间戳几乎看不见）。用渐变蒙层保底，越靠近边缘越实。
+ */
+const SCRIM_TOP: string = '#B3000000';
+const SCRIM_BOTTOM: string = '#CC000000';
+const SCRIM_NONE: string = '#00000000';
+
 const RATE_OPTIONS: number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
 /** 未知画幅时的兜底（16:9） */
 const DEFAULT_RATIO: number = 16 / 9;
@@ -687,6 +695,10 @@ export struct PlayPage {
     .width('100%')
     .padding({ left: DliSpace.SM, right: DliSpace.MD, top: DliSpace.SM, bottom: DliSpace.SM })
     .alignItems(VerticalAlign.Center)
+    .linearGradient({
+      angle: 180,
+      colors: [[SCRIM_TOP, 0.0], [SCRIM_NONE, 1.0]]
+    })
   }
 
   @Builder
@@ -755,6 +767,10 @@ export struct PlayPage {
     }
     .width('100%')
     .padding({ left: DliSpace.MD, right: DliSpace.MD, bottom: DliSpace.SM })
+    .linearGradient({
+      angle: 180,
+      colors: [[SCRIM_NONE, 0.0], [SCRIM_BOTTOM, 1.0]]
+    })
   }
 
   @Builder
