@@ -5,6 +5,7 @@ import { VideoCardItem } from '../../components/VideoCardItem';
 import { LoadMoreHint } from '../../components/LoadMoreHint';
 import { ErrorStateView } from '../../components/ErrorStateView';
 import { LazyDataSource } from '../../common/utils/LazyDataSource';
+import { AppRouter, PlayRouteParam, RouteName } from '../../common/utils/AppRouter';
 import { DliFont, DliRadius, DliSize, DliSpace } from '../../common/constants/Theme';
 import { DliMaterial } from '../../common/constants/MaterialTokens';
 import { ErrCode, ErrorMessages } from '../../common/constants/ErrorMessages';
@@ -132,10 +133,10 @@ export struct HomePage {
     this.loadFirstPage();
   }
 
-  /** 播放页归 M4-HMY-06，此处先给可感知反馈，避免点击无响应 */
+  /** 进播放页：bvid 经路由参数透传（M4-HMY-06） */
   private openVideo(bvid: string): void {
-    Logger.info(TAG, `点击稿件 ${bvid}（播放页待 M4-HMY-06 接入）`);
-    showToast(this.getUIContext(), $r('app.string.video_pending'));
+    const param: PlayRouteParam = { 'bvid': bvid };
+    AppRouter.push(RouteName.PLAY, param);
   }
 
   @Builder

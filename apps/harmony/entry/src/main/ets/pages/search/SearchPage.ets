@@ -7,6 +7,7 @@ import { VideoCardItem } from '../../components/VideoCardItem';
 import { LoadMoreHint } from '../../components/LoadMoreHint';
 import { ErrorStateView } from '../../components/ErrorStateView';
 import { LazyDataSource } from '../../common/utils/LazyDataSource';
+import { AppRouter, PlayRouteParam, RouteName } from '../../common/utils/AppRouter';
 import { resolveMediaUrl } from '../../common/utils/MediaUrl';
 import { DliFont, DliRadius, DliSize, DliSpace } from '../../common/constants/Theme';
 import { DliMaterial } from '../../common/constants/MaterialTokens';
@@ -157,10 +158,10 @@ export struct SearchPage {
     this.history = await SearchHistoryStore.list();
   }
 
-  /** 播放页与个人空间分别归 M4-HMY-06 / M4-HMY-09，先给可感知反馈，避免点击无响应 */
+  /** 播放页归 M4-HMY-06；个人空间归 M4-HMY-09，先给可感知反馈避免点击无响应 */
   private openVideo(bvid: string): void {
-    Logger.info(TAG, `点击稿件 ${bvid}（播放页待 M4-HMY-06 接入）`);
-    showToast(this.getUIContext(), $r('app.string.video_pending'));
+    const param: PlayRouteParam = { 'bvid': bvid };
+    AppRouter.push(RouteName.PLAY, param);
   }
 
   @Builder

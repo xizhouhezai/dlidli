@@ -5,6 +5,12 @@ const TAG: string = 'AppRouter';
 /** 路由名集中在此，避免各处硬编码字符串 */
 export class RouteName {
   static readonly LOGIN: string = 'login';
+  static readonly PLAY: string = 'play';
+}
+
+/** 播放页路由参数：bvid 是播放页唯一的入参（Index.ets 的 destination 分支按此解包） */
+export interface PlayRouteParam {
+  bvid: string;
 }
 
 /**
@@ -18,13 +24,14 @@ export class AppRouter {
     AppRouter.stack = stack;
   }
 
-  static push(name: string): void {
+  /** param 经 NavPathInfo 透传给压栈页的 @Param（如播放页的 bvid） */
+  static push(name: string, param?: Object): void {
     const stack: NavPathStack | null = AppRouter.stack;
     if (stack === null) {
       Logger.warn(TAG, `路由栈未绑定，忽略跳转：${name}`);
       return;
     }
-    stack.pushPath({ name: name });
+    stack.pushPath({ name: name, param: param });
   }
 
   static pop(): void {

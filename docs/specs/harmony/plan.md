@@ -92,12 +92,17 @@ apps/harmony/
 **播放链路**（承 PLY-01/04/05/08）：
 
 ```
-进入详情页 → GET 稿件详情（含签名 m3u8 URL，TTL 6h）
-  → AVPlayer.prepare/play → 播放中每 10s 上报进度（节流）
-  → 时长 > 5s 上报有效播放（服务端去重）
-  → 签名临期/过期 → 静默重取地址 → 保留进度换源续播
-  → 切后台 → 暂停并保进度；超时释放 AVPlayer 资源
+进入播放页 → GET 稿件详情（含签名 m3u8 URL，TTL 6h；服务端按 quality 降序下发，取首档即最高画质）
+  → 详情就绪 且 XComponent surface 就绪 → AVPlayer 起播（两者先到先等，surface 只能赋在 initialized 态）
+  → 500ms 心跳：按 positionSec 真实增量累计观看时长（单次增量 ≥ 2s 判跳转不计入）
+    → 累计 > 5s 上报有效播放（服务端按 uid/IP 去重）
+    → 每 10s 节流落盘进度，另在返回/切后台/自然播完/组件销毁四处主动 flush
+  → 签名距到期 < 5min → 静默重取地址 → 按 quality 值对齐 → 保留进度与播放态换源续播
+  → 手势：单击切控件 / 双击播放暂停 / 横拖改进度 / 竖拖左半屏亮度右半屏音量；全屏 = 横屏 + 铺满窗口
+  → 切后台 → 暂停并落盘（回前台不自动续播）；离开页面释放 AVPlayer 并还原窗口态与亮度
 ```
+
+> 落地细节与实测结论见 [tasks M4-HMY-06](/specs/harmony/tasks)（含起播时序、换源路径、五处实测修复）。
 
 **弹幕链路**（承 DM-10/11/15/20/21）：
 
@@ -121,12 +126,12 @@ apps/harmony/
 
 ## 6. 风险与待定项
 
-- [ ] **AVPlayer 播后端 HLS 兼容性**（最高风险）：需实测 ffmpeg 产出的 m3u8/ts 切片与签名 URL 组合；本机仅有鸿蒙模拟器，模拟器视频硬解能力受限，**播不了不得判定为不支持**，须真机复验。
+- [x] **AVPlayer 播后端 HLS 兼容性（2026-09-22 已验，M4-HMY-06）**：模拟器（API 26 `Pura X View`）上**真实解码出画**，`initialized → prepared → playing` 链路完整，720P/360P 两档 HLS 与签名 URL 组合均可用——**系统 AVPlayer 直接吃 ffmpeg 产出的 m3u8/ts，无需自带解封装**。**注意口径**：模拟器视频硬解受限，播放类结论一律不作「鸿蒙不支持」判定，**起播（约 12s）与换源（约 3.5s）耗时、长期播卡顿率仍待真机复验**（spec §4 的 P90 < 1.5s 亦须真机测）。
+- [x] **签名 URL 的请求头约束（2026-09-22 已验，M4-HMY-06）**：AVPlayer 以 `?e=&s=` 签名 URL 直接拉取 `.m3u8` 与 `.ts` 分片**无需附加任何自定义请求头**（Referer/UA 均不必），故 `PlaySignGuard` 现有边界（`.m3u8` 需签名、`.ts` 放行）对端侧已够用，本期零后端改动成立。续签走「重取详情换新签名地址」而非复用旧地址，签名解析收敛在 `media/PlaySign.ets`。
 - [x] **模拟器可用性（2026-09-21：已澄清，非宿主故障）**：早前 3 次尝试均在**冷启窗口期内**操作——`hidumper` 窗口数恒 0、`snapshot_display` 恒返回同一张 47KB 全黑帧、`aa start` 报 `10106102 … device screen is locked … developer mode`，并遇 2 次 VM 退出，一度误判为宿主 OpenGL/WGL 故障（`qemu.log` 的 `gl error 502` / `wglMakeCurrent` 失败属启动期现象）。**当晚重试完全可用**：未签名 HAP 安装、启动、渲染、切页签均正常。
   - **操作口径**：先确认 SystemUI 就绪（`com.ohos.sceneboard` 进 FOREGROUND / `hidumper -s WindowManagerService` 窗口数 > 0）再安装与启动；不在启动窗口期反复 `snapshot_display`。命令速查见 [tasks M4-HMY-01](/specs/harmony/tasks)。
   - **附带结论**：模拟器为 **API 26 / guest `7.0.0.106(SP1DEVC00E999R4P11)` / abi `x86_64`**；**未签名 HAP 可直接 `hdc install` 成功**——本机本地验证**无需配置 `signingConfigs`**，可砍掉签名前置。
   - **沉浸光感是否生效（2026-09-22 已验，见下条「沉浸光感落地」）**：当时判「浅色纯色底无可比对参照」只说对了一半——**材质确实生效了**（`supported=true`、应用级开关 `state=ENABLE`、全局档 `level=EXQUISITE`），但**纯色底上玻璃本来就看不出**，真因在背景而非能力。
-- [ ] **签名 URL 的请求头约束**：若 AVPlayer 无法附加 Referer 等校验头，需确认后端 `PlaySignGuard` 对端侧放行的边界（现有实现放行 `.ts` 分片，`.m3u8` 需签名）。
 - [ ] **弹幕 Canvas 性能上限**：同屏弹幕满载下的帧率与内存需实测（spec §4 要求 ≥ 55fps）。
 - [x] **状态管理版本（已解决，2026-09-21）**：壳层 `pages/Index.ets` 以 **ArkUI 状态管理 V2**（`@Entry @ComponentV2` / `@Local` / `@Param`）实写并通过 API 26 编译（`assembleHap` BUILD SUCCESSFUL），**定版 V2**，不再保留 V1 备选。
 - [x] **目标 API 版本选择（已解决，2026-09-21）**：DevEco 升级至 **26.0.0.821** 后内置 SDK 为 **HarmonyOS 26.0.0 / API 26**（version 26.0.0.105），模拟器镜像 **API 26 / 7.0.0.106**（`D:/Program Files/Huawei/sdk/system-image/HarmonyOS-7.0.0/phone_all_x86`）已就位，实例含 Mate 70 Pro / Mate 80 Pro Max / Pura 90 / Pura X View。**`compileSdkVersion` 与 `compatibleSdkVersion` 均取 26**，原"编译 24 / 运行时 23"的双口径已失效，历史结论仅备查。
