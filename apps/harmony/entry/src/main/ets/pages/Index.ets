@@ -3,12 +3,13 @@ import { DividerMode, HdsTabs, hdsMaterial } from '@kit.UIDesignKit';
 import { DliFont, DliRadius, DliSize, DliSpace } from '../common/constants/Theme';
 import { DliMaterial } from '../common/constants/MaterialTokens';
 import { AmbientBackdrop } from '../components/AmbientBackdrop';
-import { AppRouter, RouteName } from '../common/utils/AppRouter';
+import { AppRouter, PlayRouteParam, RouteName } from '../common/utils/AppRouter';
 import { Logger } from '../common/utils/Logger';
 import { HomePage } from './home/HomePage';
 import { SearchPage } from './search/SearchPage';
 import { ProfilePage } from './profile/ProfilePage';
 import { LoginPage } from './auth/LoginPage';
+import { PlayPage } from './play/PlayPage';
 
 const TAG: string = 'Index';
 
@@ -50,9 +51,11 @@ struct Index {
 
   /** 压栈页登记处：新增页面在此加一条分支 */
   @Builder
-  destination(name: string) {
+  destination(name: string, param: object) {
     if (name === RouteName.LOGIN) {
       LoginPage()
+    } else if (name === RouteName.PLAY) {
+      PlayPage({ bvid: (param as PlayRouteParam).bvid })
     }
   }
 

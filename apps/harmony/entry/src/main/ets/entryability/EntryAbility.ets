@@ -1,8 +1,10 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { emitter } from '@kit.BasicServicesKit';
 import { window } from '@kit.ArkUI';
 import { PreferenceStore } from '../store/PreferenceStore';
 import { TokenStore } from '../store/TokenStore';
+import { AppEvent } from '../common/constants/AppEvents';
 
 const DOMAIN = 0x0000;
 
@@ -47,10 +49,13 @@ export default class EntryAbility extends UIAbility {
   onForeground(): void {
     // Ability has brought to foreground
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onForeground');
+    // 播放页是压栈的 NavDestination，拿不到 @Entry 页的生命周期，前后台只能由 Ability 广播出去
+    emitter.emit({ eventId: AppEvent.ID_FOREGROUND });
   }
 
   onBackground(): void {
     // Ability has back to background
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+    emitter.emit({ eventId: AppEvent.ID_BACKGROUND });
   }
 }

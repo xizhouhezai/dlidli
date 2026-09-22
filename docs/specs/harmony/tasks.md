@@ -14,7 +14,7 @@
   - 可用结论（同期实测）：模拟器运行时 **API 26 / guest `7.0.0.106(SP1DEVC00E999R4P11)` / abi `x86_64`**；**未签名 HAP 可直接 `hdc install` 成功**，本地验证无需配置 `signingConfigs`
   - 模拟器操作速查：安装 `hdc -t 127.0.0.1:5555 install -r <hap>`（`<hap>` 务必用**相对路径**：先 `cd` 到产物目录；Git Bash 下传 Windows 绝对路径会被 hdc 拼成 `<当前目录>/D:/...` 而报 `Error opening file`，安装失败后紧接着的 `aa start` 就报 `10104001`，极易误判成包名问题）；启动 `hdc -t … shell "aa start -a EntryAbility -b com.dlidli.app -m entry"`；点击用 `hdc -t … shell "uitest uiInput click <x> <y>"`（`uinput -T -m x y x y` 等长 trace 不触发点击）；取控件实际矩形用 `uitest dumpLayout -p /data/local/tmp/layout.json` 再 `hdc file recv`（本次即以它纠正了 1719→2064 的坐标误判）；截图 `snapshot_display -f <路径>` + `file recv`
   - 视觉预研要点（降级为实测确认，设计侧结论已定稿见 [plan §2/§6](/specs/harmony/plan)）：① `uiMaterial.isImmersiveMaterialSupported()` 在 x86 模拟器返回什么；② `getMaterialInfo()`/`getGlobalMaterialLevel()` 的实际取值（x86 模拟器算力档位可能非高/中档，`style`/`colorInvert` 等可能不生效）；③ 在 `Navigation` 标题栏与 `Tabs` 底部标签栏上挂 `ImmersiveMaterial` 的实际观感与帧率开销；④ 结论若为模拟器不支持，**不得据此判定真机不支持**，记「待真机确认」
-  - **预研进度（2026-09-21）**：预研项中的**网络层已随 M4-HMY-03 实测覆盖**——`@ohos.net.http` 走通真实后端（首页分区列表 12 项）、超时/失败重试与 401 续期链路均已验，且模拟器可达宿主机（`10.0.2.2:8000`），结论见 M4-HMY-03；**余 AVPlayer HLS 播放、弹幕 WS 通道、沉浸光感三项待验**（分归 M4-HMY-06、M4-HMY-07 与本节视觉预研）
+  - **预研进度（2026-09-21 起，2026-09-22 补记）**：预研项中的**网络层已随 M4-HMY-03 实测覆盖**——`@ohos.net.http` 走通真实后端（首页分区列表 12 项）、超时/失败重试与 401 续期链路均已验，且模拟器可达宿主机（`10.0.2.2:8000`），结论见 M4-HMY-03；**AVPlayer HLS 播放已随 M4-HMY-06 实测覆盖**（后端签名 m3u8 真实解码出画 + 清晰度切换 + 签名临期换源续播 + 横屏全屏，结论见 M4-HMY-06）；**沉浸光感已随 M4-HMY-11 实测覆盖**（`supported=true`/`state=ENABLE`/`level=EXQUISITE`，结论见 M4-HMY-11 与 [plan §6](/specs/harmony/plan)）；**余弹幕 WS 通道待验**（归 M4-HMY-07）
 - [x] M4-HMY-02 工程骨架：DevEco 工程入库 `apps/harmony` + `pnpm-workspace.yaml` 排除该目录 + 分层目录 + 品牌色/圆角 ArkTS 常量 + HarmonyOS Symbol 图标接入 + 接口类型来源定案 + `compatibleSdkVersion` 取 26 + **应用壳层搭在 `Navigation` + `Tabs(BottomTabBarStyle)` 上**（当时认为底栏是沉浸光感的唯一合法作用面）+ `module.json5` 配 `ohos.arkui.UIMaterial.state`（2026-09-21 完成；**该壳层已于 2026-09-22 由 M4-HMY-11 改造为 `HdsTabs` 悬浮胶囊底栏，见 [plan §2/§6](/specs/harmony/plan)**）
   - 覆盖：—（工程）
   - 实现要点：`bundleName` `com.dlidli.app` / `vendor` `DliDli`；`targetSdkVersion` 与 `compatibleSdkVersion` 均 `26.0.0`（产物 `targetAPIVersion` = `minAPIVersion` = `260000026`）。壳层 `pages/Index.ets` = `Navigation`（标题栏材质 `ImmersiveStyle.ULTRA_THIN` + `interactive`）+ `Tabs(barPosition: BarPosition.End)`（`.barFloatingStyle()` 挂 `THIN` 材质 + `maskColor`/`maskHeight` 蒙层；**2026-09-22 起改 `HdsTabs` 悬浮胶囊**），首页标题栏内嵌搜索入口（对齐官方「一镜到底」搜索）；三页签 首页/搜索/我的（HMY-40/41/42）。材质统一经 `common/constants/MaterialTokens.ets` 工厂产出，内部以 `uiMaterial.isImmersiveMaterialSupported()` 判支持性，不支持时返回 `undefined` **自然降级**，`DliMaterial.off()` 暴露 `Material.empty` 语义（与传 `undefined` 的「恢复默认」区分）。品牌 token 落两处：`common/constants/Theme.ets`（字面量，供 Canvas 绘制消费）+ `resources/{base,dark}/element/color.json`（含深色变体，供声明式 UI 消费）；新增字符串资源与 `common/utils/Logger.ets`（hilog 封装）
@@ -74,8 +74,38 @@
     - **首页信息流**：推荐首屏 20 条 + 触底续 6 条后呈现「没有更多了」；分区切换（动画 → 3 条，推荐页签隐去并自动落最新）；最新/最热切换（最热按播放量降序，26.6万 > 24.3万 > 22.8万 逐屏验证）；下拉刷新（日志 7 次 page-1 重载且列表回顶）；封面走 `10.0.2.2` 正常出图、空封面为底色块占位、时长角标 `04:11`/`1:02:05` 两种格式、meta 行 `1.2亿 · 生活UP主05 · 5小时前`（万/亿与相对时间均正确）
     - **搜索**：关键词 `测试` → 视频 tab 20 条 + 「共 26 条」→ 触底续 6 条 + 「没有更多了」；UP 主 tab 同样 20 + 6 且双 Tab 各 26 条；0 结果两种文案（视频/UP 主）与 tab 切换均正常；历史新增（`测试` → `UP主` 后 `UP主` 置顶）、单条删除、清空、**重启后历史仍在**（`aa force-stop` 后重进）；点卡片弹「播放页建设中，敬请期待」（播放页归 M4-HMY-06）
   - 未覆盖：触底加载失败与刷新失败的**重试分支**未做停机实测（沿用 M4-HMY-03 已验证的 `ErrorStateView` 口径）；全部结论均在 API 26 模拟器取得，**真机待验**
-- [ ] M4-HMY-06 播放页：AVPlayer HLS 播放、清晰度切换与倍速、进度记忆与跨端续播、有效播放上报、签名过期静默换签、触屏手势与横屏全屏、切后台处理
+- [x] M4-HMY-06 播放页：AVPlayer HLS 播放、清晰度切换与倍速、进度记忆与跨端续播、有效播放上报、签名过期静默换签、触屏手势与横屏全屏、切后台处理（2026-09-22 完成）
   - 覆盖：HMY-10、HMY-11、HMY-12、HMY-13、HMY-14、HMY-15
+  - 实现要点：
+    - **分工**：`media/VideoPlayer.ets` 只管播放器状态机与事件（`open`/`play`/`pause`/`toggle`/`seekTo`/`setRate`/`setVolume`/`release`，对外只暴露 `@ObservedV2 @Trace` 的 `phase`/`positionMs`/`durationMs`/`buffering`/`videoWidth`/`videoHeight`），`pages/play/PlayPage.ets` 管业务（详情装载、跨端续播、进度与有效播放上报、签名续签、手势、横屏全屏、切后台）。HLS 调用收敛在一处，页面里没有 AVPlayer
+    - **起播时序（surface 先于起播）**：AVPlayer 的 `surfaceId` 首次只能赋在 `initialized` 态，故详情（`detailReady`）与 XComponent `onLoad`（`surfaceReady`）**两者都就绪才 open**，先到先等（`tryStart`）。`VideoPlayer.open` 内部统一用「**先注册 `waitForState` 再改状态**」的顺序防漏事件：等 `initialized` 才赋 `url`、等 `prepared` 才 seek（`prepare()` 的 Promise 会立即 resolve，不能只 await 它），整链超时 15s 判失败
+    - **`media/PlaySign.ets`**：从签名 URL 的 `e=` 参数解析过期时刻（`signExpiryMs`），续签判定只依赖这一处
+    - **跨端续播（HMY-12）**：`resolveResume` 已登录优先取 `GET /videos/{bvid}/progress`，未登录或读失败回落端侧 `store/PlaybackProgressStore.ets`（键 `playback.local_progress`，只留最近 50 条、按 `updatedAt` 淘汰）；**片头 3s 内、片尾 3s 内不续播**——那两处续播对用户是打扰
+    - **进度与有效播放上报（HMY-13）**：单条 500ms 心跳收口全部周期动作。观看时长按 `positionSec` 的**真实增量**累计（单次增量 ≥ 2s 判为跳转、不计入；采样取 500ms 而非 1s，是因为 **2x 倍速下 1s 增量恰为 2.0 会被误判成跳转**）；累计满 5s 上报一次 `reportView`（失败允许下个心跳重试，服务端按 uid/IP 去重）；进度落盘节流 10s，且**返回、切后台、自然播完、组件销毁四处都主动 flush**（不能只靠节流定时器）
+    - **签名静默续签（HMY-14）**：心跳里判签名距到期不足 5min 就重取详情，按**画质值**（非下标——防服务端档位增减后切到别的清晰度）对齐新地址，再以「保留进度 + 保留播放态」换源续播；失败只记日志、下个心跳重试。与切清晰度**共用同一条 `reopen` 路径**（reset → url → prepare → seek → play）
+    - **切清晰度与倍速（HMY-11）**：`settingsPanel` 里清晰度 chips（服务端按 `quality` 降序下发，取首档即最高画质，对齐 Web 端 `pickDefaultSource`）+ 倍速 chips `[0.5, 0.75, 1, 1.25, 1.5, 2]`（对齐 Web 端），倍速走 `setPlaybackRate` 连续取值，非档位跳变
+    - **手势与全屏（HMY-15）**：手势层是一层铺满舞台的透明 `Column`（必须显式 `hitTestBehavior(Block)`，否则触摸被下层 XComponent 的原生 surface 吃掉）；`GestureGroup(Parallel, Tap×2, Tap×1, Pan)`——**Parallel 下双击会让 count:1 与 count:2 各命中一次，净效果正好是「控件切两次回到原状 + 暂停」**，于是无需延迟单击、单击也不必为双击窗口让路（手写计时版单击要等 300ms 才响应）。拖动主轴**由起手方向定死、途中不再切换**：横向 = 进度（`offsetX / 屏宽 × 总时长`），竖向按左右半屏分亮度 / 音量（手指划过整屏高度对应 0→100%）。全屏 = `setWindowLayoutFullScreen(true)` + `setPreferredOrientation(LANDSCAPE)`，退出反向（先回 PORTRAIT 再关 fullscreen）；返回键在全屏态先退全屏（`onBackPressed` 返 true），第二次才离开播放页
+    - **亮度**：走 `setWindowBrightness`（只影响本应用窗口，不动系统亮度）；端侧无读接口故从满亮起算，下限 5%（允许压暗但不给全黑，否则用户找不到恢复的控件）；离开页面时若用户真调过则还原为跟随系统（`-1`）
+    - **切后台**：压栈的 `NavDestination` 拿不到 `@Entry` 页的生命周期，改由 `EntryAbility` 经 `emitter` 广播（`common/constants/AppEvents.ets` 的 `ID_BACKGROUND=1002`/`ID_FOREGROUND=1001`）→ 收到即暂停并落盘；**回前台不自动续播**（用户可能只是切走看了眼别的）
+    - **页面装配**：`stage`（XComponent + 手势层 + 控制层 + 中央态）+ `infoBlock`（标题/统计meta/UP 主/标签/简介）；中央态三态互斥（缓冲·起播中转圈 / `ended` 重播按钮 / `error` 文案 + 重试）；无流稿件走独立文案「该稿件暂无可播放的清晰度」
+  - **实测抓到并修掉五处**：
+    - ① **控件一显示手势就全失效**：控制层是铺满舞台的 `Column`，默认 `HitTestMode.Default` 会把空白处的触摸连同下层手势层一并吞掉（实测：控件可见时单击/双击/拖动**都不触发**，控件隐藏时才正常）→ 控制层根容器改 `hitTestBehavior(HitTestMode.Transparent)`（自身照常响应、不阻塞兄弟节点），手势层另用 `Block` 挡住 XComponent 的原生 surface
+    - ② **拖动会顺带把控件栏闪掉**：`GestureMode.Parallel` 里 `TapGesture` **不会因位移自行取消**，横向拖进度 / 竖向拖亮度时这根手指会额外命中一次单击，正在看的进度反馈反而被隐藏 → 加 `dragging` 标记与 `DRAG_TAP_GUARD_MS = 200` 尾闸，拖动期间与刚结束 200ms 内丢弃单击
+    - ③ **续签插进起播途中导致起播失败**（`5400102`）：心跳**先于首次 open** 就起来了（`tryStart` 里 `startTicker` 在 `reopen` 之前），若签名已临期（用户隔了几小时回来点开）会在起播途中再插一次 `reopen`，两次 open 交错、**先落地的那个把状态打回 `idle`**，后一个的 seek 撞 `5400102 Operate Not Permit`，表现为起播失败 → `maybeRenew()` 加 `phase ∈ {playing, paused}` 闸（只在播放器稳住时换签）；复测起播链路零 `5400102`
+    - ④ **时间戳在换源途中被打回 0**：换源会 reset 到 `preparing`，`positionMs`/`durationMs` 双双归零，进度条被写成 `00:00 / 00:01`；更麻烦的是 `durationSec()` 的下限 1 会把非零当前进度夹到 1、触发一次**程序化** `onChange`，反过来 `seekTo(1000)` 覆盖掉正要恢复的进度 → 加 `lastDurationSec` 缓存上一次时长 + 换源期间冻结 `sliderSec` + `switching` 期间屏蔽 `onChange` 的 seek
+    - ⑤ **档位高亮不跟随状态**：`@Builder` 多参数走**按值传递**，参数变化不引起内部 UI 刷新（实测：切到 360P 后仍高亮 720P）→ 改单对象参数（`ChipOption`）走按引用传递，高亮才跟随
+  - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL（ArkTS 零告警）**；`go test ./...` 与 `go vet ./...` 全绿（本期零后端改动，回归确认）；模拟器实测（API 26 实例 `Pura X View`，后端本地 `http://10.0.2.2:8000`，种子稿 `BVSEED0001`（流 90001，720P+360P HLS，时长 12:21））逐项通过：
+    - **HLS 起播（HMY-10）**：真实解码出画面（非黑屏占位），`initialized → prepared → playing` 完整
+    - **跨端续播（HMY-12）**：以 Redis（`wp:u:{uid}` 为进度真值）预置进度后进页即从该位置起播（实测 300000ms → 屏上 `05:09`）并弹「已为你续播」
+    - **进度与有效播放上报（HMY-13）**：以 Redis 为 oracle 逐段核对——观看中 `wp:u:{uid}` 由 90 → 115 → 129 递增，`his:u:{uid}` zset 同步写入
+    - **清晰度切换（HMY-11）**：720P → 360P 日志 `切换清晰度：quality=360 pos=90.092s`，屏上位置保持 `01:30`、播放态保持，未回零
+    - **倍速**：切 1.5x 后约 12s 墙钟推进 18.76s（≈1.56×，含起播损耗）
+    - **手势（HMY-15）**：单击切控件（计数 `2 → 0 → 2`）；双击暂停（画面冻结 10s 且覆盖层不变）；横向拖动 −400px 使进度由 311s 退到 90s（与 `offsetX / 屏宽 × 总时长` 换算**严格吻合**），拖动过程中提示条（`mm:ss / mm:ss`）与进度条常驻；竖向拖动左半屏 `亮度 77%`、压到底 `亮度 5%`，右半屏 `音量 0%` / `27%` / `100%`
+    - **横屏全屏（HMY-15）**：全屏后窗口 2232×1320、视频铺满、隐藏信息区；退出全屏后进度保持且底栏子控件仍可点；返回键在全屏态先退全屏
+    - **切后台（HMY-15 后半）**：切后台后 Redis 进度冻结（两次采样均 129/241 不变），重启后停在原位**且不自动续播**
+    - **签名静默续签（HMY-14）**：临时把续签阈值放大到 24h 强制触发，得到完整干净的一轮 `initialized → prepared → 换源后跳转到 → 跳转完成 → playing → 静默换源（playing=true）`，每次换源位置都保住、零 `5400102`（验完阈值已还原 5min）
+    - **实测方法补充**：播放页**截图会取到旧帧**（两次间隔 2s 的快照完全一致），本任务改以 `uitest dumpLayout` 导出的控件树 + Redis 作为可判定 oracle；`uitest uiInput swipe` 的第 5 个参数是**速率**（200~40000）而非时长，要做「慢拖」须传 200
+  - 未覆盖：**换源瞬间画面会短暂空白**（同实例 reset，模拟器约 3.5s），双播放器无缝切换列为后续优化；弹幕与互动评论未接（M4-HMY-07/08，页内以一行提示标注）；**起播（约 12s）与换源（约 3.5s）耗时、以及 HLS 硬解表现均为模拟器口径，真机待验**（模拟器视频硬解受限，播放类结论一律不据此判定「鸿蒙不支持」）
 - [ ] M4-HMY-07 弹幕：分段拉取与预取、Canvas 轨道渲染、WS 实时下发与断线重连及 HTTP 回退、关键词/发送者屏蔽、展示设置、发送与频控、列表面板
   - 覆盖：HMY-20、HMY-21、HMY-22、HMY-23、HMY-24
   - 全屏弹幕须对齐[官方影音娱乐规范](/specs/harmony/plan)（§7.2）：上下有黑边时弹幕仅在上方黑边区域内显示；无黑边时限制同屏弹幕密度
@@ -106,7 +136,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 11 | 5 |
-| **合计** | **11** | **5** |
+| M4 | 11 | 6 |
+| **合计** | **11** | **6** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
