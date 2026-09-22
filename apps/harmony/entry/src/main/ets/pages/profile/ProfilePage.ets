@@ -1,6 +1,7 @@
 import { AppRouter, RouteName } from '../../common/utils/AppRouter';
 import { session } from '../../store/Session';
 import { DliFont, DliRadius, DliSpace } from '../../common/constants/Theme';
+import { DliMaterial } from '../../common/constants/MaterialTokens';
 
 /**
  * 「我的」页：本任务只落会话相关部分（未登录入口 / 已登录身份 / 退出登录），
@@ -102,14 +103,17 @@ export struct ProfilePage {
       .width('100%')
       .padding(DliSpace.LG)
       .borderRadius(DliRadius.LG)
-      .backgroundColor($r('app.color.bg_surface'))
+      .backgroundColor(DliMaterial.surface())
+      .systemMaterial(DliMaterial.card())
 
       Button($r('app.string.profile_logout'))
         .width('100%')
         .height(44)
         .fontSize(DliFont.BODY_SM)
         .fontColor($r('app.color.text_secondary'))
-        .backgroundColor($r('app.color.bg_surface'))
+        // 与上方资料卡同口径：次级底 + 投影，保证这一行在纯白页底上仍有轮廓
+        .backgroundColor(DliMaterial.surface())
+        .systemMaterial(DliMaterial.card())
         .borderRadius(DliRadius.FULL)
         .onClick(() => {
           this.confirmLogout();
@@ -130,6 +134,5 @@ export struct ProfilePage {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Start)
-    .backgroundColor($r('app.color.bg_page'))
   }
 }
