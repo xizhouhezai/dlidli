@@ -14,8 +14,28 @@ const SEEK_CLOSEST: media.SeekMode = media.SeekMode.SEEK_CLOSEST;
 const BUFFERING_START: media.BufferingInfoType = media.BufferingInfoType.BUFFERING_START;
 const BUFFERING_END: media.BufferingInfoType = media.BufferingInfoType.BUFFERING_END;
 
-/** 等待状态迁移的上限（起播/换源）；超时即报错，避免页面永久停在 loading */
-const STATE_TIMEOUT_MS: number = 15000;
+/**
+ * 等待状态迁移的上限（起播/换源）；超时即报错，避免页面永久停在 loading。
+ * 取 30s 而非 15s：模拟器软解下 HLS 拉清单到 prepared 实测要 15.0~15.5s（两次连续复现），
+ * 贴着 15s 的线会把「慢但能起播」判成失败；真机起播是秒级，这个上限只在对端无响应时才生效。
+ */
+const STATE_TIMEOUT_MS: number = 30000;
+
+/**
+ * 自造的状态等待失败（超时/等错）。不冒充 `BusinessError`：它没有系统错误码，
+ * `as BusinessError` 只是类型断言，运行时 `code` 为 undefined，直接拼进文案会变成
+ * 「播放失败（undefined）」——用户看得见的那种 bug。
+ *
+ * `message` 是给日志的技术细节（含 prepared 这类状态名），`friendly` 才是给用户的一句话。
+ */
+class StateWaitError extends Error {
+  friendly: string;
+
+  constructor(message: string, friendly: string) {
+    super(message);
+    this.friendly = friendly;
+  }
+}
 
 /** 播放相位：对 media.AVPlayerState 的窄化，页面只关心这几档 */
 export type PlayerPhase = 'idle' | 'preparing' | 'ready' | 'playing' | 'paused' | 'ended' | 'error';
@@ -158,6 +178,11 @@ export class VideoPlayer {
       }
     } catch (err) {
       this.disposeWaiter();
+      if (err instanceof StateWaitError) {
+        Logger.error(TAG, `起播失败：${err.message}`);
+        this.fail(err.friendly);
+        return;
+      }
       const be: BusinessError = err as BusinessError;
       Logger.error(TAG, `起播失败：${be.code} ${be.message}`);
       this.fail(`播放失败（${be.code}）`);
@@ -385,7 +410,7 @@ export class VideoPlayer {
     return new Promise<void>((resolve, reject) => {
       const timer: number = setTimeout(() => {
         this.waiter = null;
-        reject(new Error(`等待播放器状态 ${target} 超时`));
+        reject(new StateWaitError(`等待播放器状态 ${target} 超时`, '起播超时，请重试'));
       }, STATE_TIMEOUT_MS);
       this.waiter = {
         target: target,
@@ -395,7 +420,7 @@ export class VideoPlayer {
           if (ok) {
             resolve();
           } else {
-            reject(new Error(`播放器未进入 ${target} 即出错`));
+            reject(new StateWaitError(`播放器未进入 ${target} 即出错`, '播放出错，请重试'));
           }
         },
         dispose: (): void => {

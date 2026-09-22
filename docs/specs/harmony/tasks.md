@@ -94,7 +94,7 @@
     - ③ **续签插进起播途中导致起播失败**（`5400102`）：心跳**先于首次 open** 就起来了（`tryStart` 里 `startTicker` 在 `reopen` 之前），若签名已临期（用户隔了几小时回来点开）会在起播途中再插一次 `reopen`，两次 open 交错、**先落地的那个把状态打回 `idle`**，后一个的 seek 撞 `5400102 Operate Not Permit`，表现为起播失败 → `maybeRenew()` 加 `phase ∈ {playing, paused}` 闸（只在播放器稳住时换签）；复测起播链路零 `5400102`
     - ④ **时间戳在换源途中被打回 0**：换源会 reset 到 `preparing`，`positionMs`/`durationMs` 双双归零，进度条被写成 `00:00 / 00:01`；更麻烦的是 `durationSec()` 的下限 1 会把非零当前进度夹到 1、触发一次**程序化** `onChange`，反过来 `seekTo(1000)` 覆盖掉正要恢复的进度 → 加 `lastDurationSec` 缓存上一次时长 + 换源期间冻结 `sliderSec` + `switching` 期间屏蔽 `onChange` 的 seek
     - ⑤ **档位高亮不跟随状态**：`@Builder` 多参数走**按值传递**，参数变化不引起内部 UI 刷新（实测：切到 360P 后仍高亮 720P）→ 改单对象参数（`ChipOption`）走按引用传递，高亮才跟随
-  - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL（ArkTS 零告警）**；`go test ./...` 与 `go vet ./...` 全绿（本期零后端改动，回归确认）；模拟器实测（API 26 实例 `Pura X View`，后端本地 `http://10.0.2.2:8000`，种子稿 `BVSEED0001`（流 90001，720P+360P HLS，时长 12:21））逐项通过：
+  - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL**（ArkTS 编译通过；`media` 值引用会带 4 条 syscap 提示，见下方「口径修正」）；`go test ./...` 与 `go vet ./...` 全绿（本期零后端改动，回归确认）；模拟器实测（API 26 实例 `Pura X View`，后端本地 `http://10.0.2.2:8000`，种子稿 `BVSEED0001`（流 90001，720P+360P HLS，时长 12:21））逐项通过：
     - **HLS 起播（HMY-10）**：真实解码出画面（非黑屏占位），`initialized → prepared → playing` 完整
     - **跨端续播（HMY-12）**：以 Redis（`wp:u:{uid}` 为进度真值）预置进度后进页即从该位置起播（实测 300000ms → 屏上 `05:09`）并弹「已为你续播」
     - **进度与有效播放上报（HMY-13）**：以 Redis 为 oracle 逐段核对——观看中 `wp:u:{uid}` 由 90 → 115 → 129 递增，`his:u:{uid}` zset 同步写入
@@ -106,6 +106,11 @@
     - **签名静默续签（HMY-14）**：临时把续签阈值放大到 24h 强制触发，得到完整干净的一轮 `initialized → prepared → 换源后跳转到 → 跳转完成 → playing → 静默换源（playing=true）`，每次换源位置都保住、零 `5400102`（验完阈值已还原 5min）
     - **实测方法补充**：播放页**截图会取到旧帧**（两次间隔 2s 的快照完全一致），本任务改以 `uitest dumpLayout` 导出的控件树 + Redis 作为可判定 oracle；`uitest uiInput swipe` 的第 5 个参数是**速率**（200~40000）而非时长，要做「慢拖」须传 200
   - 未覆盖：**换源瞬间画面会短暂空白**（同实例 reset，模拟器约 3.5s），双播放器无缝切换列为后续优化；弹幕与互动评论未接（M4-HMY-07/08，页内以一行提示标注）；**起播（约 12s）与换源（约 3.5s）耗时、以及 HLS 硬解表现均为模拟器口径，真机待验**（模拟器视频硬解受限，播放类结论一律不据此判定「鸿蒙不支持」）
+  - **交付后修复（2026-09-22，PATCH v0.48.1）**：验收反馈「白底画面下进度条看不清」，同时复现出两处起播缺陷。
+    - ① **控件层无蒙层**：控制层是白字 + 半透明白轨，压在亮画面上整体消失（白底素材下进度条与时间戳几乎不可见）→ 顶栏/底栏各加一层渐变蒙层（`SCRIM_TOP` `#B3000000` 顶实→透、`SCRIM_BOTTOM` `#CC000000` 透→底实）。蒙层挂在控件容器自身，底部控件行落在渐变更实的一侧；实测白底帧下时间戳、已播（品牌粉）与未播（半透明白）轨道均可辨，蒙层不影响命中测试（倍速面板仍正常展开）
+    - ② **等待 `prepared` 超时阈值偏紧**：`STATE_TIMEOUT_MS` 原为 15s，而模拟器冷启下 HLS 拉清单到 `prepared` 实测 **15.0~15.5s**（连续两次失败，`prepared` 恰在超时后 0.4~0.5s 到达），表现为起播直接判失败、状态机停在 `error` → 提到 **30s**（真机起播是秒级，该上限只在对端无响应时生效）。修后同一路径起播正常（`prepared` 14.9s → 续播 seek → `playing`）
+    - ③ **超时路径把 `undefined` 摆到用户面前**：等待失败抛的是自造 `Error`，而 catch 一律 `as BusinessError` 取 `code`（类型断言不改运行时形态）→ 屏上显示「播放失败（undefined）」。改抛 `StateWaitError`（带 `friendly` 字段），日志留技术细节、UI 给「起播超时，请重试」/「播放出错，请重试」；**用临时把阈值压到 1s 强制触发实测**（日志与屏上文案均已核对，验完已还原 30s）
+    - 口径修正：本节原记「ArkTS 零告警」**不准确**——`media` 命名空间的值引用（`SeekMode`/`BufferingInfoType` 常量）会触发 SDK syscap 提示共 4 条，`assembleHap` 输出为 `BUILD SUCCESSFUL` 但带 `ArkTS:WARN`，说明见 `media/VideoPlayer.ets` 文件头
 - [ ] M4-HMY-07 弹幕：分段拉取与预取、Canvas 轨道渲染、WS 实时下发与断线重连及 HTTP 回退、关键词/发送者屏蔽、展示设置、发送与频控、列表面板
   - 覆盖：HMY-20、HMY-21、HMY-22、HMY-23、HMY-24
   - 全屏弹幕须对齐[官方影音娱乐规范](/specs/harmony/plan)（§7.2）：上下有黑边时弹幕仅在上方黑边区域内显示；无黑边时限制同屏弹幕密度
