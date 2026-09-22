@@ -180,7 +180,7 @@ export struct LoginPage {
         .fontSize(DliFont.BODY)
         .fontColor($r('app.color.text_primary'))
         .placeholderColor($r('app.color.text_tertiary'))
-        .backgroundColor($r('app.color.bg_surface'))
+        .backgroundColor($r('app.color.bg_glass'))
         .borderRadius(DliRadius.MD)
         .padding({ left: DliSpace.LG, right: DliSpace.LG })
 
@@ -192,7 +192,7 @@ export struct LoginPage {
           .fontSize(DliFont.BODY)
           .fontColor($r('app.color.text_primary'))
           .placeholderColor($r('app.color.text_tertiary'))
-          .backgroundColor($r('app.color.bg_surface'))
+          .backgroundColor($r('app.color.bg_glass'))
           .borderRadius(DliRadius.MD)
           .padding({ left: DliSpace.LG, right: DliSpace.LG })
           .layoutWeight(1)
@@ -223,7 +223,7 @@ export struct LoginPage {
         .fontSize(DliFont.BODY)
         .fontColor($r('app.color.text_primary'))
         .placeholderColor($r('app.color.text_tertiary'))
-        .backgroundColor($r('app.color.bg_surface'))
+        .backgroundColor($r('app.color.bg_glass'))
         .borderRadius(DliRadius.MD)
         .padding({ left: DliSpace.LG, right: DliSpace.LG })
 
@@ -234,7 +234,7 @@ export struct LoginPage {
         .fontSize(DliFont.BODY)
         .fontColor($r('app.color.text_primary'))
         .placeholderColor($r('app.color.text_tertiary'))
-        .backgroundColor($r('app.color.bg_surface'))
+        .backgroundColor($r('app.color.bg_glass'))
         .borderRadius(DliRadius.MD)
         .padding({ left: DliSpace.LG, right: DliSpace.LG })
 
@@ -246,7 +246,7 @@ export struct LoginPage {
           .fontSize(DliFont.BODY)
           .fontColor($r('app.color.text_primary'))
           .placeholderColor($r('app.color.text_tertiary'))
-          .backgroundColor($r('app.color.bg_surface'))
+          .backgroundColor($r('app.color.bg_glass'))
           .borderRadius(DliRadius.MD)
           .padding({ left: DliSpace.LG, right: DliSpace.LG })
           .layoutWeight(1)
@@ -268,7 +268,7 @@ export struct LoginPage {
           .height(50)
           .justifyContent(FlexAlign.Center)
           .borderRadius(DliRadius.MD)
-          .backgroundColor($r('app.color.bg_surface'))
+          .backgroundColor($r('app.color.bg_glass'))
           .onClick(() => {
             this.loadCaptcha();
           })
@@ -331,6 +331,7 @@ export struct LoginPage {
       .height('100%')
     }
     .title($r('app.string.login_title'))
-    .backgroundColor($r('app.color.bg_page'))
+    // 透明交给壳层氛围底，玻璃输入框才有可透的内容
+    .backgroundColor(Color.Transparent)
   }
 }

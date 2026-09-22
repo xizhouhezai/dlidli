@@ -22,7 +22,7 @@
     },
     {
       "name": "bg_page",
-      "value": "#F6F7F8"
+      "value": "#FFFFFF"
     },
     {
       "name": "bg_surface",
@@ -45,12 +45,40 @@
       "value": "#E3E5E7"
     },
     {
-      "name": "tabbar_mask",
-      "value": "#D9F6F7F8"
-    },
-    {
       "name": "state_danger",
       "value": "#F56C6C"
+    },
+    {
+      "name": "ambient_top",
+      "value": "#FFF7FA"
+    },
+    {
+      "name": "ambient_mid",
+      "value": "#FEFBFC"
+    },
+    {
+      "name": "ambient_blob",
+      "value": "#1FFB7299"
+    },
+    {
+      "name": "ambient_blob_alt",
+      "value": "#14FC8BAB"
+    },
+    {
+      "name": "ambient_blob_soft",
+      "value": "#0FFB7299"
+    },
+    {
+      "name": "bg_glass",
+      "value": "#B8FFFFFF"
+    },
+    {
+      "name": "surface_secondary",
+      "value": "#F1F3F5"
+    },
+    {
+      "name": "material_edge",
+      "value": "#66FFFFFF"
     }
   ]
 }

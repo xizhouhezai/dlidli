@@ -40,12 +40,17 @@ export class DliFont {
   static readonly BODY: number = 15;
   static readonly TITLE_SM: number = 17;
   static readonly TITLE: number = 20;
-  static readonly TAB_LABEL: number = 10;
+  static readonly TAB_LABEL: number = 12;
 }
 
 export class DliSize {
   static readonly TAB_ICON: number = 24;
-  static readonly TAB_BAR_HEIGHT: number = 56;
-  static readonly TAB_MASK_HEIGHT: number = 88;
   static readonly TITLE_BAR_HEIGHT: number = 56;
+  /** 底栏悬浮胶囊与页面底部的间距（HdsTabs barFloatingStyle.barBottomMargin） */
+  static readonly TAB_BOTTOM_MARGIN: number = 16;
+  /** 悬浮胶囊压过内容（barOverlap），滚动内容需留出这么多底部空白才不会被压住 */
+  static readonly TAB_RESERVED: number = 96;
+  /** 底栏胶囊宽度：窄屏收窄，避免贴边 */
+  static readonly TAB_WIDTH_SMALL: number = 294;
+  static readonly TAB_WIDTH: number = 328;
 }

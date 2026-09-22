@@ -15,9 +15,9 @@
   - 模拟器操作速查：安装 `hdc -t 127.0.0.1:5555 install -r <hap>`（`<hap>` 务必用**相对路径**：先 `cd` 到产物目录；Git Bash 下传 Windows 绝对路径会被 hdc 拼成 `<当前目录>/D:/...` 而报 `Error opening file`，安装失败后紧接着的 `aa start` 就报 `10104001`，极易误判成包名问题）；启动 `hdc -t … shell "aa start -a EntryAbility -b com.dlidli.app -m entry"`；点击用 `hdc -t … shell "uitest uiInput click <x> <y>"`（`uinput -T -m x y x y` 等长 trace 不触发点击）；取控件实际矩形用 `uitest dumpLayout -p /data/local/tmp/layout.json` 再 `hdc file recv`（本次即以它纠正了 1719→2064 的坐标误判）；截图 `snapshot_display -f <路径>` + `file recv`
   - 视觉预研要点（降级为实测确认，设计侧结论已定稿见 [plan §2/§6](/specs/harmony/plan)）：① `uiMaterial.isImmersiveMaterialSupported()` 在 x86 模拟器返回什么；② `getMaterialInfo()`/`getGlobalMaterialLevel()` 的实际取值（x86 模拟器算力档位可能非高/中档，`style`/`colorInvert` 等可能不生效）；③ 在 `Navigation` 标题栏与 `Tabs` 底部标签栏上挂 `ImmersiveMaterial` 的实际观感与帧率开销；④ 结论若为模拟器不支持，**不得据此判定真机不支持**，记「待真机确认」
   - **预研进度（2026-09-21）**：预研项中的**网络层已随 M4-HMY-03 实测覆盖**——`@ohos.net.http` 走通真实后端（首页分区列表 12 项）、超时/失败重试与 401 续期链路均已验，且模拟器可达宿主机（`10.0.2.2:8000`），结论见 M4-HMY-03；**余 AVPlayer HLS 播放、弹幕 WS 通道、沉浸光感三项待验**（分归 M4-HMY-06、M4-HMY-07 与本节视觉预研）
-- [x] M4-HMY-02 工程骨架：DevEco 工程入库 `apps/harmony` + `pnpm-workspace.yaml` 排除该目录 + 分层目录 + 品牌色/圆角 ArkTS 常量 + HarmonyOS Symbol 图标接入 + 接口类型来源定案 + `compatibleSdkVersion` 取 26 + **应用壳层搭在 `Navigation` + `Tabs(BottomTabBarStyle)` 上**（沉浸光感的唯一合法作用面，见 [plan §2](/specs/harmony/plan)）+ `module.json5` 配 `ohos.arkui.UIMaterial.state`（2026-09-21 完成）
+- [x] M4-HMY-02 工程骨架：DevEco 工程入库 `apps/harmony` + `pnpm-workspace.yaml` 排除该目录 + 分层目录 + 品牌色/圆角 ArkTS 常量 + HarmonyOS Symbol 图标接入 + 接口类型来源定案 + `compatibleSdkVersion` 取 26 + **应用壳层搭在 `Navigation` + `Tabs(BottomTabBarStyle)` 上**（当时认为底栏是沉浸光感的唯一合法作用面）+ `module.json5` 配 `ohos.arkui.UIMaterial.state`（2026-09-21 完成；**该壳层已于 2026-09-22 由 M4-HMY-11 改造为 `HdsTabs` 悬浮胶囊底栏，见 [plan §2/§6](/specs/harmony/plan)**）
   - 覆盖：—（工程）
-  - 实现要点：`bundleName` `com.dlidli.app` / `vendor` `DliDli`；`targetSdkVersion` 与 `compatibleSdkVersion` 均 `26.0.0`（产物 `targetAPIVersion` = `minAPIVersion` = `260000026`）。壳层 `pages/Index.ets` = `Navigation`（标题栏材质 `ImmersiveStyle.ULTRA_THIN` + `interactive`）+ `Tabs(barPosition: BarPosition.End)`（`.barFloatingStyle()` 挂 `THIN` 材质 + `maskColor`/`maskHeight` 蒙层），首页标题栏内嵌搜索入口（对齐官方「一镜到底」搜索）；三页签 首页/搜索/我的（HMY-40/41/42）。材质统一经 `common/constants/MaterialTokens.ets` 工厂产出，内部以 `uiMaterial.isImmersiveMaterialSupported()` 判支持性，不支持时返回 `undefined` **自然降级**，`DliMaterial.off()` 暴露 `Material.empty` 语义（与传 `undefined` 的「恢复默认」区分）。品牌 token 落两处：`common/constants/Theme.ets`（字面量，供 Canvas 绘制消费）+ `resources/{base,dark}/element/color.json`（含深色变体，供声明式 UI 消费）；新增字符串资源与 `common/utils/Logger.ets`（hilog 封装）
+  - 实现要点：`bundleName` `com.dlidli.app` / `vendor` `DliDli`；`targetSdkVersion` 与 `compatibleSdkVersion` 均 `26.0.0`（产物 `targetAPIVersion` = `minAPIVersion` = `260000026`）。壳层 `pages/Index.ets` = `Navigation`（标题栏材质 `ImmersiveStyle.ULTRA_THIN` + `interactive`）+ `Tabs(barPosition: BarPosition.End)`（`.barFloatingStyle()` 挂 `THIN` 材质 + `maskColor`/`maskHeight` 蒙层；**2026-09-22 起改 `HdsTabs` 悬浮胶囊**），首页标题栏内嵌搜索入口（对齐官方「一镜到底」搜索）；三页签 首页/搜索/我的（HMY-40/41/42）。材质统一经 `common/constants/MaterialTokens.ets` 工厂产出，内部以 `uiMaterial.isImmersiveMaterialSupported()` 判支持性，不支持时返回 `undefined` **自然降级**，`DliMaterial.off()` 暴露 `Material.empty` 语义（与传 `undefined` 的「恢复默认」区分）。品牌 token 落两处：`common/constants/Theme.ets`（字面量，供 Canvas 绘制消费）+ `resources/{base,dark}/element/color.json`（含深色变体，供声明式 UI 消费）；新增字符串资源与 `common/utils/Logger.ets`（hilog 封装）
   - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL**；产物 HAP 内 `module.json` 已含 `ohos.arkui.UIMaterial.state = enable`；`sys.symbol.{house,magnifyingglass,person}` 通过资源编译；**ArkUI 状态管理 V2（`@Entry @ComponentV2` / `@Local` / `@Param`）编译通过，可定版**（消解 [plan §6](/specs/harmony/plan) 的 V2 待定项）
   - **模拟器实测（2026-09-21，API 26 实例 `Pura X View`）**：未签名 HAP 装入后启动成功，**点检通过**——标题栏（首页为搜索入口 / 其余页签为纯标题）、底部三页签 首页·搜索·我的 的 Symbol 图标与品牌粉选中态、页面占位内容均正确渲染；`uitest uiInput click` 切页签生效（标题栏与内容同步切换）
   - **实测修掉一处**：根内容标题栏多出返回键 → 补 `.hideBackButton(true)`（返回键应由后续压栈的 `NavDestination` 自带）
@@ -85,12 +85,28 @@
   - 覆盖：HMY-42、HMY-04
 - [ ] M4-HMY-10 端侧验收：核心链路走查（登录 → 找内容 → 播放 → 弹幕 → 互动 → 个人中心）+ 性能指标测量（冷启动、起播、弹幕帧率、崩溃率、包体积）
   - 覆盖：[spec §4 成功指标](/specs/harmony/spec)
+- [x] M4-HMY-11 视觉：沉浸光感落地——底栏改 HDS 悬浮玻璃胶囊、材质赋色改中性系统色、氛围背景组件与壳层透明化、卡片/胶囊接入系统材质（2026-09-22 完成）
+  - 覆盖：HMY-05
+  - 说明：视觉独立成条，**先于端侧验收交付**——观感要在验收走查前定版，否则验收完再返工
+  - 实现要点
+    - **底栏改造为 HDS 悬浮胶囊**：壳层由自绘 `Tabs` + `barFloatingStyle` 换为 `@kit.UIDesignKit` 的 `HdsTabs`（对齐官方样张 `multi-news-read`）——`.barPosition(End)` + `.barOverlap(true)` + `.barMode(Fixed)` + `.divider({ mode: DividerMode.NONE })` + `barFloatingStyle({ barBottomMargin: 16, adaptToHandedness: true, barWidth: { smallWidth: 294, mediumWidth: 328, largeWidth: 328 }, systemMaterialEffect: { materialType, materialLevel } })`。窄 `barWidth` 正是「收成悬浮胶囊」的机关（铺满整宽的永远是一条色条）；材质由 HDS 出，`MaterialTokens` 不再管底栏。`HdsTabs({ index })` 绑定 `@Local currentIndex` 已足够，**不引入 `HdsTabsController`**。因 `barOverlap(true)` 让内容从胶囊下穿过，各长列表底部留白改用 `DliSize.TAB_RESERVED = 96`（否则最后一行被胶囊压住）
+    - **材质赋色改中性、品牌粉只留选中态**：色板删掉 `glass_tint`/`chip_bg`/`tabbar_mask`，改为 `surface_secondary`（浅 `#F1F3F5` / 深 `#262626`）与 `material_edge`（白描边）；`bg_page` 提为**纯白**（对齐 HDS「页面白、材质灰」的层次约定）。`MaterialTokens` 由 5 档工厂收敛为 **3 档**（`titleBar` ULTRA_THIN+interactive / `card` REGULAR+shadow / `chip` THIN+interactive+shadow+lightEffect），三者的 `materialColor` 一律取 `surface_secondary`；`panel()` 与 `PANEL` 因无引用删除；材质对象仍在模块加载时构造一次复用
+    - **`surface()` 永远返回实色中性底，不返回透明**：实测 `systemMaterial` **不会吃掉 `backgroundColor`**（二者并存，底色照旧透出），而材质在均匀浅底上几乎不可见——若地基色透明，卡片会整个「消失」。故兜底色与材质赋色取同一档中性色：能力可用时是「中性玻璃 + 光感」，不可用时退化为平铺次级底色，两种情况都不丢轮廓
+    - **氛围底收敛为很淡的品牌洗色**：`AmbientBackdrop` 保留结构（180° 渐变 + 三枚径向光斑，`Column` + `radialGradient`），但把品牌粉压到近乎不可察觉——顶部 `ambient_top` `#FFF7FA` 与白页仅约 3% 亮度差，光斑不透明度降到 `#1F`/`#14`/`#0F`（≤12%）。**克制是这一层的全部要点**：早前把品牌粉铺到 30%、还染进材质（`glass_tint`），界面到处是半透明的粉，玻璃与品牌色互相稀释，反倒读不出主次
+    - **小控件改为中性次级底色实填、不挂材质**（撤掉原 `chip_bg` 半透明品牌实底）：小尺寸胶囊/行内控件在均匀浅底上挂材质出不了轮廓，按钮会失去可点区域的视觉暗示（退出登录按钮、搜索历史胶囊都出现过）；改用与材质同色的中性实底保形，观感与挂材质一致但一定可见。选中态/主按钮才用品牌实色
+  - **实测修正一处早期结论**（模拟器 API 26 `Pura X View`）：早前记为「`systemMaterial` 压过 `backgroundColor`」——**2026-09-22 复测推翻**：以退出登录按钮做探针，保留 `systemMaterial(card())` 同时把 `backgroundColor` 置 `border_default`(`#E3E5E7`)，灰色实底正常渲染出来。真因是当时地基色透明 + 材质赋色为品牌粉、在均匀浅底上出不了轮廓，被误读成「压过」。据此才定下「`surface()` 永远给实色中性底」的口径
+  - **能力探测取值（2026-09-22 复跑仍成立）**：启动日志 `沉浸光感：supported=true state=1 level=0`（`ENABLE`/`EXQUISITE`），继续消解 [plan §6](/specs/harmony/plan) 的「沉浸光感是否真正生效」；系统弹窗（退出登录确认框）自带明显玻璃观感，是最直观的旁证
+  - **实测抓到并修掉两处**：
+    - ① `AmbientBackdrop` 初版用 `Circle` 画光斑，形状组件默认填充盖住下层渐变 → 改 `Column` + `radialGradient`
+    - ② `position({ y: -DliSize.TITLE_BAR_HEIGHT - 60 })` 触发 ArkTS `arkts-no-polymorphic-unops`（一元负号仅限字面量）→ 提为模块级 `const PRIMARY_BLOB_Y: number = 0 - DliSize.TITLE_BAR_HEIGHT - 60`
+  - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL**（ArkTS 零告警）；`go test ./...` 全绿（本期零后端改动，回归确认）；模拟器逐页实测截图通过——首页（极淡品牌顶 + 悬浮玻璃胶囊选中态 + 中性卡片）、搜索历史、搜索结果（**玻璃胶囊身后红色海报清晰可辨**，是沉浸光感的关键证据）、我的（已登录/未登录）、登录页；壳层标题栏搜索胶囊点击切页签经 `uitest` 实测生效（无需 `HdsTabsController`），登录链路顺带复跑通过
+  - 未覆盖：暗色模式下的氛围底与材质观感未截图核对（模拟器 `param set persist.sys.color.mode` 报 errNum 1001、`settings` 二进制缺失，切不过去；两套 token 均已就位）；全部结论均在 API 26 模拟器取得，**真机待验**
 
 ## 进度
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 10 | 4 |
-| **合计** | **10** | **4** |
+| M4 | 11 | 5 |
+| **合计** | **11** | **5** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
