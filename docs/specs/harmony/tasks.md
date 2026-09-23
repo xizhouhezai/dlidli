@@ -14,7 +14,7 @@
   - 可用结论（同期实测）：模拟器运行时 **API 26 / guest `7.0.0.106(SP1DEVC00E999R4P11)` / abi `x86_64`**；**未签名 HAP 可直接 `hdc install` 成功**，本地验证无需配置 `signingConfigs`
   - 模拟器操作速查：安装 `hdc -t 127.0.0.1:5555 install -r <hap>`（`<hap>` 务必用**相对路径**：先 `cd` 到产物目录；Git Bash 下传 Windows 绝对路径会被 hdc 拼成 `<当前目录>/D:/...` 而报 `Error opening file`，安装失败后紧接着的 `aa start` 就报 `10104001`，极易误判成包名问题）；启动 `hdc -t … shell "aa start -a EntryAbility -b com.dlidli.app -m entry"`；点击用 `hdc -t … shell "uitest uiInput click <x> <y>"`（`uinput -T -m x y x y` 等长 trace 不触发点击）；取控件实际矩形用 `uitest dumpLayout -p /data/local/tmp/layout.json` 再 `hdc file recv`（本次即以它纠正了 1719→2064 的坐标误判）；截图 `snapshot_display -f <路径>` + `file recv`
   - 视觉预研要点（降级为实测确认，设计侧结论已定稿见 [plan §2/§6](/specs/harmony/plan)）：① `uiMaterial.isImmersiveMaterialSupported()` 在 x86 模拟器返回什么；② `getMaterialInfo()`/`getGlobalMaterialLevel()` 的实际取值（x86 模拟器算力档位可能非高/中档，`style`/`colorInvert` 等可能不生效）；③ 在 `Navigation` 标题栏与 `Tabs` 底部标签栏上挂 `ImmersiveMaterial` 的实际观感与帧率开销；④ 结论若为模拟器不支持，**不得据此判定真机不支持**，记「待真机确认」
-  - **预研进度（2026-09-21 起，2026-09-22 补记）**：预研项中的**网络层已随 M4-HMY-03 实测覆盖**——`@ohos.net.http` 走通真实后端（首页分区列表 12 项）、超时/失败重试与 401 续期链路均已验，且模拟器可达宿主机（`10.0.2.2:8000`），结论见 M4-HMY-03；**AVPlayer HLS 播放已随 M4-HMY-06 实测覆盖**（后端签名 m3u8 真实解码出画 + 清晰度切换 + 签名临期换源续播 + 横屏全屏，结论见 M4-HMY-06）；**沉浸光感已随 M4-HMY-11 实测覆盖**（`supported=true`/`state=ENABLE`/`level=EXQUISITE`，结论见 M4-HMY-11 与 [plan §6](/specs/harmony/plan)）；**余弹幕 WS 通道待验**（归 M4-HMY-07）
+  - **预研进度（2026-09-21 起，2026-09-22 补记）**：预研项中的**网络层已随 M4-HMY-03 实测覆盖**——`@ohos.net.http` 走通真实后端（首页分区列表 12 项）、超时/失败重试与 401 续期链路均已验，且模拟器可达宿主机（`10.0.2.2:8000`），结论见 M4-HMY-03；**AVPlayer HLS 播放已随 M4-HMY-06 实测覆盖**（后端签名 m3u8 真实解码出画 + 清晰度切换 + 签名临期换源续播 + 横屏全屏，结论见 M4-HMY-06）；**沉浸光感已随 M4-HMY-11 实测覆盖**（`supported=true`/`state=ENABLE`/`level=EXQUISITE`，结论见 M4-HMY-11 与 [plan §6](/specs/harmony/plan)）；**弹幕 WS 通道已随 M4-HMY-07 实测覆盖**（`@ohos.net.webSocket` 与 Go Hub 互通无碍，唯一阻塞是服务端 Origin 白名单未含客户端来源，端侧无从绕过；降级轮询链路与真实帧上屏均已验，结论见 M4-HMY-07）。**至此预研四项全部收口**
 - [x] M4-HMY-02 工程骨架：DevEco 工程入库 `apps/harmony` + `pnpm-workspace.yaml` 排除该目录 + 分层目录 + 品牌色/圆角 ArkTS 常量 + HarmonyOS Symbol 图标接入 + 接口类型来源定案 + `compatibleSdkVersion` 取 26 + **应用壳层搭在 `Navigation` + `Tabs(BottomTabBarStyle)` 上**（当时认为底栏是沉浸光感的唯一合法作用面）+ `module.json5` 配 `ohos.arkui.UIMaterial.state`（2026-09-21 完成；**该壳层已于 2026-09-22 由 M4-HMY-11 改造为 `HdsTabs` 悬浮胶囊底栏，见 [plan §2/§6](/specs/harmony/plan)**）
   - 覆盖：—（工程）
   - 实现要点：`bundleName` `com.dlidli.app` / `vendor` `DliDli`；`targetSdkVersion` 与 `compatibleSdkVersion` 均 `26.0.0`（产物 `targetAPIVersion` = `minAPIVersion` = `260000026`）。壳层 `pages/Index.ets` = `Navigation`（标题栏材质 `ImmersiveStyle.ULTRA_THIN` + `interactive`）+ `Tabs(barPosition: BarPosition.End)`（`.barFloatingStyle()` 挂 `THIN` 材质 + `maskColor`/`maskHeight` 蒙层；**2026-09-22 起改 `HdsTabs` 悬浮胶囊**），首页标题栏内嵌搜索入口（对齐官方「一镜到底」搜索）；三页签 首页/搜索/我的（HMY-40/41/42）。材质统一经 `common/constants/MaterialTokens.ets` 工厂产出，内部以 `uiMaterial.isImmersiveMaterialSupported()` 判支持性，不支持时返回 `undefined` **自然降级**，`DliMaterial.off()` 暴露 `Material.empty` 语义（与传 `undefined` 的「恢复默认」区分）。品牌 token 落两处：`common/constants/Theme.ets`（字面量，供 Canvas 绘制消费）+ `resources/{base,dark}/element/color.json`（含深色变体，供声明式 UI 消费）；新增字符串资源与 `common/utils/Logger.ets`（hilog 封装）
@@ -36,7 +36,7 @@
   - **实测抓到并修掉一处**：`send()` 的 catch 原先把**所有**异常都重写为「网络不可用」，把 `parse()` 抛出的业务错误一并吞掉——后果是 401 被降级成网络失败、触发 3 次无意义重试，且**续期分支永远不可达**。改为 `err instanceof ApiError` 时原样上抛（只把 `req.request` 的传输层异常定级为网络类），修后日志链路正确：`status=401 code=10003`（不重试）→ 续期不可用 → 清凭证 → `retryable=false`
   - 验证结论：`hvigorw assembleHap` **BUILD SUCCESSFUL**（ArkTS 零告警）；**模拟器实测三态**——① 成功：首页分区栏拉到后端真实 12 项（动画/游戏/科技数码…）；② 失败可重试：停掉后端 → 连接超时判为网络类（`errCode=2300028 → -2`）→ 退避重试 3 次 → 呈现「加载失败 / 网络超时，请重试」+ 重试按钮，**未白屏**；③ 恢复：后端起回后点「重试」（按 `dumpLayout` 实测矩形 `[549,1158][772,1278]` 取中心点击）→ 重新加载 12 项。**401 分支**用临时把接口指向需鉴权的 `/api/v1/users/me` 验证（验完已还原）：`code=10003` 不重试 → 无 refresh_token → 清凭证 → 文案「登录已过期，请重新登录」且**不出现重试按钮**（业务错误不可重试）
   - **模拟器访问宿主机的口径（本次实测）**：`http://10.0.2.2:8000` 直连宿主 loopback 可用（QEMU 用户态网络），明文 HTTP 未被系统拦截，无需 `hdc fport` 转发；该地址由 `ApiConfig.BASE_URL` 单点维护，真机联调改宿主局域网 IP 即可
-  - 未覆盖：401**续期成功后的重放**分支（需真实登录态才能造出有效 refresh_token，归 M4-HMY-04，**已于 2026-09-21 由 M4-HMY-04 实测补齐**）；WS 弹幕通道（M4-HMY-07）
+  - 未覆盖：401**续期成功后的重放**分支（需真实登录态才能造出有效 refresh_token，归 M4-HMY-04，**已于 2026-09-21 由 M4-HMY-04 实测补齐**）；WS 弹幕通道（M4-HMY-07，**已于 2026-09-22 实测覆盖**，结论见 M4-HMY-07）
 - [x] M4-HMY-04 登录与会话：手机号验证码与密码登录、令牌偏好存储、静默续期、退出清理（2026-09-21 完成）
   - 覆盖：HMY-01、HMY-02
   - 实现要点：契约以**服务端实现为准**核对——`GET /auth/captcha` 实返 `{id, svg}`（**内联 SVG 文本**，swagger 注释里的 `{captcha_id, image_base64}` 与实现不符，已在 `model/Auth.ets` 注明）；`/auth/sms-code` 在 dev 环境回显 `debug_code`。`model/Auth.ets` 落 `Profile`/`TokenPair`/`SmsCodeResult`/`CaptchaResult`；`service/AuthApi.ets` 覆盖验证码/短信/密码登录/刷新/登出/`users/me`，**鉴权前的自证类请求（验证码、登录）一律走 `postPublic`/`getPublic`**，不带 Authorization、不参与 401 续期，避免「未登录却先续期」；`store/Session.ets` 以 `@ObservedV2` + `@Trace` 单例承载登录态（`loggedIn`/`nickname`/`avatar`/`level`），`hydrate()` 先用 `TokenStore.ready()` 对齐异步回填再判定，并以 `AuthApi.me()` 校验令牌（401 时清凭证回落未登录）；`logout()` 先尽力调用服务端 `/auth/logout`（失败只记日志，不阻断本地清理）再清凭证。`common/utils/AppRouter.ets` 收口 `NavPathStack` 的路由入口（`RouteName.LOGIN` + `bind/push/pop`），`pages/Index.ets` 由 `Navigation(this.pathStack).navDestination(...)` 承接压栈页；`pages/auth/LoginPage.ets` 为 `NavDestination`（自带返回键），双模式（验证码/密码）、60s 倒计时、dev 回显验证码自动填充、密码模式失败后清空验证码并换图；`pages/profile/ProfilePage.ets` 拆未登录/已登录两态，退出走 `this.getUIContext().showAlertDialog`（`AlertDialog.show` 在 API 26 已废弃，改后 ArkTS 零告警）。`TokenStore` 新增 `ready()` 并让 `restore()` 幂等，解决「onCreate 异步回填与读登录态竞态」。新增端侧语义色 `state_danger`（`#F56C6C`，对齐 Web 端 ElMessage error 色；Web 侧无对应 SCSS 变量，为端侧新增 token）
@@ -105,15 +105,44 @@
     - **切后台（HMY-15 后半）**：切后台后 Redis 进度冻结（两次采样均 129/241 不变），重启后停在原位**且不自动续播**
     - **签名静默续签（HMY-14）**：临时把续签阈值放大到 24h 强制触发，得到完整干净的一轮 `initialized → prepared → 换源后跳转到 → 跳转完成 → playing → 静默换源（playing=true）`，每次换源位置都保住、零 `5400102`（验完阈值已还原 5min）
     - **实测方法补充**：播放页**截图会取到旧帧**（两次间隔 2s 的快照完全一致），本任务改以 `uitest dumpLayout` 导出的控件树 + Redis 作为可判定 oracle；`uitest uiInput swipe` 的第 5 个参数是**速率**（200~40000）而非时长，要做「慢拖」须传 200
-  - 未覆盖：**换源瞬间画面会短暂空白**（同实例 reset，模拟器约 3.5s），双播放器无缝切换列为后续优化；弹幕与互动评论未接（M4-HMY-07/08，页内以一行提示标注）；**起播（约 12s）与换源（约 3.5s）耗时、以及 HLS 硬解表现均为模拟器口径，真机待验**（模拟器视频硬解受限，播放类结论一律不据此判定「鸿蒙不支持」）
+  - 未覆盖：**换源瞬间画面会短暂空白**（同实例 reset，模拟器约 3.5s），双播放器无缝切换列为后续优化；弹幕与互动评论未接（**弹幕已于 2026-09-22 由 M4-HMY-07 补齐**，见该条；互动评论归 M4-HMY-08，页内以一行提示标注）；**起播（约 12s）与换源（约 3.5s）耗时、以及 HLS 硬解表现均为模拟器口径，真机待验**（模拟器视频硬解受限，播放类结论一律不据此判定「鸿蒙不支持」）
   - **交付后修复（2026-09-22，PATCH v0.48.1）**：验收反馈「白底画面下进度条看不清」，同时复现出两处起播缺陷。
     - ① **控件层无蒙层**：控制层是白字 + 半透明白轨，压在亮画面上整体消失（白底素材下进度条与时间戳几乎不可见）→ 顶栏/底栏各加一层渐变蒙层（`SCRIM_TOP` `#B3000000` 顶实→透、`SCRIM_BOTTOM` `#CC000000` 透→底实）。蒙层挂在控件容器自身，底部控件行落在渐变更实的一侧；实测白底帧下时间戳、已播（品牌粉）与未播（半透明白）轨道均可辨，蒙层不影响命中测试（倍速面板仍正常展开）
     - ② **等待 `prepared` 超时阈值偏紧**：`STATE_TIMEOUT_MS` 原为 15s，而模拟器冷启下 HLS 拉清单到 `prepared` 实测 **15.0~15.5s**（连续两次失败，`prepared` 恰在超时后 0.4~0.5s 到达），表现为起播直接判失败、状态机停在 `error` → 提到 **30s**（真机起播是秒级，该上限只在对端无响应时生效）。修后同一路径起播正常（`prepared` 14.9s → 续播 seek → `playing`）
     - ③ **超时路径把 `undefined` 摆到用户面前**：等待失败抛的是自造 `Error`，而 catch 一律 `as BusinessError` 取 `code`（类型断言不改运行时形态）→ 屏上显示「播放失败（undefined）」。改抛 `StateWaitError`（带 `friendly` 字段），日志留技术细节、UI 给「起播超时，请重试」/「播放出错，请重试」；**用临时把阈值压到 1s 强制触发实测**（日志与屏上文案均已核对，验完已还原 30s）
     - 口径修正：本节原记「ArkTS 零告警」**不准确**——`media` 命名空间的值引用（`SeekMode`/`BufferingInfoType` 常量）会触发 SDK syscap 提示共 4 条，`assembleHap` 输出为 `BUILD SUCCESSFUL` 但带 `ArkTS:WARN`，说明见 `media/VideoPlayer.ets` 文件头
-- [ ] M4-HMY-07 弹幕：分段拉取与预取、Canvas 轨道渲染、WS 实时下发与断线重连及 HTTP 回退、关键词/发送者屏蔽、展示设置、发送与频控、列表面板
+- [x] M4-HMY-07 弹幕：分段拉取与预取、Canvas 轨道渲染、WS 实时下发与断线重连及 HTTP 回退、关键词/发送者屏蔽、展示设置、发送与频控、列表面板（2026-09-22 完成）
   - 覆盖：HMY-20、HMY-21、HMY-22、HMY-23、HMY-24
   - 全屏弹幕须对齐[官方影音娱乐规范](/specs/harmony/plan)（§7.2）：上下有黑边时弹幕仅在上方黑边区域内显示；无黑边时限制同屏弹幕密度
+  - 实现要点：
+    - **分工**：`danmaku/DanmakuEngine.ets`（Canvas 轨道渲染，纯渲染无 IO）、`danmaku/DanmakuController.ets`（分段池/屏蔽/发送/列表/降级轮询）、`danmaku/DanmakuSocket.ets`（WS 通道）、`danmaku/DanmakuSettings.ets`（`@ObservedV2` 单例设置）、`components/DanmakuLayer.ets`（逐帧驱动：取位置 → 补分段上屏 → 绘制）、`model/Danmaku.ets` + `service/DanmakuApi.ets`。播放页只接线与画 UI，与 Web 端 `useDanmakuController + DanmakuLayer` 同分工
+    - **引擎以视频时间为相位基准**：一条弹幕的位置是 `(videoMs - startMs) / durationMs` 的**纯函数**，由此免费得到三个正确行为——暂停时弹幕冻住（Web 端 DOM 动画做不到，暂停后弹幕仍在飘）、seek 后落到新位置的正确轨迹而非从右侧重飘一遍、分段/实时弹幕**迟到**时直接出现在它该在的位置。代价是没有「动画完成回调」，回收改为每帧按 `videoMs` 判定。`videoMs()` 以播放器采样值为锚点 + 墙钟按倍速外推（`timeUpdate` 约 100ms 一次，直接拿它画会「一格一格跳」）
+    - 常量与口径：`LINE_HEIGHT=32` / `TRACK_PAD=4` / `MIN_TRACKS=3` / `MAX_ACTIVE=240` / `FIXED_DURATION_MS=4000` / `LATE_WINDOW_MS=12000`（迟到窗口——不加它，一次前进式 seek 会把整段几百条早已过期的弹幕塞进引擎，白跑一轮绘制与轨道分配）；轨道分配让同速弹幕在**前车走完 1/3** 时入场（hold = 滚动总时长/3），全满时随机叠放；`fillText` 的 y 是**基线**而非行框上缘，须从行框底部上提一个降部（`DESCENT_RATIO=0.25`），否则首行会被裁到区域外（实测）
+    - **分段拉取与预取（HMY-20）**：段号变化时拉当前段并**预取下一段**；失败回滚 `loadedSegs` 允许下个心跳重试；段长 `segment_ms` 由首次响应带回（端侧不硬编码 6min）。池按段存放 + 每段一个扫描游标，正常播放整体是 O(新上屏条数)（池可上万条）
+    - **§7.2 区域与密度**：`dmLetterboxBar(stageW, stageH, videoW, videoH)` 只在视频比舞台更「宽」时算出上下黑边，且**窄于 `LINE_HEIGHT + TRACK_PAD*2`（40vp）的黑边按「无有效黑边」处理**（放不下整行，不如不截）；有黑边 → 区域只取上方黑边区（`densityScale=1`）；无黑边 → 铺满舞台，全屏态再乘 `FULLSCREEN_DENSITY_SCALE=0.6` 压同屏密度。舞台尺寸取 `onAreaChange`（vp，与 Canvas 绘制单位一致），画幅/全屏变化清屏重排（旧轨道号在新区间可能越界）
+    - **屏蔽（HMY-23）**：关键词（`content.includes`）+ 发送者哈希，服务端账号级下发；**WS 帧不经服务端过滤，本地过滤是唯一防线**；`is_self` 的弹幕始终可见（否则发完自己先看不见，观感像发失败了）。DM-20/21 均未要求「解除屏蔽」UI，故本期不做
+    - **发送（HMY-21）**：等级门槛/频控/去重**全部由服务端裁决**，端侧只翻译错误码（40001 太频繁 / 40002 需 Lv1 / 40003 需 Lv3 / 40004 内容重复）——**不做本地倒计时**，端侧与服务端时间窗不同步，本地拦反而误伤。发送成功走乐观上屏（服务端广播排除发送者本人，故不会重复）
+    - **WS 与回退（HMY-22）**：指数退避重连（2/4/8/15/15s，`MAX_RETRY=5`），次数用尽置 `degraded` 并起 **15s 分段轮询**兜底（轮询重取当前段——发送会让服务端段缓存失效，故能拿到新弹幕），状态回到 `open` 即停轮询
+    - **列表面板（HMY-24）**：`/list` 每页 50（服务端上限 200）、按 id 倒序（最新在前）、触底加载更多、点条目跳到该时间点
+    - **展示设置**：开关**落盘记忆**（对齐 DM-11「并记忆状态」；Web 端只持久化展示项、不记忆开关）；不透明度/字号/区域/速度/密度。影响轨道分配的档位（区域/密度）改动要**清屏重排**，只影响画笔的档位（开关/不透明度/字号/速度）重画即可——**暂停时没有新弹幕入队，光靠引擎的 dirty 标记不会重绘**，故 `DanmakuLayer` 每帧比较两个签名并分别触发
+    - 契约以服务端实现为准核对：`/danmaku` 返回 `{segment, segment_ms, list[]}`；`/list` 的分页参数是 **`size`**（不是 `page_size`）；雪花 id 在 JSON 里是**字符串**（端侧定 `id: string`）；`/ws?token=` 只出不进（上行帧被服务端丢弃，发送一律走 HTTP）；游客可用 `/danmaku` 与 `/list`，`/blocks` 需登录（未登录只记日志，不阻塞弹幕展示）
+  - **官方 §7.2 黑边分支：实测几何 + 一处越界缺陷（本次抓到已修）**：
+    - **本机内容下黑边分支在稳态不可达**：竖屏舞台高度由视频画幅等比算出（`screenWidthVp × videoH/videoW`），舞台画幅恒等于视频画幅 → `bar=0`；横屏全屏实测舞台 `744×440vp` vs 视频 `1280×720` → `bar=0`（走「无黑边 + 密度 0.6」分支）。实测日志：竖屏 `弹幕区域：舞台 440x247.5vp 视频 1280x720 全屏=false 黑边=0vp`、横屏 `舞台 744x440vp … 全屏=true 黑边=0vp`（本条日志为本次新增，真机排查黑边问题可直接看它）
+    - **但旋屏过渡会短暂经过「竖屏 + 全屏」中间态**：`舞台 440x677vp → 黑边 214.75vp`、`舞台 440x744vp → 黑边 248.25vp`（随后才转成横屏），说明黑边分支不是死代码
+    - 为核验该分支渲染，按 2.39:1 宽银幕片横屏全屏下的黑边（≈64vp）**临时抬一个黑边下限做探针**，并在 dev 库**临时插 3 条聚集弹幕**（6.0/6.2/6.4s）占满轨道（两者验完均已还原/删除）：
+      - 修前：3 条轨道全开，第 3 行文字落在 68~100vp，**越出 64vp 黑边、画到画面里**
+      - 修后：只剩 1 行且全在 64vp 之内（截图核对）
+    - 根因：`trackCount` 的 `Math.max(MIN_TRACKS, count)` 只按「区域高 × 区域比例 × 密度档 × 全屏系数」算，**没有区域高度的物理上限**，`MIN_TRACKS=3` 在黑边 40~104vp 时会把弹幕排到区域外（3 行需要 104vp）。规范要求有黑边时弹幕**只在上方黑边区域内**显示，故加 `capacity = floor((frame.height - TRACK_PAD*2) / LINE_HEIGHT)` 并取 `min(max(MIN_TRACKS, count), capacity)`，`enter()` 在 `tracks === 0` 时直接不上屏（宁可不显示，也不画到画面里）。常规画幅下 `capacity` 不收紧（竖屏 247.5vp → 容量 7 > 档位 6；横屏 440vp → 容量 13 > 档位 7），只影响「区域放不下 3 行」的黑边与极扁画幅
+  - **结项 M4-HMY-01 余项「弹幕 WS 通道待验」（2026-09-22 实测）**：ArkTS `@ohos.net.webSocket` 与 Go Hub 互通本身无碍，**唯一阻塞是 Origin 白名单**——① ArkTS 的 WebSocket **自生成 Origin**，默认形态 `http://<host>`（**不带端口**，`connect()` 的同名 header 覆盖不掉），API 26 起可用 `supportOriginPort: true` 让它带上端口；② 服务端 `CheckOrigin` 对 `allow_origins` 做**精确匹配**（dev 为 `http://localhost:5173~5175`），直连 `ws://10.0.2.2:8000` 时 `Origin=http://10.0.2.2` 不在白名单 → 握手 403 → 端侧按失败重连、`MAX_RETRY` 用尽后置 `degraded`（这条降级链路已实测：`弹幕通道异常：code=200` ×5 → `实时弹幕不可用，改用分段轮询兜底` → 15s 后 `弹幕分段 0 就绪：4 条`）；③ 端侧临时把 WS 地址指向设备侧 `localhost:5173`（`hdc rport tcp:5173 tcp:8000` 反向转发到本机 8000）并置 `supportOriginPort: true` 后：握手成功（`弹幕通道已连接`）、`?token=` 鉴权生效、收到真实广播帧并上屏（`收到实时弹幕帧：id=2102328490358476800 t=3000`），且命中屏蔽的帧被**本地过滤**；④ 结论：dev/局域网环境的唯一阻塞是**服务端白名单未含客户端来源，端侧无从绕过**；生产若同源（App 连 `wss://<正式域名>`）则 Origin 与白名单条目一致。**上线前需服务端确认此项**（本期零后端改动，故未动白名单；`supportOriginPort` 也未随包发布——默认带端口在正式域名上反而可能破坏 Origin 匹配）
+  - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL**；`go test ./... -count=1` 全绿（本期零后端改动，回归确认；`internal/module/danmaku` 0.552s）；模拟器实测（API 26 实例 `Pura X View`，后端本地 `http://10.0.2.2:8000`，种子稿 `BVSEED0001` = 4 条 @2/5/8/11s）逐项通过：
+    - **分段与预取（HMY-20）**：进页**同一瞬间**打出 `弹幕分段 0 就绪：4 条（段长 360000ms）` 与 `弹幕分段 1 就绪：0 条（段长 360000ms）`——段 1 起点在 6:00，是预取而非按需（为取这条证据本次新增了段就绪日志）
+    - **Canvas 渲染**：竖屏 00:03 时「弹幕自检 A」自右缘进入并左移；横屏全屏同一条按密度 0.6 分支正常上屏（截图核对，修 `capacity` 后两条分支均无回归）
+    - **发送（HMY-21）**：Lv1 白字滚动 → toast「弹幕已发送」+ **乐观上屏且带 `is_self` 白框** + 服务端落库；Lv3 门槛（顶部/彩色）→ toast「Lv3 解锁彩色弹幕与顶部/底部弹幕」且选中态不变
+    - **屏蔽（HMY-23）**：加关键词后服务端落 `danmaku_block` 行 + 面板出 chip + 重 seek 后该条（00:08）不再渲染；屏蔽发送者后落行 + 「已屏蔽 1 位用户」+ 该发送者 4 条全部不渲染
+    - **列表面板（HMY-24）**：共 4 条、最新在前、点「复制」出「已复制」toast
+    - **WS（HMY-22）**：见上条 M4-HMY-01 结项（真实握手 + 帧上屏 + 本地过滤均已实测）；`degraded → 分段轮询` 兜底另在本次复跑中再次实测
+    - 验证后状态复原：临时弹幕与屏蔽行已删（`BVSEED0001` 4 行、`video_stat.danmaku_cnt=4`、`danmaku_block` 0 行）、反向端口转发已撤、段缓存键 `dm:v:{vid}:0` 已清
+  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得）；**黑边分支的稳态真机场景未覆盖**——需画幅比宽于窗口的宽银幕片（本机内容全 16:9，故只以探针核验，见上）；列表「加载更多」未在 >50 条的稿上实测（种子仅 4 条）；发送频控/去重（40001/40004）的**服务端裁决文案**未在 UI 复现（端侧不做本地拦截，错误码翻译由 `ErrorMessages` 表覆盖）；暗色模式下的弹幕观感未核对
 - [ ] M4-HMY-08 互动与评论：点赞/投币/收藏/长按三连（幂等 + 原生动画）、评论一级与二级、分享走系统面板
   - 覆盖：HMY-30、HMY-31、HMY-32
 - [ ] M4-HMY-09 个人中心：资料与我的投稿、观看历史、收藏、未登录态入口、端侧偏好与进度缓存
@@ -141,7 +170,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 11 | 6 |
-| **合计** | **11** | **6** |
+| M4 | 11 | 7 |
+| **合计** | **11** | **7** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
