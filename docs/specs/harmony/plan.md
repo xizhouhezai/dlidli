@@ -124,7 +124,11 @@ apps/harmony/
   → 续期失败 → 清凭证 → 跳登录页
 ```
 
-**三连**（承 ITR-30）：长按点赞 1.5s → 并行发起点赞/投币（默认 2 枚，不足则 1 枚）/收藏 → 幂等键防重 → 原生动画反馈。
+**三连**（承 ITR-30）：长按点赞 1.5s → `POST /videos/{bvid}/triple`（服务端一次做完点赞 + 投币 2 枚不足则 1 枚 + 收藏默认夹，返回三项状态与 delta）→ 端侧按 delta 修正计数 → 原生动画反馈。
+
+> 落地细节见 [tasks M4-HMY-08](/specs/harmony/tasks)：长按由 `LongPressGesture({duration:1500})` 直接驱动（不在控制器内重复计时，否则手感变 3s）；长按松手时 Tap 与 LongPress 在 Parallel 组下都会命中，故加 300ms 单击抑制窗口（三连已含点赞，否则会把刚点上的赞取消掉）；动画用 `uiContext.animateTo` 做脉冲 + 三段递进点亮；幂等靠服务端开关/唯一键语义 + 端侧 `acting` 串行化与失败回滚。
+
+> **与 Web 端的差异**（承 spec 端侧差异条款）：长按 800ms → 1.5s；分享由「转发到动态」弹层改为**系统分享面板**（`systemShare.ShareController`，鸿蒙端无小程序卡片载体）。
 
 ## 6. 风险与待定项
 

@@ -7,6 +7,13 @@ export class ApiConfig {
   static readonly BASE_URL: string = 'http://10.0.2.2:8000';
   static readonly API_PREFIX: string = '/api/v1';
 
+  /**
+   * H5 站点地址（站外分享链接用，SHR-02 / HMY-32）。
+   * 与 BASE_URL 分开是因为二者来源不同域是常态：本地联调时后端在 10.0.2.2:8000，
+   * 而 Web 端 dev server 在宿主 5173；生产则各自换成正式域名。
+   */
+  static readonly WEB_BASE_URL: string = 'http://10.0.2.2:5173';
+
   static readonly CONNECT_TIMEOUT_MS: number = 5000;
   static readonly READ_TIMEOUT_MS: number = 10000;
 
