@@ -431,6 +431,114 @@
     {
       "name": "dm_live_off",
       "value": "实时弹幕已断开，正在定时刷新"
+    },
+    {
+      "name": "action_delete",
+      "value": "删除"
+    },
+    {
+      "name": "cmt_count",
+      "value": "%d 条评论"
+    },
+    {
+      "name": "cmt_sort_hot",
+      "value": "最热"
+    },
+    {
+      "name": "cmt_sort_new",
+      "value": "最新"
+    },
+    {
+      "name": "cmt_input_hint",
+      "value": "发一条友善的评论"
+    },
+    {
+      "name": "cmt_reply_hint",
+      "value": "回复 @%s"
+    },
+    {
+      "name": "cmt_send",
+      "value": "发布"
+    },
+    {
+      "name": "cmt_sent",
+      "value": "已发布"
+    },
+    {
+      "name": "cmt_need_login",
+      "value": "登录后参与评论"
+    },
+    {
+      "name": "cmt_need_content",
+      "value": "评论不能为空"
+    },
+    {
+      "name": "cmt_reply",
+      "value": "回复"
+    },
+    {
+      "name": "cmt_top",
+      "value": "置顶"
+    },
+    {
+      "name": "cmt_expand_more",
+      "value": "展开更多回复（共 %d 条）"
+    },
+    {
+      "name": "cmt_empty",
+      "value": "还没有评论，来抢沙发～"
+    },
+    {
+      "name": "cmt_load_more",
+      "value": "加载更多评论"
+    },
+    {
+      "name": "cmt_delete_title",
+      "value": "删除评论"
+    },
+    {
+      "name": "cmt_delete_msg",
+      "value": "确定删除这条评论吗？"
+    },
+    {
+      "name": "cmt_deleted",
+      "value": "已删除"
+    },
+    {
+      "name": "act_need_login",
+      "value": "登录后可互动"
+    },
+    {
+      "name": "act_triple_done",
+      "value": "三连成功，感谢支持！"
+    },
+    {
+      "name": "act_coined_hint",
+      "value": "已经投过币啦"
+    },
+    {
+      "name": "act_coin_done",
+      "value": "投了 %d 枚硬币～"
+    },
+    {
+      "name": "act_coin_opt",
+      "value": "投 %d 枚"
+    },
+    {
+      "name": "act_fav_on",
+      "value": "已收藏"
+    },
+    {
+      "name": "act_fav_off",
+      "value": "已取消收藏"
+    },
+    {
+      "name": "act_fav_default_suffix",
+      "value": "（默认）"
+    },
+    {
+      "name": "act_link_copied",
+      "value": "链接已复制，去粘贴分享吧"
     }
   ]
 }

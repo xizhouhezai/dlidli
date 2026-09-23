@@ -6,7 +6,10 @@ import { StreamItem, VideoDetail } from '../../model/Video';
 import { VideoApi } from '../../service/VideoApi';
 import { ErrorStateView } from '../../components/ErrorStateView';
 import { DanmakuLayer } from '../../components/DanmakuLayer';
+import { ActionBar } from '../../components/ActionBar';
+import { CommentSection } from '../../components/CommentSection';
 import { DanmakuController } from '../../danmaku/DanmakuController';
+import { InteractionController } from '../../service/InteractionController';
 import { colorHex } from '../../danmaku/DanmakuEngine';
 import { DmArea, DmDensity, DmSpeed, dmSettings } from '../../danmaku/DanmakuSettings';
 import { AppRouter, RouteName } from '../../common/utils/AppRouter';
@@ -122,6 +125,8 @@ export struct PlayPage {
   @Local tags: string[] = [];
   @Local streams: StreamItem[] = [];
   @Local qualityIndex: number = 0;
+  /** 详情实体（互动栏 ActionBar 消费完整 detail；loadDetail 成功后赋值） */
+  @Local currentDetail: VideoDetail = {} as VideoDetail;
 
   @Local controlsVisible: boolean = true;
   @Local panelOpen: boolean = false;
@@ -144,6 +149,9 @@ export struct PlayPage {
 
   /** 弹幕控制器：分段拉取/实时通道/屏蔽/发送/列表都在其中，页面只做接线与 UI */
   private dm: DanmakuController = new DanmakuController();
+
+  /** 互动控制器：点赞/投币/收藏/三连（M4-HMY-08），页面只接线 */
+  private acts: InteractionController = new InteractionController();
 
   /** 播放器是业务无关的状态容器，页面只读它的 @Trace 字段驱动 UI */
   private player: VideoPlayer = new VideoPlayer();
@@ -234,6 +242,11 @@ export struct PlayPage {
     try {
       const detail: VideoDetail = await VideoApi.detail(this.bvid);
       this.applyDetail(detail);
+      this.currentDetail = detail;
+      // 互动状态装载（M4-HMY-08）：seed 计数并拉赞/币/藏（详情已含完整 stat 与 owner）
+      this.acts.load(this.bvid, detail).catch((err: Object) => {
+        Logger.warn(TAG, `互动状态装载失败：${JSON.stringify(err)}`);
+      });
       const list: StreamItem[] = detail.streams ?? [];
       if (list.length === 0) {
         this.noStream = true;
@@ -1349,10 +1362,12 @@ export struct PlayPage {
           .width('100%')
       }
 
-      Text($r('app.string.play_pending'))
-        .fontSize(DliFont.CAPTION)
-        .fontColor($r('app.color.text_tertiary'))
-        .width('100%')
+      // 互动栏（M4-HMY-08）：点赞/投币/收藏/长按三连 + 分享（系统面板）
+      ActionBar({ bvid: this.bvid, detail: this.currentDetail })
+
+      // 评论区（M4-HMY-08 / CMT-01~04）：一级 + 二级、排序、分页、发布/回复、点赞、删除
+      Divider().color($r('app.color.border_default'))
+      CommentSection({ bvid: this.bvid })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
