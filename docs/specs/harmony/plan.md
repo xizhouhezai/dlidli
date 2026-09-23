@@ -114,6 +114,8 @@ apps/harmony/
   → 发送：校验等级门槛（本地提示 + 服务端校验）→ 频控 → 上屏
 ```
 
+> 落地细节与实测结论见 [tasks M4-HMY-07](/specs/harmony/tasks)（含 WS 的 Origin 阻塞与降级轮询、§7.2 黑边分支的实测几何与一处越界缺陷修复）。
+
 **登录与会话**（承 ACC-01/03/06）：
 
 ```
@@ -132,7 +134,8 @@ apps/harmony/
   - **操作口径**：先确认 SystemUI 就绪（`com.ohos.sceneboard` 进 FOREGROUND / `hidumper -s WindowManagerService` 窗口数 > 0）再安装与启动；不在启动窗口期反复 `snapshot_display`。命令速查见 [tasks M4-HMY-01](/specs/harmony/tasks)。
   - **附带结论**：模拟器为 **API 26 / guest `7.0.0.106(SP1DEVC00E999R4P11)` / abi `x86_64`**；**未签名 HAP 可直接 `hdc install` 成功**——本机本地验证**无需配置 `signingConfigs`**，可砍掉签名前置。
   - **沉浸光感是否生效（2026-09-22 已验，见下条「沉浸光感落地」）**：当时判「浅色纯色底无可比对参照」只说对了一半——**材质确实生效了**（`supported=true`、应用级开关 `state=ENABLE`、全局档 `level=EXQUISITE`），但**纯色底上玻璃本来就看不出**，真因在背景而非能力。
-- [ ] **弹幕 Canvas 性能上限**：同屏弹幕满载下的帧率与内存需实测（spec §4 要求 ≥ 55fps）。
+- [ ] **弹幕 Canvas 性能上限**：同屏弹幕满载下的帧率与内存需实测（spec §4 要求 ≥ 55fps）。2026-09-22 补：轨道渲染已由 M4-HMY-07 落地，但**帧率/内存未测**，归 M4-HMY-10 端侧验收（同一处一并测控制层材质叠加的开销，见 §7.2 末条）。
+- [ ] **弹幕 WS 的 Origin 白名单（2026-09-22 实测，归线上配置）**：ArkTS 的 WebSocket **自生成 Origin**（默认 `http://<host>`，不带端口；API 26 起 `supportOriginPort` 可带上），而服务端 `CheckOrigin` 对 `allow_origins` 做**精确匹配**——dev 白名单（`http://localhost:5173~5175`）不含端侧来源，故直连 `ws://10.0.2.2:8000` 握手 403，端侧只能降级为 15s 分段轮询。**dev 联调可临时同源绕过（做法见 [tasks M4-HMY-07](/specs/harmony/tasks)），生产必须让服务端白名单纳入 App 的实际 Origin，或同源部署 `wss://<正式域名>`**；本期零后端改动，未动白名单。
 - [x] **状态管理版本（已解决，2026-09-21）**：壳层 `pages/Index.ets` 以 **ArkUI 状态管理 V2**（`@Entry @ComponentV2` / `@Local` / `@Param`）实写并通过 API 26 编译（`assembleHap` BUILD SUCCESSFUL），**定版 V2**，不再保留 V1 备选。
 - [x] **目标 API 版本选择（已解决，2026-09-21）**：DevEco 升级至 **26.0.0.821** 后内置 SDK 为 **HarmonyOS 26.0.0 / API 26**（version 26.0.0.105），模拟器镜像 **API 26 / 7.0.0.106**（`D:/Program Files/Huawei/sdk/system-image/HarmonyOS-7.0.0/phone_all_x86`）已就位，实例含 Mate 70 Pro / Mate 80 Pro Max / Pura 90 / Pura X View。**`compileSdkVersion` 与 `compatibleSdkVersion` 均取 26**，原"编译 24 / 运行时 23"的双口径已失效，历史结论仅备查。
 - [x] **沉浸光感落地（2026-09-22 已落地并在模拟器实测，M4-HMY-11）**：主路线为**原生系统材质**——`uiMaterial.ImmersiveMaterial` + `.systemMaterial()`，应用级开关走 `module.json5` 的 `metadata` → `ohos.arkui.UIMaterial.state`（`default`/`enable`/`disable`，仅 entry 模块生效，本工程已配 `enable`）。

@@ -1,16 +1,22 @@
 import { display, window } from '@kit.ArkUI';
-import { emitter } from '@kit.BasicServicesKit';
+import { emitter, pasteboard } from '@kit.BasicServicesKit';
 import { ApiError } from '../../model/Api';
+import { DanmakuItem, DanmakuMode } from '../../model/Danmaku';
 import { StreamItem, VideoDetail } from '../../model/Video';
 import { VideoApi } from '../../service/VideoApi';
 import { ErrorStateView } from '../../components/ErrorStateView';
-import { AppRouter } from '../../common/utils/AppRouter';
+import { DanmakuLayer } from '../../components/DanmakuLayer';
+import { DanmakuController } from '../../danmaku/DanmakuController';
+import { colorHex } from '../../danmaku/DanmakuEngine';
+import { DmArea, DmDensity, DmSpeed, dmSettings } from '../../danmaku/DanmakuSettings';
+import { AppRouter, RouteName } from '../../common/utils/AppRouter';
 import { AppEvent } from '../../common/constants/AppEvents';
 import { resolveMediaUrl } from '../../common/utils/MediaUrl';
 import { formatCount, formatDuration, formatPubdate } from '../../common/utils/Format';
 import { signExpiryMs } from '../../media/PlaySign';
 import { VideoPlayer } from '../../media/VideoPlayer';
 import { PlaybackProgressStore } from '../../store/PlaybackProgressStore';
+import { session } from '../../store/Session';
 import { TokenStore } from '../../store/TokenStore';
 import { DliFont, DliRadius, DliSpace } from '../../common/constants/Theme';
 import { ErrCode, ErrorMessages } from '../../common/constants/ErrorMessages';
@@ -56,11 +62,25 @@ const RATE_OPTIONS: number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
 /** 未知画幅时的兜底（16:9） */
 const DEFAULT_RATIO: number = 16 / 9;
 
+/** 弹幕发送可选颜色（与 Web 端 DM_COLORS 同套；白色外的彩色需 Lv3） */
+const DM_COLORS: number[] = [0xffffff, 0xff0000, 0xff7f00, 0xffff00, 0x00ff00, 0x00bfff, 0xff00ff, 0xff69b4];
+/** 弹幕模式档位（1 滚动 2 顶部 3 底部） */
+const DM_MODES: DanmakuMode[] = [1, 2, 3];
+/** 弹幕输入长度上限（服务端 binding 为 max=100） */
+const DM_MAX_LEN: number = 100;
+const DM_WHITE: number = 0xffffff;
+
 /** 设置面板里的单个选项（清晰度/倍速共用）；单对象入参是为了让 @Builder 走按引用传递 */
 interface ChipOption {
   label: ResourceStr;
   active: boolean;
   onTap: () => void;
+}
+
+/** 弹幕展示设置里的档位项（区域/速度/密度共用，value 为落盘值） */
+interface DmChip {
+  label: ResourceStr;
+  value: string;
 }
 
 /** 一次拖动的主轴：起手方向定死，途中不再切换 */
@@ -84,7 +104,7 @@ enum DragAxis {
  *    在 VideoPlayer 内是同一条 reset→url→prepare→seek→play 路径。
  * ③ **离开即落盘**：进度不可只依赖节流定时器，返回、切后台、销毁三处都必须主动 flush。
  *
- * 本期未接：弹幕（M4-HMY-07）、互动与评论（M4-HMY-08），页内以一行提示标注。
+ * 本期未接：互动与评论（M4-HMY-08），页内以一行提示标注。
  */
 @ComponentV2
 export struct PlayPage {
@@ -109,6 +129,21 @@ export struct PlayPage {
   @Local sliderSec: number = 0;
   @Local sliderDragging: boolean = false;
   @Local dragHint: string = '';
+
+  /** 舞台实测尺寸（vp）：弹幕区域按它算，比按屏幕宽与画幅推算更稳（全屏/旋转都覆盖） */
+  @Local stageW: number = 0;
+  @Local stageH: number = 0;
+  /** 信息区当前页签：0 简介 1 弹幕（列表 + 屏蔽管理） */
+  @Local infoTab: number = 0;
+  @Local dmInput: string = '';
+  @Local dmSending: boolean = false;
+  @Local dmMode: DanmakuMode = 1;
+  @Local dmColor: number = 0xffffff;
+  @Local dmKeyword: string = '';
+  @Local dmBlocking: boolean = false;
+
+  /** 弹幕控制器：分段拉取/实时通道/屏蔽/发送/列表都在其中，页面只做接线与 UI */
+  private dm: DanmakuController = new DanmakuController();
 
   /** 播放器是业务无关的状态容器，页面只读它的 @Trace 字段驱动 UI */
   private player: VideoPlayer = new VideoPlayer();
@@ -152,11 +187,13 @@ export struct PlayPage {
     this.updateScreenMetrics();
     // 压栈页拿不到 @Entry 页的生命周期，切后台只能靠 Ability 广播（见 AppEvents）
     emitter.on({ eventId: AppEvent.ID_BACKGROUND }, this.bgListener);
+    this.startDanmaku();
     this.loadDetail();
   }
 
   aboutToDisappear(): void {
     this.stopTicker();
+    this.dm.stop();
     emitter.off(AppEvent.ID_BACKGROUND, this.bgListener);
     this.flushProgress();
     this.player.release();
@@ -166,6 +203,26 @@ export struct PlayPage {
     }
     if (this.brightnessTouched) {
       this.restoreSystemBrightness();
+    }
+  }
+
+  /**
+   * 弹幕：先读展示设置（本地偏好），再接实时通道。
+   * 与详情/起播并行推进——弹幕不参与起播时序，更不能成为起播的前置（HMY-20）。
+   */
+  private startDanmaku(): void {
+    dmSettings.load().then(() => {
+      this.dm.start(this.bvid, this.player);
+    }).catch((err: Object) => {
+      Logger.warn(TAG, `弹幕设置读取失败，按默认值启动：${JSON.stringify(err)}`);
+      this.dm.start(this.bvid, this.player);
+    });
+    // 等级门槛（Lv3 才能发彩色/顶/底弹幕）要读会话等级，而会话只在「我的」页 hydrate 过；
+    // 从首页直接进播放页时补一次，否则 Lv3 用户会被本地门槛误挡。
+    if (TokenStore.isLoggedIn() && !session.loggedIn) {
+      session.hydrate().catch((err: Object) => {
+        Logger.warn(TAG, `会话校正失败：${JSON.stringify(err)}`);
+      });
     }
   }
 
@@ -406,8 +463,14 @@ export struct PlayPage {
     this.reopen(this.playUrl, this.player.positionSec() * 1000, true);
   }
 
+  /** 跳转统一入口：弹幕层要按新位置重放，否则 seek 后屏上残留的还是旧位置的弹幕 */
+  private seekTo(ms: number): void {
+    this.player.seekTo(ms);
+    this.dm.onSeeked(ms);
+  }
+
   private replay(): void {
-    this.player.seekTo(0);
+    this.seekTo(0);
     this.player.play();
   }
 
@@ -496,6 +559,192 @@ export struct PlayPage {
   /** 倍速：走 setPlaybackRate（连续取值），与 Web 端 [0.5, 0.75, 1, 1.25, 1.5, 2] 档位一致 */
   private setRate(rate: number): void {
     this.player.setRate(rate);
+  }
+
+  // ---- 弹幕：展示设置（DM-11/DM-12） ----
+
+  /** 开关切换：本地偏好记忆（DM-11「一键开/关并记忆状态」） */
+  private toggleDanmaku(): void {
+    dmSettings.enabled = !dmSettings.enabled;
+    dmSettings.persist();
+    Logger.info(TAG, `弹幕开关：${dmSettings.enabled ? '开' : '关'}`);
+  }
+
+  private areaOptions(): DmChip[] {
+    return [
+      { label: $r('app.string.dm_area_quarter'), value: 'quarter' },
+      { label: $r('app.string.dm_area_half'), value: 'half' },
+      { label: $r('app.string.dm_area_full'), value: 'full' }
+    ];
+  }
+
+  private speedOptions(): DmChip[] {
+    return [
+      { label: $r('app.string.dm_speed_slow'), value: 'slow' },
+      { label: $r('app.string.dm_speed_normal'), value: 'normal' },
+      { label: $r('app.string.dm_speed_fast'), value: 'fast' }
+    ];
+  }
+
+  private densityOptions(): DmChip[] {
+    return [
+      { label: $r('app.string.dm_density_low'), value: 'low' },
+      { label: $r('app.string.dm_density_normal'), value: 'normal' },
+      { label: $r('app.string.dm_density_high'), value: 'high' }
+    ];
+  }
+
+  /** 弹幕列表面板：切到「弹幕」页签并拉首屏 */
+  private openDmList(): void {
+    this.panelOpen = false;
+    this.switchInfoTab(1);
+  }
+
+  /** 信息区页签切换：首次进弹幕页签才拉列表（DM-16），避免每次进页面白跑一次请求 */
+  private switchInfoTab(index: number): void {
+    this.infoTab = index;
+    if (index !== 1) {
+      return;
+    }
+    if (this.dm.listItems.length > 0 || this.dm.listLoading) {
+      return;
+    }
+    this.dm.loadList(true).catch((err: ApiError) => {
+      showToast(this.getUIContext(), err.message);
+    });
+  }
+
+  private dmModeLabel(mode: DanmakuMode): ResourceStr {
+    if (mode === 2) {
+      return $r('app.string.dm_mode_top');
+    }
+    return mode === 3 ? $r('app.string.dm_mode_bottom') : $r('app.string.dm_mode_scroll');
+  }
+
+  private hasMoreDm(): boolean {
+    return this.dm.listItems.length < this.dm.listTotal;
+  }
+
+  private loadMoreDm(): void {
+    if (this.dm.listLoading) {
+      return;
+    }
+    this.dm.loadList(false).catch((err: ApiError) => {
+      showToast(this.getUIContext(), err.message);
+    });
+  }
+
+  private copyDanmaku(item: DanmakuItem): void {
+    const data: pasteboard.PasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, item.content);
+    pasteboard.getSystemPasteboard().setData(data).then(() => {
+      showToast(this.getUIContext(), $r('app.string.dm_copied'));
+    }).catch((err: Object) => {
+      Logger.warn(TAG, `复制弹幕失败：${JSON.stringify(err)}`);
+    });
+  }
+
+  // ---- 弹幕：发送（DM-01~04 / HMY-21） ----
+
+  private dmLevel3(): boolean {
+    return session.level >= 3;
+  }
+
+  private selectDmMode(mode: DanmakuMode): void {
+    // 顶/底需 Lv3（DM-03）：端侧前置提示，服务端仍会再校验一次
+    if (mode !== 1 && !this.dmLevel3()) {
+      showToast(this.getUIContext(), $r('app.string.dm_lv3_hint'));
+      return;
+    }
+    this.dmMode = mode;
+  }
+
+  private selectDmColor(color: number): void {
+    if (color !== DM_WHITE && !this.dmLevel3()) {
+      showToast(this.getUIContext(), $r('app.string.dm_lv3_hint'));
+      return;
+    }
+    this.dmColor = color;
+  }
+
+  private async sendDanmaku(): Promise<void> {
+    const text: string = this.dmInput.trim();
+    if (text.length === 0) {
+      showToast(this.getUIContext(), $r('app.string.dm_need_content'));
+      return;
+    }
+    if (!TokenStore.isLoggedIn()) {
+      showToast(this.getUIContext(), $r('app.string.dm_need_login'));
+      AppRouter.push(RouteName.LOGIN);
+      return;
+    }
+    this.dmSending = true;
+    try {
+      await this.dm.send(text, this.dmMode, this.dmColor);
+      this.dmInput = '';
+      showToast(this.getUIContext(), $r('app.string.dm_sent'));
+    } catch (err) {
+      const apiErr: ApiError = err as ApiError;
+      // 频控/等级/重复等业务错误由服务端文案直接呈现（Errcode 40001~40004 已在端侧表内）
+      const message: string = apiErr.message.length > 0 ? apiErr.message : ErrorMessages.text(ErrCode.INTERNAL, '');
+      showToast(this.getUIContext(), message);
+      Logger.warn(TAG, `弹幕发送失败：${apiErr.describe()}`);
+    } finally {
+      this.dmSending = false;
+    }
+  }
+
+  // ---- 弹幕：屏蔽（DM-20 / DM-21） ----
+
+  private async addKeyword(): Promise<void> {
+    const word: string = this.dmKeyword.trim();
+    if (word.length === 0) {
+      showToast(this.getUIContext(), $r('app.string.dm_need_keyword'));
+      return;
+    }
+    if (!TokenStore.isLoggedIn()) {
+      showToast(this.getUIContext(), $r('app.string.dm_need_login'));
+      return;
+    }
+    this.dmBlocking = true;
+    try {
+      await this.dm.addKeyword(word);
+      this.dmKeyword = '';
+      showToast(this.getUIContext(), $r('app.string.dm_block_added'));
+    } catch (err) {
+      showToast(this.getUIContext(), (err as ApiError).message);
+    } finally {
+      this.dmBlocking = false;
+    }
+  }
+
+  private async removeKeyword(word: string): Promise<void> {
+    this.dmBlocking = true;
+    try {
+      await this.dm.removeBlock(1, word);
+    } catch (err) {
+      showToast(this.getUIContext(), (err as ApiError).message);
+    } finally {
+      this.dmBlocking = false;
+    }
+  }
+
+  /** 屏蔽某发送者（服务端账号级），成功后从屏上与列表里一并生效 */
+  private async blockSender(item: DanmakuItem): Promise<void> {
+    this.dmBlocking = true;
+    try {
+      await this.dm.blockSender(item);
+      showToast(this.getUIContext(), $r('app.string.dm_block_sender_done'));
+    } catch (err) {
+      showToast(this.getUIContext(), (err as ApiError).message);
+    } finally {
+      this.dmBlocking = false;
+    }
+  }
+
+  /** 列表面板点击条目：跳转到该弹幕的时间点（DM-16） */
+  private seekToDanmaku(item: DanmakuItem): void {
+    this.seekTo(item.time_ms);
+    showToast(this.getUIContext(), $r('app.string.dm_jumped'));
   }
 
   /** 画面高度：竖屏按视频画幅等比（未知画幅按 16:9），全屏铺满窗口 */
@@ -608,7 +857,7 @@ export struct PlayPage {
 
   private handleDragEnd(): void {
     if (this.dragAxis === DragAxis.SEEK) {
-      this.player.seekTo(this.sliderSec * 1000);
+      this.seekTo(this.sliderSec * 1000);
     }
     this.dragAxis = DragAxis.NONE;
     this.dragging = false;
@@ -635,45 +884,151 @@ export struct PlayPage {
 
   @Builder
   settingsPanel() {
-    Column({ space: DliSpace.SM }) {
-      Row({ space: DliSpace.SM }) {
-        Text($r('app.string.play_quality'))
-          .fontSize(DliFont.BODY_SM)
-          .fontColor($r('app.color.text_secondary'))
-        ForEach(this.streams, (item: StreamItem, index: number) => {
-          this.optionChip({
-            label: this.qualityLabel(item.quality),
-            active: index === this.qualityIndex,
-            onTap: () => {
-              this.switchQuality(index);
-            }
-          });
-        }, (item: StreamItem) => `${item.quality}`)
-      }
-      .alignItems(VerticalAlign.Center)
+    Scroll() {
+      Column({ space: DliSpace.SM }) {
+        Row({ space: DliSpace.SM }) {
+          Text($r('app.string.play_quality'))
+            .fontSize(DliFont.BODY_SM)
+            .fontColor($r('app.color.text_secondary'))
+          ForEach(this.streams, (item: StreamItem, index: number) => {
+            this.optionChip({
+              label: this.qualityLabel(item.quality),
+              active: index === this.qualityIndex,
+              onTap: () => {
+                this.switchQuality(index);
+              }
+            });
+          }, (item: StreamItem) => `${item.quality}`)
+        }
+        .alignItems(VerticalAlign.Center)
 
-      Row({ space: DliSpace.SM }) {
-        Text($r('app.string.play_speed'))
-          .fontSize(DliFont.BODY_SM)
-          .fontColor($r('app.color.text_secondary'))
-        ForEach(RATE_OPTIONS, (item: number) => {
+        Row({ space: DliSpace.SM }) {
+          Text($r('app.string.play_speed'))
+            .fontSize(DliFont.BODY_SM)
+            .fontColor($r('app.color.text_secondary'))
+          ForEach(RATE_OPTIONS, (item: number) => {
+            this.optionChip({
+              label: this.rateLabel(item),
+              active: item === this.player.rate,
+              onTap: () => {
+                this.setRate(item);
+              }
+            });
+          }, (item: number) => `${item}`)
+        }
+        .alignItems(VerticalAlign.Center)
+
+        Divider().color($r('app.color.border_default'))
+
+        Row({ space: DliSpace.SM }) {
+          Text($r('app.string.dm_label'))
+            .fontSize(DliFont.BODY_SM)
+            .fontColor($r('app.color.text_secondary'))
           this.optionChip({
-            label: this.rateLabel(item),
-            active: item === this.player.rate,
+            label: dmSettings.enabled ? $r('app.string.dm_on') : $r('app.string.dm_off'),
+            active: dmSettings.enabled,
             onTap: () => {
-              this.setRate(item);
+              this.toggleDanmaku();
             }
-          });
-        }, (item: number) => `${item}`)
+          })
+          this.optionChip({
+            label: $r('app.string.dm_list_entry'),
+            active: false,
+            onTap: () => {
+              this.openDmList();
+            }
+          })
+        }
+        .alignItems(VerticalAlign.Center)
+
+        this.sliderRow($r('app.string.dm_opacity'), dmSettings.opacity, 0.2, 1, (v: number) => {
+          dmSettings.opacity = v;
+          dmSettings.persist();
+        })
+        this.sliderRow($r('app.string.dm_font_scale'), dmSettings.fontScale, 0.8, 1.5, (v: number) => {
+          dmSettings.fontScale = v;
+          dmSettings.persist();
+        })
+
+        Row({ space: DliSpace.SM }) {
+          Text($r('app.string.dm_area'))
+            .fontSize(DliFont.BODY_SM)
+            .fontColor($r('app.color.text_secondary'))
+          ForEach(this.areaOptions(), (item: DmChip) => {
+            this.optionChip({
+              label: item.label,
+              active: dmSettings.area === item.value,
+              onTap: () => {
+                dmSettings.area = item.value as DmArea;
+                dmSettings.persist();
+              }
+            });
+          }, (item: DmChip) => item.value)
+        }
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: DliSpace.SM }) {
+          Text($r('app.string.dm_speed'))
+            .fontSize(DliFont.BODY_SM)
+            .fontColor($r('app.color.text_secondary'))
+          ForEach(this.speedOptions(), (item: DmChip) => {
+            this.optionChip({
+              label: item.label,
+              active: dmSettings.speed === item.value,
+              onTap: () => {
+                dmSettings.speed = item.value as DmSpeed;
+                dmSettings.persist();
+              }
+            });
+          }, (item: DmChip) => item.value)
+        }
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: DliSpace.SM }) {
+          Text($r('app.string.dm_density'))
+            .fontSize(DliFont.BODY_SM)
+            .fontColor($r('app.color.text_secondary'))
+          ForEach(this.densityOptions(), (item: DmChip) => {
+            this.optionChip({
+              label: item.label,
+              active: dmSettings.density === item.value,
+              onTap: () => {
+                dmSettings.density = item.value as DmDensity;
+                dmSettings.persist();
+              }
+            });
+          }, (item: DmChip) => item.value)
+        }
+        .alignItems(VerticalAlign.Center)
       }
-      .alignItems(VerticalAlign.Center)
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(DliSpace.MD)
     }
+    .scrollBar(BarState.Off)
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding(DliSpace.MD)
+    .constraintSize({ maxHeight: Math.max(180, this.stageH * 0.62) })
     .borderRadius(DliRadius.MD)
     .backgroundColor($r('app.color.bg_glass'))
     .margin({ bottom: DliSpace.SM })
+  }
+
+  /** 设置面板里的滑杆行（不透明度/字号共用） */
+  @Builder
+  sliderRow(label: ResourceStr, value: number, min: number, max: number, onChange: (v: number) => void) {
+    Row({ space: DliSpace.SM }) {
+      Text(label)
+        .fontSize(DliFont.BODY_SM)
+        .fontColor($r('app.color.text_secondary'))
+      Slider({ value: value, min: min, max: max, step: 0.05 })
+        .layoutWeight(1)
+        .trackColor($r('app.color.border_default'))
+        .selectedColor($r('app.color.brand_primary'))
+        .onChange((v: number) => {
+          onChange(v);
+        })
+    }
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -738,7 +1093,7 @@ export struct PlayPage {
               // 只有真实拖动/点击才产生 seek；且时长未就绪时时刻校不准，一律不发
               if (dragged || mode === SliderChangeMode.Click) {
                 if (!this.switching && this.player.durationMs > 0) {
-                  this.player.seekTo(value * 1000);
+                  this.seekTo(value * 1000);
                 }
               }
             }
@@ -880,6 +1235,16 @@ export struct PlayPage {
           )
         )
 
+      // 弹幕层：整层不吃触摸（HitTestMode.None），压在画面上但把手势留给下面的手势层
+      DanmakuLayer({
+        controller: this.dm,
+        stageWidth: this.stageW,
+        stageHeight: this.stageH,
+        videoWidth: this.player.videoWidth,
+        videoHeight: this.player.videoHeight,
+        fullscreen: this.fullscreen
+      })
+
       // 控制层：Transparent 让空白处的触摸仍能落到底下的手势层，控件自身照常响应
       if (this.controlsVisible) {
         this.stageOverlay()
@@ -891,63 +1256,324 @@ export struct PlayPage {
     .height(this.stageHeight())
     .backgroundColor(Color.Black)
     .clip(true)
+    // 实测尺寸是弹幕区域与轨道分配的唯一依据（全屏/旋转/画幅变化都会触发）
+    .onAreaChange((oldArea: Area, newArea: Area) => {
+      this.stageW = Number(newArea.width);
+      this.stageH = Number(newArea.height);
+    })
+  }
+
+  /** 信息区页签：简介 / 弹幕（DM-16 弹幕列表 + DM-20/21 屏蔽管理都在「弹幕」页签内） */
+  @Builder
+  infoTabs() {
+    Row({ space: DliSpace.LG }) {
+      Column({ space: DliSpace.XS }) {
+        Text($r('app.string.info_tab_intro'))
+          .fontSize(DliFont.BODY_SM)
+          .fontWeight(this.infoTab === 0 ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.infoTab === 0 ? $r('app.color.text_primary') : $r('app.color.text_tertiary'))
+        Divider()
+          .width(20)
+          .strokeWidth(2)
+          .color(this.infoTab === 0 ? $r('app.color.brand_primary') : Color.Transparent)
+      }
+      .onClick(() => {
+        this.switchInfoTab(0);
+      })
+
+      Column({ space: DliSpace.XS }) {
+        Text($r('app.string.info_tab_danmaku'))
+          .fontSize(DliFont.BODY_SM)
+          .fontWeight(this.infoTab === 1 ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.infoTab === 1 ? $r('app.color.text_primary') : $r('app.color.text_tertiary'))
+        Divider()
+          .width(20)
+          .strokeWidth(2)
+          .color(this.infoTab === 1 ? $r('app.color.brand_primary') : Color.Transparent)
+      }
+      .onClick(() => {
+        this.switchInfoTab(1);
+      })
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  introPanel() {
+    Column({ space: DliSpace.MD }) {
+      Text(this.title)
+        .fontSize(DliFont.TITLE_SM)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.text_primary'))
+        .width('100%')
+      Text(this.metaText)
+        .fontSize(DliFont.CAPTION)
+        .fontColor($r('app.color.text_tertiary'))
+        .width('100%')
+
+      Row({ space: DliSpace.SM }) {
+        if (this.ownerAvatar.length > 0) {
+          Image(this.ownerAvatar)
+            .width(36)
+            .height(36)
+            .borderRadius(DliRadius.FULL)
+            .objectFit(ImageFit.Cover)
+        }
+        Text(this.ownerName)
+          .fontSize(DliFont.BODY_SM)
+          .fontColor($r('app.color.text_primary'))
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      if (this.tags.length > 0) {
+        Flex({ wrap: FlexWrap.Wrap }) {
+          ForEach(this.tags, (item: string) => {
+            Text(item)
+              .fontSize(DliFont.CAPTION)
+              .fontColor($r('app.color.text_secondary'))
+              .padding({ left: DliSpace.SM, right: DliSpace.SM, top: 2, bottom: 2 })
+              .borderRadius(DliRadius.SM)
+              .backgroundColor($r('app.color.surface_secondary'))
+              .margin({ right: DliSpace.SM, bottom: DliSpace.XS })
+          }, (item: string) => item)
+        }
+        .width('100%')
+      }
+
+      if (this.description.length > 0) {
+        Text(this.description)
+          .fontSize(DliFont.BODY_SM)
+          .fontColor($r('app.color.text_secondary'))
+          .width('100%')
+      }
+
+      Text($r('app.string.play_pending'))
+        .fontSize(DliFont.CAPTION)
+        .fontColor($r('app.color.text_tertiary'))
+        .width('100%')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  /** 悬停/选中态的小胶囊（弹幕模式、屏蔽词、列表条目操作共用） */
+  @Builder
+  dmChip($$: ChipOption) {
+    Text($$.label)
+      .fontSize(DliFont.CAPTION)
+      .fontColor($$.active ? $r('app.color.text_secondary') : $r('app.color.text_tertiary'))
+      .padding({ left: DliSpace.SM, right: DliSpace.SM, top: 3, bottom: 3 })
+      .borderRadius(DliRadius.FULL)
+      .backgroundColor($$.active ? $r('app.color.surface_secondary') : Color.Transparent)
+      .onClick(() => {
+        $$.onTap();
+      })
+  }
+
+  @Builder
+  danmakuPanel() {
+    Column({ space: DliSpace.MD }) {
+      if (this.dm.socketState === 'degraded') {
+        Text($r('app.string.dm_live_off'))
+          .fontSize(DliFont.CAPTION)
+          .fontColor($r('app.color.text_tertiary'))
+          .width('100%')
+      }
+
+      Row({ space: DliSpace.SM }) {
+        TextInput({ text: $$this.dmInput, placeholder: $r('app.string.dm_input_hint') })
+          .maxLength(DM_MAX_LEN)
+          .fontSize(DliFont.BODY_SM)
+          .layoutWeight(1)
+        Button($r('app.string.dm_send'))
+          .fontSize(DliFont.BODY_SM)
+          .fontColor($r('app.color.text_on_brand'))
+          .backgroundColor($r('app.color.brand_primary'))
+          .borderRadius(DliRadius.FULL)
+          .enabled(!this.dmSending)
+          .onClick(() => {
+            this.sendDanmaku();
+          })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Row({ space: DliSpace.SM }) {
+        Text($r('app.string.dm_label'))
+          .fontSize(DliFont.BODY_SM)
+          .fontColor($r('app.color.text_secondary'))
+        ForEach(DM_MODES, (item: DanmakuMode) => {
+          this.dmChip({
+            label: this.dmModeLabel(item),
+            active: this.dmMode === item,
+            onTap: () => {
+              this.selectDmMode(item);
+            }
+          });
+        }, (item: DanmakuMode) => `${item}`)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Row({ space: DliSpace.SM }) {
+        ForEach(DM_COLORS, (item: number) => {
+          Column()
+            .width(22)
+            .height(22)
+            .borderRadius(DliRadius.FULL)
+            .backgroundColor(colorHex(item))
+            .border({
+              width: this.dmColor === item ? 2 : 1,
+              color: this.dmColor === item ? $r('app.color.brand_primary') : $r('app.color.border_default')
+            })
+            .onClick(() => {
+              this.selectDmColor(item);
+            })
+        }, (item: number) => `${item}`)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Divider().color($r('app.color.border_default'))
+
+      Row({ space: DliSpace.SM }) {
+        Text($r('app.string.dm_block_title'))
+          .fontSize(DliFont.BODY_SM)
+          .fontColor($r('app.color.text_secondary'))
+        TextInput({ text: $$this.dmKeyword, placeholder: $r('app.string.dm_keyword_hint') })
+          .maxLength(64)
+          .fontSize(DliFont.BODY_SM)
+          .layoutWeight(1)
+        Button($r('app.string.dm_block_add'))
+          .fontSize(DliFont.CAPTION)
+          .fontColor($r('app.color.text_on_brand'))
+          .backgroundColor($r('app.color.brand_primary'))
+          .borderRadius(DliRadius.FULL)
+          .enabled(!this.dmBlocking)
+          .onClick(() => {
+            this.addKeyword();
+          })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      if (this.dm.blockWords.length > 0) {
+        Flex({ wrap: FlexWrap.Wrap }) {
+          ForEach(this.dm.blockWords, (item: string) => {
+            Row({ space: DliSpace.XS }) {
+              Text(item)
+                .fontSize(DliFont.CAPTION)
+                .fontColor($r('app.color.text_secondary'))
+              SymbolGlyph($r('sys.symbol.xmark'))
+                .fontSize(11)
+                .fontColor([$r('app.color.text_tertiary')])
+            }
+            .padding({ left: DliSpace.SM, right: DliSpace.XS, top: 3, bottom: 3 })
+            .borderRadius(DliRadius.FULL)
+            .backgroundColor($r('app.color.surface_secondary'))
+            .margin({ right: DliSpace.SM, bottom: DliSpace.XS })
+            .onClick(() => {
+              this.removeKeyword(item);
+            })
+          }, (item: string) => item)
+        }
+        .width('100%')
+      }
+
+      if (this.dm.blockHashes.length > 0) {
+        Text($r('app.string.dm_blocked_users', this.dm.blockHashes.length))
+          .fontSize(DliFont.CAPTION)
+          .fontColor($r('app.color.text_tertiary'))
+          .width('100%')
+      }
+
+      Divider().color($r('app.color.border_default'))
+
+      Row() {
+        Text($r('app.string.dm_list_count', this.dm.listTotal))
+          .fontSize(DliFont.CAPTION)
+          .fontColor($r('app.color.text_tertiary'))
+      }
+      .width('100%')
+
+      if (this.dm.listItems.length === 0) {
+        Text(this.dm.listLoading ? $r('app.string.feed_loading_more') : $r('app.string.dm_empty'))
+          .fontSize(DliFont.BODY_SM)
+          .fontColor($r('app.color.text_tertiary'))
+          .width('100%')
+          .textAlign(TextAlign.Center)
+          .padding({ top: DliSpace.MD, bottom: DliSpace.MD })
+      } else {
+        ForEach(this.dm.listItems, (item: DanmakuItem) => {
+          this.dmListItem(item);
+        }, (item: DanmakuItem) => item.id)
+
+        if (this.hasMoreDm()) {
+          Button(this.dm.listLoading ? $r('app.string.feed_loading_more') : $r('app.string.dm_load_more'))
+            .fontSize(DliFont.CAPTION)
+            .fontColor($r('app.color.text_primary'))
+            .backgroundColor($r('app.color.surface_secondary'))
+            .borderRadius(DliRadius.FULL)
+            .enabled(!this.dm.listLoading)
+            .onClick(() => {
+              this.loadMoreDm();
+            })
+        }
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  /** 列表条目：点内容跳转到该时间点（DM-16），右侧复制/屏蔽（DM-21） */
+  @Builder
+  dmListItem($$: DanmakuItem) {
+    Row({ space: DliSpace.SM }) {
+      Text(formatDuration($$.time_ms / 1000))
+        .fontSize(DliFont.CAPTION)
+        .fontColor($r('app.color.text_tertiary'))
+        .width(44)
+      Text($$.content)
+        .fontSize(DliFont.BODY_SM)
+        .fontColor($$.is_self === true ? $r('app.color.brand_primary') : $r('app.color.text_primary'))
+        .layoutWeight(1)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .onClick(() => {
+          this.seekToDanmaku($$);
+        })
+      Text($r('app.string.dm_action_copy'))
+        .fontSize(DliFont.CAPTION)
+        .fontColor($r('app.color.text_tertiary'))
+        .onClick(() => {
+          this.copyDanmaku($$);
+        })
+      if (($$.sender_hash ?? '').length > 0) {
+        Text($r('app.string.dm_action_block'))
+          .fontSize(DliFont.CAPTION)
+          .fontColor($r('app.color.text_tertiary'))
+          .onClick(() => {
+            this.blockSender($$);
+          })
+      }
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Top)
+    .padding({ top: DliSpace.XS, bottom: DliSpace.XS })
   }
 
   @Builder
   infoBlock() {
     Scroll() {
       Column({ space: DliSpace.MD }) {
-        Text(this.title)
-          .fontSize(DliFont.TITLE_SM)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.text_primary'))
-          .width('100%')
-        Text(this.metaText)
-          .fontSize(DliFont.CAPTION)
-          .fontColor($r('app.color.text_tertiary'))
-          .width('100%')
-
-        Row({ space: DliSpace.SM }) {
-          if (this.ownerAvatar.length > 0) {
-            Image(this.ownerAvatar)
-              .width(36)
-              .height(36)
-              .borderRadius(DliRadius.FULL)
-              .objectFit(ImageFit.Cover)
-          }
-          Text(this.ownerName)
-            .fontSize(DliFont.BODY_SM)
-            .fontColor($r('app.color.text_primary'))
+        this.infoTabs()
+        if (this.infoTab === 0) {
+          this.introPanel()
+        } else {
+          this.danmakuPanel()
         }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        if (this.tags.length > 0) {
-          Flex({ wrap: FlexWrap.Wrap }) {
-            ForEach(this.tags, (item: string) => {
-              Text(item)
-                .fontSize(DliFont.CAPTION)
-                .fontColor($r('app.color.text_secondary'))
-                .padding({ left: DliSpace.SM, right: DliSpace.SM, top: 2, bottom: 2 })
-                .borderRadius(DliRadius.SM)
-                .backgroundColor($r('app.color.surface_secondary'))
-                .margin({ right: DliSpace.SM, bottom: DliSpace.XS })
-            }, (item: string) => item)
-          }
-          .width('100%')
-        }
-
-        if (this.description.length > 0) {
-          Text(this.description)
-            .fontSize(DliFont.BODY_SM)
-            .fontColor($r('app.color.text_secondary'))
-            .width('100%')
-        }
-
-        Text($r('app.string.play_pending'))
-          .fontSize(DliFont.CAPTION)
-          .fontColor($r('app.color.text_tertiary'))
-          .width('100%')
       }
       .width('100%')
       .padding({ left: DliSpace.PAGE, right: DliSpace.PAGE, top: DliSpace.MD, bottom: DliSpace.XL })

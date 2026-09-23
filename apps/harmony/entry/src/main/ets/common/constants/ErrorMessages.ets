@@ -10,6 +10,8 @@ export class ErrCode {
   static readonly NET_TIMEOUT: number = -2;
   /** 端侧合成：响应不是统一包裹（多为网关/代理返回的非契约内容） */
   static readonly BAD_RESPONSE: number = -3;
+  /** 端侧合成：本地前置校验失败（无需/无法发请求，如屏蔽项缺发送者哈希） */
+  static readonly LOCAL_REJECT: number = -4;
 
   static readonly INTERNAL: number = 10001;
   static readonly INVALID_PARAMS: number = 10002;
@@ -23,6 +25,7 @@ const CODE_TEXT: Map<number, string> = new Map<number, string>([
   [ErrCode.NET_OFFLINE, '网络不可用，请检查网络后重试'],
   [ErrCode.NET_TIMEOUT, '网络超时，请重试'],
   [ErrCode.BAD_RESPONSE, '服务响应异常，请稍后重试'],
+  [ErrCode.LOCAL_REJECT, '操作无法完成'],
   [10001, '服务器开小差了，请稍后再试'],
   [10002, '参数不合法'],
   [10003, '请先登录'],

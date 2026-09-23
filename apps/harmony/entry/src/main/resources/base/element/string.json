@@ -254,7 +254,183 @@
     },
     {
       "name": "play_pending",
-      "value": "弹幕、互动与评论建设中"
+      "value": "互动与评论建设中"
+    },
+    {
+      "name": "info_tab_intro",
+      "value": "简介"
+    },
+    {
+      "name": "info_tab_danmaku",
+      "value": "弹幕"
+    },
+    {
+      "name": "dm_label",
+      "value": "弹幕"
+    },
+    {
+      "name": "dm_on",
+      "value": "开"
+    },
+    {
+      "name": "dm_off",
+      "value": "关"
+    },
+    {
+      "name": "dm_list_entry",
+      "value": "弹幕列表"
+    },
+    {
+      "name": "dm_opacity",
+      "value": "不透明度"
+    },
+    {
+      "name": "dm_font_scale",
+      "value": "字号"
+    },
+    {
+      "name": "dm_area",
+      "value": "显示区域"
+    },
+    {
+      "name": "dm_area_quarter",
+      "value": "1/4 屏"
+    },
+    {
+      "name": "dm_area_half",
+      "value": "半屏"
+    },
+    {
+      "name": "dm_area_full",
+      "value": "全屏"
+    },
+    {
+      "name": "dm_speed",
+      "value": "滚动速度"
+    },
+    {
+      "name": "dm_speed_slow",
+      "value": "慢"
+    },
+    {
+      "name": "dm_speed_normal",
+      "value": "标准"
+    },
+    {
+      "name": "dm_speed_fast",
+      "value": "快"
+    },
+    {
+      "name": "dm_density",
+      "value": "同屏密度"
+    },
+    {
+      "name": "dm_density_low",
+      "value": "低"
+    },
+    {
+      "name": "dm_density_normal",
+      "value": "标准"
+    },
+    {
+      "name": "dm_density_high",
+      "value": "高"
+    },
+    {
+      "name": "dm_mode_scroll",
+      "value": "滚动"
+    },
+    {
+      "name": "dm_mode_top",
+      "value": "顶部"
+    },
+    {
+      "name": "dm_mode_bottom",
+      "value": "底部"
+    },
+    {
+      "name": "dm_input_hint",
+      "value": "发个友善的弹幕见证当前进度"
+    },
+    {
+      "name": "dm_send",
+      "value": "发送"
+    },
+    {
+      "name": "dm_sent",
+      "value": "弹幕已发送"
+    },
+    {
+      "name": "dm_need_content",
+      "value": "请输入弹幕内容"
+    },
+    {
+      "name": "dm_need_login",
+      "value": "登录后才能发弹幕"
+    },
+    {
+      "name": "dm_need_keyword",
+      "value": "请输入屏蔽词"
+    },
+    {
+      "name": "dm_block_added",
+      "value": "已添加屏蔽词"
+    },
+    {
+      "name": "dm_block_sender_done",
+      "value": "已屏蔽该用户的弹幕"
+    },
+    {
+      "name": "dm_lv3_hint",
+      "value": "Lv3 解锁彩色弹幕与顶部/底部弹幕"
+    },
+    {
+      "name": "dm_block_title",
+      "value": "屏蔽词"
+    },
+    {
+      "name": "dm_keyword_hint",
+      "value": "输入屏蔽关键词"
+    },
+    {
+      "name": "dm_block_add",
+      "value": "添加"
+    },
+    {
+      "name": "dm_blocked_users",
+      "value": "已屏蔽 %d 位用户"
+    },
+    {
+      "name": "dm_jumped",
+      "value": "已跳转到该时间点"
+    },
+    {
+      "name": "dm_empty",
+      "value": "还没有弹幕，来发第一条吧"
+    },
+    {
+      "name": "dm_load_more",
+      "value": "加载更多"
+    },
+    {
+      "name": "dm_list_count",
+      "value": "共 %d 条"
+    },
+    {
+      "name": "dm_action_copy",
+      "value": "复制"
+    },
+    {
+      "name": "dm_action_block",
+      "value": "屏蔽"
+    },
+    {
+      "name": "dm_copied",
+      "value": "已复制"
+    },
+    {
+      "name": "dm_live_off",
+      "value": "实时弹幕已断开，正在定时刷新"
     }
   ]
 }

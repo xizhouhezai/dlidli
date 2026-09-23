@@ -55,6 +55,10 @@ export class HttpClient {
     return HttpClient.request<T>(http.RequestMethod.POST, path, body, options);
   }
 
+  static del<T>(path: string, options?: HttpOptions): Promise<T> {
+    return HttpClient.request<T>(http.RequestMethod.DELETE, path, null, options);
+  }
+
   /** 不注入凭证、不参与续期重放的请求（登录、续期、登出等自证接口用） */
   static getPublic<T>(path: string, options?: HttpOptions): Promise<T> {
     return HttpClient.request<T>(http.RequestMethod.GET, path, null, HttpClient.publicOptions(options));
