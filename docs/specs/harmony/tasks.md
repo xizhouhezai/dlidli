@@ -145,6 +145,21 @@
   - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得）；**黑边分支的稳态真机场景未覆盖**——需画幅比宽于窗口的宽银幕片（本机内容全 16:9，故只以探针核验，见上）；列表「加载更多」未在 >50 条的稿上实测（种子仅 4 条）；发送频控/去重（40001/40004）的**服务端裁决文案**未在 UI 复现（端侧不做本地拦截，错误码翻译由 `ErrorMessages` 表覆盖）；暗色模式下的弹幕观感未核对
 - [ ] M4-HMY-08 互动与评论：点赞/投币/收藏/长按三连（幂等 + 原生动画）、评论一级与二级、分享走系统面板
   - 覆盖：HMY-30、HMY-31、HMY-32
+  - 状态：**代码已完成、ArkTS 编译零告警、接口层已对真实后端逐项打通；模拟器端到端交互实测未完成，故不勾选**
+  - 实现要点：
+    - **分工**：`service/InteractionController.ets`（互动状态与动作：赞/币/藏/三连 + 收藏夹弹层）、`components/ActionBar.ets`（播放页互动栏：四个入口 + 投币/收藏弹层 + 三连原生动画）、`components/CommentSection.ets`（评论区：一级 + 二级、排序、分页、发布/回复、点赞、删除）、`service/InteractionApi.ets`（接口层）、`service/ShareUtil.ets`（系统分享面板）、`model/Interaction.ets`（端侧模型）。播放页只接线：`ActionBar` 与 `CommentSection` 挂在「简介」页签下，替掉原先的 `play_pending` 占位
+    - **长按三连（ITR-30）**：由 `LongPressGesture({duration: 1500})` 直接驱动 `InteractionController.doTriple()`——**不在控制器里另起定时器**（手势组件自带时长判定，重复计时会把手感拉成 3s；开发中一度如此，已修）。松手时 Tap 与 LongPress 在 Parallel 组下**都会命中**（与播放页双击/单击并存同一现象），而三连本身已含点赞，故用 `TAP_AFTER_LONG_PRESS_GUARD_MS = 300` 抑制紧随的单击——否则刚点上的赞会被自己取消
+    - **原生动画反馈（HMY-30「原生动画」）**：`uiContext.animateTo({duration:180, curve:EaseOut, iterations:2, playMode:Alternate})` 让点赞图标做一次 1→1.4→1 脉冲；另以 0/240/480ms 三段递进把 赞→币→藏 依次点亮（1200ms 后复位）。用 `getUIContext().animateTo` 而非全局 `animateTo`（后者已废弃，会产生 ArkTS 告警）
+    - **幂等（承 ITR §3）**：服务端互动接口本身幂等（点赞/收藏为开关语义、投币有唯一键、三连先扣币失败退款），端侧再以 `acting` 串行化 + **乐观更新与失败回滚**兜底——双击或网络重试在服务端只生效一次
+    - **投币上限按版权判定**：`detail.copyright === 1 ? 2 : 1`（自制 2、转载 1），与 Web 端一致；已投过时端侧提前提示「已经投过币啦」，服务端 50001 仍会兜底
+    - **收藏走默认夹**：`toggleFavorite(bvid, '')`，服务端懒创建「默认收藏夹」。弹层列出收藏夹供选择（默认夹排在首位、带「（默认）」后缀）。多收藏夹管理（ITR-21 的增删改）属 P1，本期不做，接口层已注明
+    - **分享（HMY-32）**：`systemShare.SharedData({utd: general.hyperlink, content, title})` → `new ShareController(data).show(context, options)` 调起系统分享面板。**端侧差异**：不依赖微信小程序卡片（鸿蒙端无小程序载体）。面板调起失败兜底为复制链接到剪贴板（`@throws` 已在 `copyLink` 声明，对齐 `showToast` 口径）。分享**不统计计数**——SHR-02 只要求能调起面板，且 `show()` 的 Promise 仅表示面板关闭，不代表用户完成分享
+    - **分享链接可配置**：新增 `ApiConfig.WEB_BASE_URL`（与 `BASE_URL` 分开，因本地联调时后端在 `:8000`、Web dev server 在 `:5173`，生产各自换正式域名），`ShareUtil.videoShareUrl` 由它拼接 `/video/{bvid}`
+    - **评论（CMT-01~04）**：一级评论分页（`page_size` 参数）+ 热度/最新排序 + 楼中楼「展开更多回复」。发布走乐观插入列表头；回复走乐观挂载到该一级评论的 `replies` + `reply_cnt++`；点赞按会话级 `likedSet` 乐观更新计数，失败回滚；删除仅 `is_self` 显示入口，确认框走 `getUIContext().showAlertDialog`（`AlertDialog.show` 在 API 26 已废弃）
+    - **ArkTS 约束下的一处写法**：`CommentItem` 是 interface，`{...c, like_cnt: n}` 会触发 `arkts-no-spread`（interface 不可展开）→ 收敛为 `clone()` + `replaceRoot()`/`replaceReply()` 三个具名方法做不可变替换，既过编译又集中了「哪一层要刷新」的逻辑
+    - **契约以服务端实现为准核对**：评论雪花 id 在 JSON 里是**字符串**（`json:"id,string"`）；`/users/me/collections` 的 data **直接是数组**（非 `{list}` 包裹）；评论列表返回 `{list, total}`；`/comments/{id}/replies` 分页参数同为 `page_size`；`toggleFavorite` 请求体的 `collection_id` 用字符串（服务端按 int64 解析，空串=默认夹）
+  - 验证结论（接口层，真实后端）：`go test ./...` 与 `go vet ./...` 全绿（本期零后端改动，回归确认）；`hvigorw assembleHap` **BUILD SUCCESSFUL（ArkTS 零告警）**；以本地后端（`http://10.0.2.2:8000` 对应宿主 `:8000`）逐项打通：**互动**——点赞 true→false（开关幂等）、投币 2 枚（自制上限）后再投返回「已经投过币啦」、收藏默认夹 `faved=true` 且收藏夹列表出现「默认收藏夹 default=1」、三连返回 `{liked:true, coin_count:2, faved:true}` 且硬币余额 6→4、互动状态聚合正确；**评论**——发一级评论 → 回复楼中楼（`reply_cnt=1`）→ 列表 hot/new 两种排序正确返回 → 评论点赞 `liked=true` → 楼中楼分页 total=1 → 删除自己的回复成功
+  - 未覆盖：**模拟器端到端走查未完成**（本次会话模拟器进程反复秒退，仅首页截图确认应用可正常渲染；互动栏与评论区的真机/模拟器交互实测待补）；真机待验；评论的 @用户与表情（CMT-01 的 P1 部分）与举报（CMT-06）本期不做；暗色模式下互动栏/评论区的观感未核对
 - [ ] M4-HMY-09 个人中心：资料与我的投稿、观看历史、收藏、未登录态入口、端侧偏好与进度缓存
   - 覆盖：HMY-42、HMY-04
 - [ ] M4-HMY-10 端侧验收：核心链路走查（登录 → 找内容 → 播放 → 弹幕 → 互动 → 个人中心）+ 性能指标测量（冷启动、起播、弹幕帧率、崩溃率、包体积）
