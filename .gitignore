@@ -25,6 +25,9 @@ server/tmp_*
 # pnpm 本地存储（若被置于仓库根目录）
 .pnpm-store/
 
+# dev-all 一键启动的服务日志（每次运行覆盖）
+.dev-logs/
+
 # 本地设计参考图（AI 生成的概念图，仅作设计对照，不入库）
 vibe_images/
 
