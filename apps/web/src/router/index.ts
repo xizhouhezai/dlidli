@@ -113,6 +113,12 @@ const router = createRouter({
           component: () => import('@/views/lab/PelicanNightView.vue'),
           meta: { title: '提示词实验室 · 夜骑' },
         },
+        {
+          path: 'pelican-ride',
+          name: 'pelican-ride',
+          component: () => import('@/views/lab/PelicanRideView.vue'),
+          meta: { title: '鹈鹕骑行' },
+        },
       ],
     },
     // 管理后台已拆为独立应用 apps/admin（dev :5175）
