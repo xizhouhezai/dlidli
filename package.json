@@ -20,6 +20,7 @@
     "dev:all": "node scripts/dev-all.mjs",
     "dev:all:docs": "node scripts/dev-all.mjs --docs",
     "dev:all:check": "node scripts/dev-all.mjs --check-only",
+    "dev:all:list": "node scripts/dev-all.mjs --list",
     "format": "prettier --write apps packages --ignore-unknown",
     "format:check": "prettier --check apps packages --ignore-unknown",
     "prepare": "husky"
