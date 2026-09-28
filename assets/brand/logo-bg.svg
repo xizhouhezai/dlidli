@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- DliDli 品牌图形 · 玻璃底板（满幅、不带到边描边；圆角与遮罩由各端平台机制提供）
+       液态玻璃做法：主渐变 + 右下厚度加深 + 四周边缘暗角 + 斜向流动光带 + 左上镜面高光。
+       颜色只用既有 token：#FFD9E4 primary-light、#FB7299 primary、#E45C84 文档站暗色 -3；
+       明暗一律用黑/白叠加降低透明度得到，不引入新色相。
+       到边的亮倒角（rim）不放这里——鸿蒙分层图标的遮罩形状由系统决定，硬边会与遮罩错位；
+       成品图标（favicon / startIcon / logo.png）另由 logo-rim.svg 叠加。 -->
+  <defs>
+    <linearGradient id="dliPlate" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0%" stop-color="#FFD9E4"/>
+      <stop offset="52%" stop-color="#FB7299"/>
+      <stop offset="100%" stop-color="#E45C84"/>
+    </linearGradient>
+
+    <!-- 右下角压暗：玻璃的厚度 -->
+    <radialGradient id="dliDepth" cx="0.88" cy="0.94" r="0.66">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- 四周边缘暗角：无论被什么形状遮罩都能读出边缘 -->
+    <radialGradient id="dliVignette" cx="0.5" cy="0.46" r="0.78">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="72%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.15"/>
+    </radialGradient>
+
+    <!-- 斜向流动光带：液态的「动」 -->
+    <linearGradient id="dliSheen" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="44%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="54%" stop-color="#FFFFFF" stop-opacity="0.15"/>
+      <stop offset="64%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- 左上镜面高光：光源方向 -->
+    <radialGradient id="dliSpecular" cx="0.26" cy="0.16" r="0.72">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.46"/>
+      <stop offset="34%" stop-color="#FFFFFF" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#dliPlate)"/>
+  <rect width="1024" height="1024" fill="url(#dliDepth)"/>
+  <rect width="1024" height="1024" fill="url(#dliVignette)"/>
+  <rect width="1024" height="1024" fill="url(#dliSheen)"/>
+  <rect width="1024" height="1024" fill="url(#dliSpecular)"/>
+</svg>

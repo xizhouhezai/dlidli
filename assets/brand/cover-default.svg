@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <!-- DliDli 视频默认封面（兜底图）· 液态玻璃
+       画布 1600x900 = 16:9，与 VideoCard 的 aspect-ratio: 16/9 一致，不被裁切。
+       本文件只画「底板」：玻璃渐变 -> 折射光带 -> 涟漪 -> 扫光/高光 -> 标记处的压深。
+       鲸标记不在这里——它是位图源 assets/brand/logo-mark.png，由 scripts/svg2png.mjs
+       在合成阶段按「宽度 620px、中心落在 (800,450)」贴上去（故直接打开本文件看不到鲸）。
+       无 <text> 元素，纯矢量、无字体依赖。 -->  <defs>
+    <linearGradient id="dliCoverPlate" x1="0" y1="0" x2="0.45" y2="1">
+      <stop offset="0%" stop-color="#FFD9E4"/>
+      <stop offset="34%" stop-color="#FB7299"/>
+      <stop offset="100%" stop-color="#E45C84"/>
+    </linearGradient>
+
+    <radialGradient id="dliCoverDepth" cx="0.88" cy="0.96" r="0.72">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="dliCoverVignette" cx="0.5" cy="0.45" r="0.80">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="68%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.18"/>
+    </radialGradient>
+
+    <linearGradient id="dliCoverSheen" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="46%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="55%" stop-color="#FFFFFF" stop-opacity="0.15"/>
+      <stop offset="64%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <radialGradient id="dliCoverSpec" cx="0.20" cy="0.10" r="0.78">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.38"/>
+      <stop offset="34%" stop-color="#FFFFFF" stop-opacity="0.11"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- 标记处的压深：让白色标记像嵌进玻璃里 -->
+    <radialGradient id="dliMarkHalo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.20"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="dliRefract" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#dliCoverPlate)"/>
+  <rect width="1600" height="900" fill="url(#dliCoverDepth)"/>
+  <rect width="1600" height="900" fill="url(#dliCoverVignette)"/>
+
+  <!-- 折射光带：斜穿玻璃的两道光 -->
+  <g filter="url(#dliRefract)" fill="#FFFFFF" opacity="0.18">
+    <path d="M-120,820 L560,-80 L820,-80 L140,820 Z"/>
+    <path d="M640,1000 L1320,180 L1460,180 L780,1000 Z"/>
+  </g>
+
+  <!-- 涟漪：自标记圆心向外扩散的环 -->
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round">
+    <circle cx="800" cy="450" r="470" stroke-width="2" opacity="0.16"/>
+    <circle cx="800" cy="450" r="540" stroke-width="2" opacity="0.13"/>
+    <circle cx="800" cy="450" r="600" stroke-width="2" opacity="0.10"/>
+    <circle cx="800" cy="450" r="690" stroke-width="2" opacity="0.07"/>
+  </g>
+
+  <rect width="1600" height="900" fill="url(#dliCoverSheen)"/>
+  <rect width="1600" height="900" fill="url(#dliCoverSpec)"/>
+
+  <ellipse cx="800" cy="452" rx="440" ry="250" fill="url(#dliMarkHalo)"/>
+
+</svg>
