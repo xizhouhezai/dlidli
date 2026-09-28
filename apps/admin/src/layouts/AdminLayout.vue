@@ -114,7 +114,7 @@ function logout() {
     <!-- 侧边栏 -->
     <aside class="admin-sider">
       <div class="admin-sider__logo">
-        <span class="i-mingcute-tv-2-line text-5 text-primary" />
+        <img class="admin-sider__logo-img" src="/logo.png" alt="DliDli" width="24" height="24" />
         <span class="admin-sider__logo-text">DliDli 管理后台</span>
       </div>
       <nav class="admin-sider__nav">
@@ -210,6 +210,12 @@ function logout() {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.admin-sider__logo-img {
+  display: block;
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+
 .admin-sider__nav {
   flex: 1;
   padding: 12px 10px;
@@ -265,8 +271,12 @@ function logout() {
 
 .admin-header {
   height: 56px;
-  background: #fff;
+  /* 吸顶玻璃：只有内容从下方滚过时才读得出模糊感，平铺在纯色底上只看得见倒角与柔和投影。
+     这里只有下边缘，所以不用 $glass 混合（它会画整圈描边）。 */
+  background: v.$glass-bg;
   border-bottom: 1px solid v.$border;
+  backdrop-filter: blur(v.$glass-blur) saturate(1.6);
+  -webkit-backdrop-filter: blur(v.$glass-blur) saturate(1.6);
   display: flex;
   align-items: center;
   justify-content: space-between;

@@ -60,5 +60,8 @@ export default defineConfig({
   },
   shortcuts: {
     'flex-center': 'flex items-center justify-center',
+    // 液态玻璃面（与 C 端 web 同一套口径，见 apps/web/uno.config.ts）
+    glass:
+      'bg-[rgba(255,255,255,0.72)] backdrop-blur-18px backdrop-saturate-150 border border-[rgba(255,255,255,0.6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),inset_0_-1px_0_rgba(24,25,28,0.05),0_8px_30px_rgba(24,25,28,0.1)]',
   },
 })

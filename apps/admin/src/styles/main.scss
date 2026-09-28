@@ -8,6 +8,13 @@
   --dli-text-2: #{v.$text-2};
   --dli-text-3: #{v.$text-3};
   --dli-border: #{v.$border};
+  --dli-glass-blur: #{v.$glass-blur};
+  --dli-glass-bg: #{v.$glass-bg};
+  --dli-glass-bg-strong: #{v.$glass-bg-strong};
+  --dli-glass-border: #{v.$glass-border};
+  --dli-glass-shadow: #{v.$glass-shadow};
+  --dli-glass-dark-bg: #{v.$glass-dark-bg};
+  --dli-glass-dark-border: #{v.$glass-dark-border};
 }
 
 * {

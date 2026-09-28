@@ -15,7 +15,7 @@ import { useVideoPlayer } from '@/composables/video/useVideoPlayer'
 import { useDanmakuController } from '@/composables/video/useDanmakuController'
 import { useVideoActions } from '@/composables/video/useVideoActions'
 import { usePlaybackReport } from '@/composables/video/usePlaybackReport'
-import defaultCover from '@/assets/default-cover.svg'
+import defaultCover from '@/assets/default-cover.png'
 
 const route = useRoute()
 const router = useRouter()
