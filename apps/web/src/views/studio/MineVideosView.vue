@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
 import { ApiError, type VideoCard } from '@dlidli/api-client'
 import { api } from '@/api'
-import defaultCover from '@/assets/default-cover.svg'
+import defaultCover from '@/assets/default-cover.png'
 
 const router = useRouter()
 

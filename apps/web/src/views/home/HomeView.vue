@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
 import type { VideoCard } from '@dlidli/api-client'
 import { useUserStore } from '@/stores/user'
-import defaultCover from '@/assets/default-cover.svg'
+import defaultCover from '@/assets/default-cover.png'
 import defaultAvatar from '@/assets/default-avatar.png'
 import { useHomeFeed } from '@/composables/home/useHomeFeed'
 import { useHomeBanners } from '@/composables/home/useHomeBanners'
@@ -525,10 +525,14 @@ onBeforeUnmount(() => {
 /* 卡片更多操作下拉菜单（popper 挂载于 body，需全局样式） */
 .card-menu-popper {
   border-radius: 8px;
-  border: 1px solid #eef0f2;
+  /* 浮层玻璃：popper 是 .el-popper 本身，覆盖它的背景即可；箭头被 overflow 裁掉无需处理 */
+  background: var(--dli-glass-bg-strong);
+  border: 1px solid var(--dli-glass-border);
   box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.04);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    var(--dli-glass-shadow);
+  backdrop-filter: blur(var(--dli-glass-blur)) saturate(1.6);
+  -webkit-backdrop-filter: blur(var(--dli-glass-blur)) saturate(1.6);
   /* 无内边距：菜单项 hover 背景填满弹框（圆角与弹框一致） */
   padding: 0;
   overflow: hidden;

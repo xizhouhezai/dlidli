@@ -7,7 +7,7 @@ import { adminApi } from '@/api'
 import { usePagedList } from '@/composables/usePagedList'
 import { useApiAction } from '@/composables/useApiAction'
 import PageHead from '@/components/PageHead.vue'
-import defaultCover from '@/assets/default-cover.svg'
+import defaultCover from '@/assets/default-cover.png'
 
 const previewing = ref<ReviewItem | null>(null)
 const { run } = useApiAction()

@@ -150,7 +150,10 @@ async function onLogout() {
 <template>
   <header class="dli-header">
     <div class="mx-auto max-w-1440px h-15 flex items-center gap-6 px-6">
-      <RouterLink to="/" class="dli-logo shrink-0 text-6 font-800"> DliDli </RouterLink>
+      <RouterLink to="/" class="dli-logo shrink-0 flex items-center gap-2 text-6 font-800">
+        <img src="/logo.png" alt="DliDli" width="28" height="28" class="dli-logo__mark" />
+        DliDli
+      </RouterLink>
 
       <nav class="dli-nav flex gap-5 text-3.5 shrink-0">
         <RouterLink to="/"> 首页 </RouterLink>
@@ -228,8 +231,13 @@ async function onLogout() {
 @use '@/styles/variables' as v;
 
 .dli-header {
-  background: v.$surface;
+  /* 吸顶玻璃：半透明 + 背景模糊。内容从下方滚过时才读得出材质，
+     平铺在纯色底上只看得见倒角与柔和投影——这是玻璃的物理前提，不是没生效。 */
+  background: rgba(255, 255, 255, 0.72);
   border-bottom: 1px solid v.$border;
+  box-shadow: inset 0 -1px 0 v.$glass-border;
+  backdrop-filter: blur(v.$glass-blur) saturate(1.6);
+  -webkit-backdrop-filter: blur(v.$glass-blur) saturate(1.6);
   position: sticky;
   top: 0;
   z-index: v.$z-header;
@@ -237,6 +245,12 @@ async function onLogout() {
 
 .dli-logo {
   color: v.$primary;
+  line-height: 1;
+}
+
+.dli-logo__mark {
+  display: block;
+  border-radius: 8px;
 }
 
 .dli-nav {

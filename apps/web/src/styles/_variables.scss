@@ -27,6 +27,29 @@ $shadow-pop: 0 6px 20px rgba(0, 0, 0, 0.12);
 $z-header: 100;
 $z-popover: 20;
 
+// 液态玻璃材质（Liquid Glass 取向）：半透明底 + 背景模糊 + 上亮下暗的镜面倒角。
+// 注意物理前提：玻璃只有「背后有内容可模糊」时才读得出模糊感，所以主要给吸顶栏、浮层、
+// 弹窗这类内容会从下面滚过去的面用；平铺在纯色底上的卡片只能读出倒角与柔和投影。
+$glass-blur: 18px;
+$glass-blur-lg: 30px;
+$glass-bg: rgba(255, 255, 255, 0.7);
+$glass-bg-strong: rgba(255, 255, 255, 0.84);
+$glass-border: rgba(255, 255, 255, 0.6);
+$glass-shadow: 0 8px 30px rgba(24, 25, 28, 0.1);
+
+// 玻璃面：底 + 模糊 + 倒角（上缘吃光、下缘折光）+ 柔和投影
+@mixin glass($radius: $radius-lg, $bg: $glass-bg, $blur: $glass-blur) {
+  background: $bg;
+  border: 1px solid $glass-border;
+  border-radius: $radius;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(24, 25, 28, 0.05),
+    $glass-shadow;
+  backdrop-filter: blur($blur) saturate(1.6);
+  -webkit-backdrop-filter: blur($blur) saturate(1.6);
+}
+
 // 文本省略（行数）
 @mixin ellipsis($lines: 1) {
   overflow: hidden;
