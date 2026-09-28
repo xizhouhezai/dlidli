@@ -5,6 +5,9 @@ import { formatCount, formatDuration, type User } from '@dlidli/shared'
 import { ApiError, type VideoCard, type CollectionItem } from '@dlidli/api-client'
 import { api, hasLogin, saveLogin, clearLogin } from '@/api'
 import { wxLoginCode } from '@/utils/wxlogin'
+// 走模块导入而非 '/static/logo.png'：dev 下 /static 被代理到后端（后端的媒体命名空间），
+// 模板里写绝对 /static 路径会被编译成模块导入并 404，连页面模块一起加载失败。
+import logoUrl from '@/static/logo.png'
 
 const DEFAULT_AVATAR = '/static/default-avatar.png'
 const DEFAULT_COVER = '/static/default-cover.png'
@@ -143,6 +146,7 @@ onShow(() => {
     <!-- 未登录：短信登录面板 -->
     <view v-if="!loggedIn" class="login-panel">
       <view class="login-panel__brand">
+        <image class="login-panel__mark" :src="logoUrl" mode="aspectFit" />
         <text class="login-panel__logo">DliDli</text>
         <text class="login-panel__slogan">登录后管理你的投稿与收藏</text>
       </view>
@@ -260,6 +264,13 @@ onShow(() => {
 .login-panel__brand {
   text-align: center;
   margin-bottom: 48rpx;
+}
+
+.login-panel__mark {
+  display: block;
+  width: 96rpx;
+  height: 96rpx;
+  margin: 0 auto 16rpx;
 }
 
 .login-panel__logo {

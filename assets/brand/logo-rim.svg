@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- DliDli 品牌图形 · 玻璃倒角（只叠加在成品图标上，不用于满幅底板）
+       液态玻璃的「厚度」：上缘吃光发亮、下缘折光偏暗，绕一圈形成镜面倒角。
+       内缩 10、圆角 230 与合成时的 squircle 遮罩（rx 240）同心——同心圆角矩形满足 内圆角 = 外圆角 − 内缩。 -->
+  <defs>
+    <linearGradient id="dliRim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.90"/>
+      <stop offset="34%" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="52%" stop-color="#FFFFFF" stop-opacity="0.06"/>
+      <stop offset="64%" stop-color="#000000" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.24"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="1004" height="1004" rx="230" ry="230" fill="none" stroke="url(#dliRim)" stroke-width="20"/>
+</svg>

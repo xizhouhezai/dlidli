@@ -6,7 +6,7 @@ import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
 import { ApiError, type FeedItem } from '@dlidli/api-client'
 import { api } from '@/api'
 import { useUserStore } from '@/stores/user'
-import defaultCover from '@/assets/default-cover.svg'
+import defaultCover from '@/assets/default-cover.png'
 import defaultAvatar from '@/assets/default-avatar.png'
 import ReportDialog from '@/components/ReportDialog.vue'
 

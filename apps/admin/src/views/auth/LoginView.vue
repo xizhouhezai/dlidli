@@ -41,40 +41,7 @@ async function onLogin() {
     <div class="panel">
       <div class="panel__brand">
         <span class="panel__logo">
-          <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true">
-            <rect
-              x="4"
-              y="12"
-              width="40"
-              height="28"
-              rx="8"
-              fill="none"
-              stroke="url(#lg)"
-              stroke-width="3.5"
-            />
-            <path
-              d="M15 5l6 7M33 5l-6 7"
-              stroke="url(#lg)"
-              stroke-width="3.5"
-              stroke-linecap="round"
-              fill="none"
-            />
-            <circle cx="17" cy="26" r="2.6" fill="#fb7299" />
-            <circle cx="31" cy="26" r="2.6" fill="#23ade5" />
-            <path
-              d="M19 33q5 3.5 10 0"
-              stroke="#fb7299"
-              stroke-width="2.6"
-              stroke-linecap="round"
-              fill="none"
-            />
-            <defs>
-              <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#fb7299" />
-                <stop offset="1" stop-color="#23ade5" />
-              </linearGradient>
-            </defs>
-          </svg>
+          <img src="/logo.png" alt="DliDli" width="44" height="44" />
         </span>
         <h1 class="panel__title">DliDli <span class="panel__title-sub">管理后台</span></h1>
         <p class="panel__desc">内容审核 · 用户治理 · 运营配置</p>
@@ -208,11 +175,14 @@ async function onLogin() {
   z-index: 1;
   width: 400px;
   padding: 40px 36px 28px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(22px);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  @include v.glass(
+    18px,
+    v.$glass-dark-bg,
+    22px,
+    v.$glass-dark-border,
+    rgba(255, 255, 255, 0.14),
+    0 24px 60px rgba(0, 0, 0, 0.45)
+  );
   animation: panel-in 0.55s cubic-bezier(0.22, 0.85, 0.35, 1);
 }
 
@@ -235,10 +205,12 @@ async function onLogin() {
 
 .panel__logo {
   display: inline-flex;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(251, 114, 153, 0.1);
-  border: 1px solid rgba(251, 114, 153, 0.22);
+  line-height: 0;
+}
+
+.panel__logo img {
+  display: block;
+  border-radius: 12px;
 }
 
 .panel__title {

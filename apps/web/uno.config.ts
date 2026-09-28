@@ -43,5 +43,11 @@ export default defineConfig({
       'bg-primary text-white rounded-lg px-4 py-2 cursor-pointer transition-colors hover:bg-primary-hover',
     'card-surface': 'bg-white rounded-xl',
     'flex-center': 'flex items-center justify-center',
+    // 液态玻璃面：半透明底 + 背景模糊(带饱和提升) + 上亮下暗倒角。
+    // 只给背后有内容可模糊的面上用（吸顶栏/浮层/弹窗），纯色底上读不出模糊。
+    glass:
+      'bg-[rgba(255,255,255,0.7)] backdrop-blur-18px backdrop-saturate-150 border border-[rgba(255,255,255,0.6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),inset_0_-1px_0_rgba(24,25,28,0.05),0_8px_30px_rgba(24,25,28,0.1)]',
+    'glass-strong':
+      'bg-[rgba(255,255,255,0.84)] backdrop-blur-30px backdrop-saturate-150 border border-[rgba(255,255,255,0.6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),inset_0_-1px_0_rgba(24,25,28,0.05),0_8px_30px_rgba(24,25,28,0.1)]',
   },
 })

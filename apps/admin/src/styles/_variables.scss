@@ -19,6 +19,40 @@ $radius-lg: 12px;
 $shadow-card: 0 4px 14px rgba(0, 0, 0, 0.08);
 $shadow-pop: 0 6px 20px rgba(0, 0, 0, 0.12);
 
+// 液态玻璃材质（与 C 端 web 同源 + 后台深色面专用的一组）。
+// 物理前提同 web：只有背后有内容可模糊时才读得出模糊感，主要给吸顶顶栏、侧栏、弹窗用。
+$glass-blur: 18px;
+$glass-blur-lg: 30px;
+$glass-bg: rgba(255, 255, 255, 0.72);
+$glass-bg-strong: rgba(255, 255, 255, 0.85);
+$glass-border: rgba(255, 255, 255, 0.6);
+$glass-shadow: 0 8px 30px rgba(24, 25, 28, 0.1);
+
+// 深色玻璃：后台侧栏这类深色面用（白光低透明度叠加，不再用固定深色板）
+$glass-dark-bg: rgba(255, 255, 255, 0.06);
+$glass-dark-border: rgba(255, 255, 255, 0.1);
+
+// $highlight / $shadow 需随底色深浅覆盖：深色面用高亮 0.14 左右，
+// 0.7 的白内描边在深蓝底上会糊成一条亮线。
+@mixin glass(
+  $radius: $radius-lg,
+  $bg: $glass-bg,
+  $blur: $glass-blur,
+  $border: $glass-border,
+  $highlight: rgba(255, 255, 255, 0.7),
+  $shadow: $glass-shadow
+) {
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow:
+    inset 0 1px 0 $highlight,
+    inset 0 -1px 0 rgba(24, 25, 28, 0.05),
+    $shadow;
+  backdrop-filter: blur($blur) saturate(1.6);
+  -webkit-backdrop-filter: blur($blur) saturate(1.6);
+}
+
 @mixin ellipsis($lines: 1) {
   overflow: hidden;
   @if $lines == 1 {

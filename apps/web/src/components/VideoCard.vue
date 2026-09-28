@@ -5,7 +5,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { formatCount, formatDuration, formatPubdate } from '@dlidli/shared'
 import type { VideoCard } from '@dlidli/api-client'
-import defaultCover from '@/assets/default-cover.svg'
+import defaultCover from '@/assets/default-cover.png'
 
 const props = defineProps<{
   video: VideoCard

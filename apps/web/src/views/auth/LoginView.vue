@@ -192,6 +192,7 @@ async function onSubmit() {
     <!-- 登录卡片 -->
     <el-card class="login-card" shadow="always">
       <div class="login-brand">
+        <img src="/logo.png" alt="DliDli" width="64" height="64" class="login-logo__mark" />
         <span class="login-logo">DliDli</span>
         <p class="login-slogan">你感兴趣的视频都在 DliDli</p>
       </div>
@@ -277,7 +278,12 @@ async function onSubmit() {
               />
             </el-form-item>
             <el-form-item>
-              <el-input v-model="regForm.inviteCode" placeholder="邀请码（选填，内测开启时必填）" size="large" maxlength="16" />
+              <el-input
+                v-model="regForm.inviteCode"
+                placeholder="邀请码（选填，内测开启时必填）"
+                size="large"
+                maxlength="16"
+              />
             </el-form-item>
           </el-form>
         </el-tab-pane>
@@ -306,16 +312,13 @@ async function onSubmit() {
         <p v-if="debugActivateUrl" class="activate-tip">
           （dev 模式 mock 邮件）激活链接已生成，可直接复制 token 或点击下方按钮：
         </p>
-        <p v-else class="activate-tip">激活邮件已发送至 {{ pendingEmail }}，请查收并输入链接中的 token。</p>
+        <p v-else class="activate-tip">
+          激活邮件已发送至 {{ pendingEmail }}，请查收并输入链接中的 token。
+        </p>
         <el-input v-model="activateToken" placeholder="激活 token" size="large" />
         <div class="activate-actions">
           <el-button size="large" @click="activateDialog = false">稍后激活</el-button>
-          <el-button
-            type="primary"
-            size="large"
-            :loading="activateLoading"
-            @click="onActivate"
-          >
+          <el-button type="primary" size="large" :loading="activateLoading" @click="onActivate">
             立即激活
           </el-button>
         </div>
@@ -483,12 +486,20 @@ async function onSubmit() {
   margin-bottom: 8px;
 }
 
+.login-logo__mark {
+  display: inline-block;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  margin-bottom: 10px;
+  animation: logo-bounce 2.4s ease-in-out infinite;
+}
+
 .login-logo {
   font-size: 32px;
   font-weight: 800;
   color: var(--dli-primary);
-  display: inline-block;
-  animation: logo-bounce 2.4s ease-in-out infinite;
+  display: block;
 }
 
 @keyframes logo-bounce {
@@ -570,7 +581,7 @@ async function onSubmit() {
   .login-page,
   .bg-blob,
   .bg-danmaku,
-  .login-logo,
+  .login-logo__mark,
   .login-card {
     animation: none;
   }

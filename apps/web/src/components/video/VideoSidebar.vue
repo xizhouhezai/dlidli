@@ -8,7 +8,7 @@ import type { VideoCard, VideoDetail } from '@dlidli/api-client'
 import type { useDanmakuController } from '@/composables/video/useDanmakuController'
 import type { useVideoActions } from '@/composables/video/useVideoActions'
 import type { useVideoPlayer } from '@/composables/video/useVideoPlayer'
-import defaultCover from '@/assets/default-cover.svg'
+import defaultCover from '@/assets/default-cover.png'
 import defaultAvatar from '@/assets/default-avatar.png'
 import { useUserStore } from '@/stores/user'
 
