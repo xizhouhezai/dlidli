@@ -56,7 +56,8 @@ packages/
 
 - **UnoCSS**：原子化 CSS，web 用 `presetUno + presetAttributify + presetIcons`，h5 用 `presetUno`（小程序属性化受限）；布局/间距/字号等高频样式直接写在模板类名。
 - **SCSS**：交互态（hover/active）、`:deep()`、复杂选择器仍用局部 `<style scoped lang="scss">`；h5 保留 rpx 适配。
-- **品牌 token 单一真源**：`apps/web/src/styles/_variables.scss`（SCSS 变量+mixin）、`uno.config.ts` theme、`main.scss` 导出的 `--dli-*` CSS 变量三处同源；旧页面 `var(--dli-*)` 写法零改动兼容，新页面用 Uno/SCSS，渐进式迁移。h5 同源变量在 `apps/h5/src/styles/variables.scss`。
+- **品牌 token 单一真源**：`apps/web/src/styles/_variables.scss`（SCSS 变量+mixin）、`uno.config.ts` theme、`main.scss` 导出的 `--dli-*` CSS 变量三处同源；旧页面 `var(--dli-*)` 写法零改动兼容，新页面用 Uno/SCSS，渐进式迁移。h5 同源变量在 `apps/h5/src/styles/variables.scss`；admin 各有一份自己的三处同源（`apps/admin/src/styles/`）。
+- **液态玻璃材质**：`$glass-*` 令牌 + `@mixin glass()`（web/admin 各自 `_variables.scss`），导出为 `--dli-glass-*`，Uno 侧 `glass` / `glass-strong` 快捷类。物理前提是**背后必须有内容可模糊**，因此只用在吸顶栏、浮层、弹窗这类内容会从下面滚过去的面；平铺在纯色底上的卡片只能读出倒角与柔和投影。admin 顶栏深色面用 `$glass-dark-bg` / `$glass-dark-border`。
 - **坑点**：uni-app 旧版 vite 配置加载器用 require 读取，`unocss/vite`（ESM-only）需用异步 `defineConfig(async () => { const UnoCSS = (await import('unocss/vite')).default })` 惰性加载；h5 SCSS 中 `@use` 用相对路径（uni sass 解析器不认 `@` 别名）。
 
 ## 4. 工程规范
@@ -184,8 +185,8 @@ packages/
 
 - 格式：`i-{集合}-{图标名}`，如 `i-mdi-thumb-up`、`i-carbon-search`、`i-tabler-bell`。
 - 同一功能全端统一图标名（避免 web 用 mdi、h5 用 carbon 导致视觉不一致）。
-- 品牌 Logo / 吉祥物保持 SVG 文件方案（方案 D），不走 Iconify。
-  - 品牌图形（应用图标 / favicon）单一矢量源：`apps/web/public/favicon.svg`，Web 端由它派生 `favicon.ico`、`apple-touch-icon.png`，鸿蒙端由它导出分层图标与启动图标位图；设计定版与实测见 [harmony plan §7.1](/specs/harmony/plan)。
+- 品牌 Logo / 吉祥物不走 Iconify。品牌图形是一只**白色鲸**（圆形胖身 + 张开的嘴 + 眼 + 短胸鳍 + 厚尾鳍，播放三角以负空间挖在身体中段），贯穿应用图标 / favicon / 顶栏与登录页标记 / 默认封面。
+  - 品牌图形（应用图标 / favicon / 顶栏与登录页标记 / 默认封面）单一来源：`assets/brand/`（`logo-bg.svg`、`logo-rim.svg`、`cover-default.svg` 三个 SVG 底板 + `logo-mark.png`、`logo-mark-small.png` 两个位图标记）。全部产物由 `node scripts/svg2png.mjs` 派生——Web 端 `favicon.svg` / `favicon.ico` / `apple-touch-icon.png`、鸿蒙端分层图标与启动图标位图、三端默认封面、以及各端顶栏/登录页用的 `logo.png`（web/admin 176px、h5 144px）。**标记层是位图**：由生图模型产出后清理成纯白 + 透明底并归一化，脚本以 `<image href="data:…">` 嵌进合成 SVG；`apps/web/public/favicon.svg` 也是脚本合成产物而非手写源文件（自包含，内嵌标记位图），产物均带 generated 头注。**默认封面只由脚本在合成阶段把标记贴到 `cover-default.svg` 底板上**（故直接打开该 SVG 看不到鲸）。改视觉只改 `assets/brand/` 后重跑脚本。设计定版与实测见 [harmony plan §7.1](/specs/harmony/plan)。
 
 - TypeScript 严格模式；ESLint + Prettier + stylelint，CI 强制。
 - 提交规范：Conventional Commits + commitlint + husky。
