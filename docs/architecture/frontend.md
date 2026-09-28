@@ -185,7 +185,7 @@ packages/
 
 - 格式：`i-{集合}-{图标名}`，如 `i-mdi-thumb-up`、`i-carbon-search`、`i-tabler-bell`。
 - 同一功能全端统一图标名（避免 web 用 mdi、h5 用 carbon 导致视觉不一致）。
-- 品牌 Logo / 吉祥物不走 Iconify。品牌图形是一只**白色鲸**（圆形胖身 + 张开的嘴 + 眼 + 短胸鳍 + 厚尾鳍，播放三角以负空间挖在身体中段），贯穿应用图标 / favicon / 顶栏与登录页标记 / 默认封面。
+- 品牌 Logo / 吉祥物不走 Iconify。品牌图形是一只**白色鲸**（饱满正圆的大头 + **闭合的嘴**（头左端即一条平滑圆弧）+ 眼在头前部 + 贴着下缘的细弧胸鳍 + 厚实两叶尾鳍 + **头顶一簇简化小喷泉**；播放三角以负空间挖在身体中段，保住播放语义），贯穿应用图标 / favicon / 顶栏与登录页标记 / 默认封面。喷泉是**独立于鲸身的连通块**，16/32px 帧会把它去掉（小尺寸下只会糊成噪点），故小尺寸变体只剩「鲸身 + 一个播放三角」。
   - 品牌图形（应用图标 / favicon / 顶栏与登录页标记 / 默认封面）单一来源：`assets/brand/`（`logo-bg.svg`、`logo-rim.svg`、`cover-default.svg` 三个 SVG 底板 + `logo-mark.png`、`logo-mark-small.png` 两个位图标记）。全部产物由 `node scripts/svg2png.mjs` 派生——Web 端 `favicon.svg` / `favicon.ico` / `apple-touch-icon.png`、鸿蒙端分层图标与启动图标位图、三端默认封面、以及各端顶栏/登录页用的 `logo.png`（web/admin 176px、h5 144px）。**标记层是位图**：由生图模型产出后清理成纯白 + 透明底并归一化，脚本以 `<image href="data:…">` 嵌进合成 SVG；`apps/web/public/favicon.svg` 也是脚本合成产物而非手写源文件（自包含，内嵌标记位图），产物均带 generated 头注。**默认封面只由脚本在合成阶段把标记贴到 `cover-default.svg` 底板上**（故直接打开该 SVG 看不到鲸）。改视觉只改 `assets/brand/` 后重跑脚本。设计定版与实测见 [harmony plan §7.1](/specs/harmony/plan)。
 
 - TypeScript 严格模式；ESLint + Prettier + stylelint，CI 强制。
