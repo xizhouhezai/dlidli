@@ -42,6 +42,12 @@ func NewService(repo *Repo, rdb *redis.Client, store storage.Storage, tmpDir str
 func sessKey(id string) string  { return "up:sess:" + id }
 func partsKey(id string) string { return "up:parts:" + id }
 
+// byHashKey 断点续传的会话索引键：必须含 uid。
+// 只按 hash 索引会让不同用户互相复用未完成会话（见 0033 迁移说明与缺陷②）。
+func byHashKey(uid int64, hash string) string {
+	return fmt.Sprintf("up:byhash:%d:%s", uid, hash)
+}
+
 // Init 初始化上传：秒传命中直接返回文件；否则创建/恢复上传会话。
 func (s *Service) Init(ctx context.Context, uid int64, req *InitReq) (*InitResp, error) {
 	ext := strings.ToLower(filepath.Ext(req.FileName))
@@ -53,15 +59,17 @@ func (s *Service) Init(ctx context.Context, uid int64, req *InitReq) (*InitResp,
 	}
 	hash := strings.ToLower(req.FileHash)
 
-	// 秒传：同 hash 文件已存在且属于当前用户时直接复用（VID-24：跨用户不暴露他人 file_id）
-	if f, err := s.repo.FindByHash(hash); err != nil {
+	// 秒传：同 hash 文件已存在**且属于当前用户**时直接复用（VID-24：跨用户不暴露他人 file_id）
+	if f, err := s.repo.FindByUserHash(uid, hash); err != nil {
 		return nil, err
-	} else if f != nil && f.UserID == uid {
+	} else if f != nil {
 		return &InitResp{Fast: true, FileID: fmt.Sprintf("%d", f.ID), StoreKey: f.StoreKey}, nil
 	}
 
-	// 恢复未完成会话（断点续传）：以 hash 作为会话索引
-	if existing, _ := s.rdb.Get(ctx, "up:byhash:"+hash).Result(); existing != "" {
+	// 恢复未完成会话（断点续传）：以「用户 + hash」作为会话索引。
+	// 键必须含 uid——否则用户 B 会复用用户 A 的 uploadID，而 session() 的归属校验
+	// 会让 B 在上传分片时撞 ErrForbidden（表现为「上传莫名被拒」）。
+	if existing, _ := s.rdb.Get(ctx, byHashKey(uid, hash)).Result(); existing != "" {
 		if uploaded, err := s.uploadedParts(ctx, existing); err == nil {
 			chunkCount, _ := s.rdb.HGet(ctx, sessKey(existing), "chunk_count").Int()
 			return &InitResp{
@@ -86,7 +94,7 @@ func (s *Service) Init(ctx context.Context, uid int64, req *InitReq) (*InitResp,
 		return nil, err
 	}
 	s.rdb.Expire(ctx, sessKey(uploadID), sessionTTL)
-	s.rdb.Set(ctx, "up:byhash:"+hash, uploadID, sessionTTL)
+	s.rdb.Set(ctx, byHashKey(uid, hash), uploadID, sessionTTL)
 
 	return &InitResp{
 		UploadID: uploadID, ChunkSize: ChunkSize,
@@ -220,8 +228,8 @@ func (s *Service) Complete(ctx context.Context, uid int64, uploadID string) (*Co
 		return nil, err
 	}
 
-	// 清理会话与分片
-	s.rdb.Del(ctx, sessKey(uploadID), partsKey(uploadID), "up:byhash:"+sess["file_hash"])
+	// 清理会话与分片（会话索引键按「用户 + hash」，与 Init 写入时一致）
+	s.rdb.Del(ctx, sessKey(uploadID), partsKey(uploadID), byHashKey(uid, sess["file_hash"]))
 	if err := os.RemoveAll(dir); err != nil {
 		s.log.Warn("清理分片目录失败", zap.String("dir", dir), zap.Error(err))
 	}
@@ -317,6 +325,8 @@ func (s *Service) CleanupOrphans(ctx context.Context, maxAge time.Duration) (int
 			s.log.Warn("清理过期分片目录失败", zap.String("dir", dir), zap.Error(err))
 			continue
 		}
+		// 注意：会话索引键（up:byhash:<uid>:<hash>）不在此清理——本函数按磁盘目录扫描，
+		// 拿不到 uid，无法重建该键。它自带 sessionTTL（24h）会自然过期，仅短暂占用内存。
 		s.rdb.Del(ctx, sessKey(uploadID), partsKey(uploadID))
 		s.log.Info("清理过期分片目录", zap.String("upload_id", uploadID))
 		removed++
