@@ -234,11 +234,51 @@
   - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL**（ArkTS 零告警）；`go test ./...` 全绿（本期零后端改动，回归确认）；模拟器逐页实测截图通过——首页（极淡品牌顶 + 悬浮玻璃胶囊选中态 + 中性卡片）、搜索历史、搜索结果（**玻璃胶囊身后红色海报清晰可辨**，是沉浸光感的关键证据）、我的（已登录/未登录）、登录页；壳层标题栏搜索胶囊点击切页签经 `uitest` 实测生效（无需 `HdsTabsController`），登录链路顺带复跑通过
   - 未覆盖：暗色模式下的氛围底与材质观感未截图核对（模拟器 `param set persist.sys.color.mode` 报 errNum 1001、`settings` 二进制缺失，切不过去；两套 token 均已就位）；全部结论均在 API 26 模拟器取得，**真机待验**
 
+## M4 追加（W49+）创作端
+
+> **口径变更（2026-09-30）**：[spec §1](/specs/harmony/spec) 原定「投稿不在本期范围、引导至 Web」，V1.3 起端侧扩为**观看 + 创作**。M4 的结论并未作废——它是**阶段性范围决策**，而技术预研（见 [plan §2.1](/specs/harmony/plan)）已确认端侧具备完整投稿能力。**创作者中心（数据看板/收益/合集管理）仍只在 Web**，端侧不承接。
+
+- [ ] M4-HMY-50 投稿预研：`@ohos.request` 与后端分片协议的对接方式定论（**阻塞 HMY-51，必须先做**）
+  - 覆盖：—（工程；为 HMY-50~54 定实现方案）
+  - 背景：后端分片是 **`PUT` + 裸二进制 body**（`packages/api-client` 的 `putRaw`），而 `request.uploadFile` 的 `UploadConfig` 走 **multipart 表单**（`files` + `data`），SDK 未见 `PUT` 示例。两条路线必须实测择一，详见 [plan §6.1](/specs/harmony/plan)
+  - 判定项（用真实 ≥5MB 文件对本地后端跑通即可定论）：① `request.uploadFile` 能否发 `PUT`；② 后端是否接受 multipart（若不接受，B 路线或"加后端 multipart 变体"需二选一）；③ `begins`/`ends` 是否为**字节区间**语义（决定能否只传一段）；④ 切后台/锁屏时上传是否持续（`backgroundModes` 声明是否必需）
+  - 产出：把定论写回 [plan §2.1](/specs/harmony/plan) 的「上传通道」行与 §6.1 首条，并据此确定 HMY-51 的实现形态
+  - 前置：本地后端 + MySQL/Redis 已起（见 [部署文档](/project/deployment)）；模拟器 API 26 `Pura X View` 就绪
+  - 注意：**模拟器的后台/锁屏保活结论不作数**，须记「待真机确认」
+
+- [ ] M4-HMY-51 投稿上传链路：选片、分片上传、断点续传、秒传、进度可见
+  - 覆盖：HMY-50、HMY-54
+  - 实现要点（待 HMY-50 定论后细化）：
+    - `@ohos.file.picker` 选片取 `uri`；`@ohos.request` 或扩展后的 `HttpClient` 传分片（择一，见 HMY-50）
+    - 端侧算 SHA-256 → `POST /upload/init`；`fast=true` 直接拿 `file_id`；否则按 `chunk_size` 切片依 `uploaded` 数组**只传缺失分片**
+    - 进度用 `on('progress')` 或按分片计数上报；`POST /upload/{id}/complete` 收口
+    - 新增 `service/UploadApi.ets` 与 `model/Upload.ets`（手写模型，字段以 OpenAPI 为准）
+    - 上传前校验：扩展名白名单（mp4/mov/mkv/flv/avi）、单文件 ≤8GB、剩余空间与网络类型提示（HMY-54）
+  - 验证结论：待补
+  - 未覆盖：真机待验
+
+- [ ] M4-HMY-52 稿件信息与封面：标题/简介/分区/标签、封面选图或截帧 + 16:9 裁切
+  - 覆盖：HMY-51
+  - 实现要点：分区取 `GET /api/v1/categories`；封面走 `@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9，`multipart/form-data` 传 `POST /videos/cover`（字段 `file`，≤5MB，jpg/png/webp）；表单校验对齐 Web `UploadView`（标题 ≤80、简介 ≤2000、标签 1~10）
+  - 验证结论：待补
+
+- [ ] M4-HMY-53 多P 与草稿：多分P 管理、投稿中退出可恢复
+  - 覆盖：HMY-52
+  - 实现要点：多P 上限 10（对齐 Web 与 `SubmitReq.parts`）；草稿存 `preferences`（标题/简介/分区/标签/各P 的 file_id/封面路径）；**重进时先 `GET /upload/{id}` 校验会话有效性**（Redis TTL 24h），失效则提示重选文件
+  - 验证结论：待补
+
+- [ ] M4-HMY-54 提交与状态回看：提交投稿、我的投稿状态与驳回原因
+  - 覆盖：HMY-53
+  - 实现要点：`POST /videos` 提交；「我的投稿」（M4-HMY-09 的 `ProfileContent` 投稿档）展示 `status`（0 草稿/1 上传中/2 转码中/3 待审核/4 已发布/5 已驳回）并对已驳回展示 `reject_reason`；下拉刷新取最新状态
+  - 实现提示：`GET /videos/mine` 已返回 `{list,total}`，`MineResult` 已在 M4-HMY-09 落地，本任务多数为展示层改造
+  - 验证结论：待补
+
 ## 进度
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 11 | 9 |
-| **合计** | **11** | **9** |
+| M4 观看端 | 11 | 9 |
+| M4 追加·创作端 | 5 | 0 |
+| **合计** | **16** | **9** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

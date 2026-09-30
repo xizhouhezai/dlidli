@@ -57,6 +57,19 @@ apps/harmony/
 | 小控件的边界 | 小尺寸胶囊/行内控件**用中性次级底色实填、不挂材质**（选中态才用品牌实色） | 小控件在均匀浅底上挂材质出不了轮廓——按钮会失去可点区域的视觉暗示（实测：退出登录按钮、搜索历史胶囊都出现过）。改用固定的中性次级底色（与材质同色）保形，观感与挂材质一致但一定可见 | 一律挂材质（否：控件视觉上消失）；半透明**品牌**实底（否：小控件满屏粉，是"割裂感"的直接来源） |
 | 沉浸光感实现路线 | **原生 ArkUI 系统材质**：`uiMaterial.ImmersiveMaterial` + `.systemMaterial()` 通用属性，`module.json5` 配 `ohos.arkui.UIMaterial.state`；**底栏另取 HDS `HdsTabs`** | API 26 已就位：前者是内容区组件的一等能力（含 `interactive`/`lightEffect`），后者是本机已内置的 `@kit.UIDesignKit`（`HdsTabs` 自 6.0.0(20) 起），负责悬浮胶囊的几何与材质。二者分域不重叠 | 全部自绘光效（否：非系统级，功耗与一致性差）；内容区也走 HDS（否：HDS 面向的是导航/列表等成品组件，无通用"给任意组件上材质"的能力） |
 
+### 2.1 投稿（M4 追加，承 §2.6 需求）
+
+| 决策点 | 决策 | 理由 | 备选方案 |
+| --- | --- | --- | --- |
+| 上传通道 | **`@ohos.request` 的 `uploadFile`（`UploadTask`）**，而非现有 `HttpClient` | 现有 `HttpClient` 只做 JSON（`extraData = JSON.stringify(body)`，`HttpDataType.STRING`），**不具备二进制/大文件能力**。`request.uploadFile` 是系统级上传任务：支持裸文件、进度回调（`on('progress')`）、**后台传输（应用切后台/锁屏不中断）**、断点字段（`begins`/`ends`/`index`）——恰好覆盖 HMY-50 的三条端侧差异 | ArkTS 手写 `@ohos.net.http` 传 ArrayBuffer（否：需自行切片与重试，且**无后台传输**）；`@ohos.net.rcp`（否：无专用上传任务与进度语义） |
+| 分片协议 | **复用后端既有分片接口，零后端改动** | 后端 `/upload/init`（秒传+断点恢复）、`PUT /upload/{id}/parts/{index}`（**裸二进制 body**，见 `packages/api-client` 的 `putRaw`）、`POST /upload/{id}/complete` 已完备（chunk 5MB / 上限 8GB / 白名单 mp4·mov·mkv·flv·avi） | 整文件直传（否：8GB 级文件必超时且不可续传）；新增端侧专用上传接口（否：契约分叉，无必要） |
+| 文件选取 | **`@ohos.file.picker` 的 `PhotoViewPicker` / `DocumentViewPicker`** | 系统选择器直接返回 `uri`，交给 `request.uploadFile` 的 `files: [{ filename, name, uri }]` 使用，**无需申请读媒体库权限**（选择器是授权入口） | 申请 `READ_MEDIA` 直读相册（否：权限面大、需用户额外授权，系统选择器已够用） |
+| 哈希与秒传 | **端侧算 SHA-256**（`@ohos.file.hash` 或 crypto framework 流式读取），命中秒传则跳过上传 | 后端 `InitReq.file_hash` 为必填且长度须为 64 位 hex；秒传可让重复投稿零上传 | 不算哈希传空（否：后端 binding `required,len=64` 直接拒）；仅按文件名/大小推断（否：不可靠且后端不支持） |
+| 上传态与草稿 | **`upload_file` 会话由后端持有，端侧只存「稿件草稿」**（标题/简介/分区/标签/file_id/本地封面路径）于 `preferences` | 后端已用 Redis 存上传会话（`up:sess:*`/`up:parts:*`，TTL 24h）并支持 `GET /upload/{id}` 查已传分片，**端侧无需自建分片账本**；草稿只解决"填了一半退出"的场景 | 端侧自建分片状态表（否：与后端 Redis 会话重复，且不一致时更难排查）；不做草稿（否：HMY-52 明确要求） |
+| 封面处理 | **`@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9**，再以 `multipart/form-data` 传 `POST /videos/cover`（字段名 `file`） | 后端封面接口是 `c.FormFile("file")` multipart（**与分片的裸 body 不同**），限 5MB / jpg·png·webp；端侧先裁切可避免上传后被裁掉主体 | 直接传原图（否：相册图常见 4:3/竖图，后端按 16:9 消费会裁掉内容）；复用 `request.uploadFile`（可行，但该接口是 multipart 表单，用 `HttpClient` 需扩展 multipart 能力，二者择一，见下条风险） |
+| 期望类型 | `@ohos.request` / `@ohos.file.picker` / `@ohos.multimedia.image` 按 OpenAPI **手写端侧模型**（沿用既有口径） | 与全网一致：swag 产物无响应模型，手写 + 真实响应核对；本次新增 `model/Upload.ets`（`InitResp`/`CompleteResp`/`Draft`）与 `SubmitReq` | 生成器（否：不可行，见 §6） |
+| 提交与状态回看 | 复用 `POST /videos`（`SubmitReq`）与 `GET /videos/mine` | 两者均已存在，且 `MineResult` 已在 M4-HMY-09 落地；`video.status` 枚举（0 草稿/1 上传中/2 转码中/3 待审核/4 已发布/5 已驳回）可直接驱动 HMY-53 的状态展示 | 新增状态查询接口（否：`/videos/mine` 已含 status 与 reject_reason） |
+
 ## 3. 数据模型
 
 端侧无业务数据库（不建表），仅本地偏好存储：
@@ -86,6 +99,19 @@ apps/harmony/
 | WS | 弹幕实时下发 | 既有 comet WS 通道 |
 
 > 模块级接口清单待预研阶段以 OpenAPI 逐条核对后补全（见 [tasks](/specs/harmony/tasks) M4-HMY-02）。
+
+**M4 追加：投稿新增消费的接口**（同样**不新增后端接口**，全部为既有能力）：
+
+| 方法 | 路径 | 说明 | 端侧注意 |
+| --- | --- | --- | --- |
+| POST | `/api/v1/upload/init` | 初始化上传（秒传/断点恢复） | `file_hash` 必填且为 64 位 hex；响应 `fast=true` 时直接拿 `file_id` |
+| PUT | `/api/v1/upload/{id}/parts/{index}` | 上传分片 | **裸二进制 body**（非 multipart）；分片大小以后端 `chunk_size` 为准（5MB） |
+| GET | `/api/v1/upload/{id}` | 查询已传分片 | 用于断点续传与草稿校验 |
+| POST | `/api/v1/upload/{id}/complete` | 合并分片 | 返回 `file_id` 供投稿使用 |
+| POST | `/api/v1/videos/cover` | 上传封面 | **multipart**（字段名 `file`）；≤5MB；jpg/png/webp |
+| POST | `/api/v1/videos` | 提交稿件 | `SubmitReq`：`file_id`/`title`≤80/`description`≤2000/`category_id`/`tags`(1~10)/`copyright`(1自制·2转载)/`cover`/`parts`(多P) |
+| GET | `/api/v1/videos/mine` | 我的投稿 | 返回 `{list,total}`，含 `status` 与 `reject_reason`，驱动 HMY-53 |
+| GET | `/api/v1/categories` | 分区列表 | **注意不在 `/videos` 下**；与首页分区共用 |
 
 ## 5. 关键流程
 
@@ -159,6 +185,19 @@ apps/harmony/
 - [ ] **微信登录**：鸿蒙端无小程序载体，微信开放平台鸿蒙版 SDK 可用性待查证（本期不做）。
 - [ ] **CI 影响**：hvigor 构建需 DevEco 环境，CI 是否纳入鸿蒙构建待定（本期可先本地构建）。
 - [ ] **应用签名与上架**：本期口径为仅模拟器/真机本地验证，不提审；签名证书与资质材料待上架阶段再办。
+
+### 6.1 投稿专项风险（M4 追加，2026-09-30 预研）
+
+- [ ] **`@ohos.request` 与后端分片协议的对接方式（首要未决项）**：后端分片接口是 **`PUT` + 裸二进制 body**（`packages/api-client` 的 `putRaw`），而 `request.uploadFile` 的 `UploadConfig` 走的是 **multipart 表单**（`files` + `data`），`method` 字段在 SDK 声明中为 `string` 但**未见 `PUT` 用法示例**。两条路线待实测择一：
+  - **A. 用 `request.uploadFile` 直传文件**：需确认 ① 能否发 `PUT`（后端只注册了 `PUT /:id/parts/:index`）；② 无需服务端改 multipart 解析；③ 能否只传"文件的某一段"（`begins`/`ends` 语义是否为字节区间）。**若后端不接受 multipart，则须改后端加一个 multipart 变体（破坏"零后端改动"口径）**。
+  - **B. 扩展端侧 `HttpClient` 支持二进制 body**：`http.HttpRequestOptions` 的 `extraData` 可直接传 `ArrayBuffer`（配 `HttpDataType.ARRAY_BUFFER`），自制 PUT 分片；**代价是失去系统级后台传输**，HMY-50 的"切后台不中断"需自行用 `backgroundTaskManager` 申请长时任务保活。
+  - 结论未定前，**不得开工 HMY-50**；预研应作为 M4-HMY-50 的前置任务先做掉（预计半天，用真实 5MB+ 文件对真后端跑通即可定论）。
+- [ ] **后台传输的保活边界**：即便走 `request.uploadFile`，系统对后台任务仍有约束（长时任务需声明 `backgroundModes`，且可能受省电策略影响）。HMY-50 的"锁屏继续上传"需在真机上以"锁屏 + 切后台 5 分钟"实测确认，**模拟器结论不作数**。
+- [ ] **端侧算大文件 SHA-256 的耗时**：8GB 文件全量哈希在端侧可能达数十秒。需实测并决定策略（如对 > 500MB 的文件改用"抽样哈希 + 尺寸"做弱秒传，或直接跳过秒传改由后端在合并时校验）。**后端 `file_hash` 是必填 `len=64`**，跳过秒传仍须算完哈希，故此耗时无法回避，只能优化或后端放宽。
+- [ ] **`uploads/` 与数据库的一致性运维**（承本仓 [部署文档 §4.8](/project/deployment)）：投稿功能上线后，端侧产生的媒体文件同样落在 `server/uploads/`（**不在 Docker 卷内、被 gitignore**），**该目录与数据库必须同周期备份**，否则重演 2026-09-30 的"文件在、元数据丢"事故。此项为运维约束，非端侧代码问题，但投稿上线前应在 [deployment](/project/deployment) 的检查清单中确认。
+- [ ] **草稿的清理策略**：本地草稿（`preferences`）与服务端上传会话（Redis TTL 24h）生命周期不一致——草稿可能引用已被清理的上传会话。需定义：进入草稿时**先 `GET /upload/{id}` 校验会话是否仍有效**，失效则提示"上传已过期，需重新选择文件"。
+- [ ] **端侧投稿的定位复核**：spec §1 原定"投稿引导至 Web"，V1.3 放开为端侧承接。**Web 端 `UploadView` 已有的能力边界需逐项对齐**（多P 上限 10、标签 1~10、标题 ≤80、简介 ≤2000），端侧不得超出或遗漏（HMY-52/54）。
+
 
 ## 7. 视觉设计资源与规范依据
 
