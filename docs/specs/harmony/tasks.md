@@ -103,7 +103,8 @@
     - ② **空结果时 tab 行消失**：`resultHeader`（含 视频/UP 主 tab 与「共 N 条」）原只在与结果列表同一分支渲染，0 结果时没有 tab 可切（视频无果就无法去 UP 主 tab）。改为 tab 行独立于结果态渲染，「共 N 条」仅在 `total > 0` 时展示
   - 验证结论：`hvigorw assembleHap` **BUILD SUCCESSFUL（ArkTS 零告警）**；`go test ./...` 与 `go vet ./...` 全绿（本期无后端改动，回归确认）；模拟器实测（API 26 实例，后端本地 `http://10.0.2.2:8000`）逐项通过：
     - **数据口径**：dev 库原无稿件，种子数据 26 稿件 / 26 UP 主（覆盖 12 个一级分区，含空封面、超 1 小时时长、亿级播放等边界）——推荐链路的同 UP 打散要求一稿一主，故 UP 主数与稿件数 1:1
-    - **首页信息流**：推荐首屏 20 条 + 触底续 6 条后呈现「没有更多了」；分区切换（动画 → 3 条，推荐页签隐去并自动落最新）；最新/最热切换（最热按播放量降序，26.6万 > 24.3万 > 22.8万 逐屏验证）；下拉刷新（日志 7 次 page-1 重载且列表回顶）；封面走 `10.0.2.2` 正常出图、空封面为底色块占位、时长角标 `04:11`/`1:02:05` 两种格式、meta 行 `1.2亿 · 生活UP主05 · 5小时前`（万/亿与相对时间均正确）
+    - **首页信息流**：推荐首屏 20 条 + 触底续 6 条后呈现「没有更多了」；分区切换（动画 → 3 条，推荐页签隐去并自动落最新）；最新/最热切换（最热按播放量降序，26.6万 > 24.3万 > 22.8万 逐屏验证）；下拉刷新（日志 7 次 page-1 重载且列表回顶）；封面走 `10.0.2.2` 正常出图、时长角标 `04:11`/`1:02:05` 两种格式、meta 行 `1.2亿 · 生活UP主05 · 5小时前`（万/亿与相对时间均正确）
+    - **默认封面接入（2026-09-30）**：空封面原先只画一块 `border_default` 底色占位，与 Web/H5/Admin 的品牌默认封面不一致。现改为 `Image($r('app.media.default_cover'))`——产物由 `scripts/svg2png.mjs` 与三端一并派生（同一次合成循环、同一份底板与标记贴法），落在 `entry/src/main/resources/base/media/default_cover.png`（鸿蒙资源名只允许小写字母/数字/下划线，故用下划线而非连字符），并同步进 `assets/brand/dist/` 归档清单。**验证结论**：四端 `default-cover.png` **md5 逐字节相同**（`B93C45D8…`，163475 字节）；模拟器实测首页「测试 05/25/20」三张空封面卡片已渲染品牌鲸+喷泉封面（原为灰块）；`hvigorw assembleHap` BUILD SUCCESSFUL
     - **搜索**：关键词 `测试` → 视频 tab 20 条 + 「共 26 条」→ 触底续 6 条 + 「没有更多了」；UP 主 tab 同样 20 + 6 且双 Tab 各 26 条；0 结果两种文案（视频/UP 主）与 tab 切换均正常；历史新增（`测试` → `UP主` 后 `UP主` 置顶）、单条删除、清空、**重启后历史仍在**（`aa force-stop` 后重进）；点卡片弹「播放页建设中，敬请期待」（播放页归 M4-HMY-06）
   - 未覆盖：触底加载失败与刷新失败的**重试分支**未做停机实测（沿用 M4-HMY-03 已验证的 `ErrorStateView` 口径）；全部结论均在 API 26 模拟器取得，**真机待验**
 - [x] M4-HMY-06 播放页：AVPlayer HLS 播放、清晰度切换与倍速、进度记忆与跨端续播、有效播放上报、签名过期静默换签、触屏手势与横屏全屏、切后台处理（2026-09-22 完成）
@@ -175,9 +176,9 @@
     - **WS（HMY-22）**：见上条 M4-HMY-01 结项（真实握手 + 帧上屏 + 本地过滤均已实测）；`degraded → 分段轮询` 兜底另在本次复跑中再次实测
     - 验证后状态复原：临时弹幕与屏蔽行已删（`BVSEED0001` 4 行、`video_stat.danmaku_cnt=4`、`danmaku_block` 0 行）、反向端口转发已撤、段缓存键 `dm:v:{vid}:0` 已清
   - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得）；**黑边分支的稳态真机场景未覆盖**——需画幅比宽于窗口的宽银幕片（本机内容全 16:9，故只以探针核验，见上）；列表「加载更多」未在 >50 条的稿上实测（种子仅 4 条）；发送频控/去重（40001/40004）的**服务端裁决文案**未在 UI 复现（端侧不做本地拦截，错误码翻译由 `ErrorMessages` 表覆盖）；暗色模式下的弹幕观感未核对
-- [ ] M4-HMY-08 互动与评论：点赞/投币/收藏/长按三连（幂等 + 原生动画）、评论一级与二级、分享走系统面板
+- [x] M4-HMY-08 互动与评论：点赞/投币/收藏/长按三连（幂等 + 原生动画）、评论一级与二级、分享走系统面板（2026-09-30 完成）
   - 覆盖：HMY-30、HMY-31、HMY-32
-  - 状态：**代码已完成、ArkTS 编译零告警、接口层已对真实后端逐项打通；模拟器端到端交互实测未完成，故不勾选**
+  - 状态：**代码已完成、ArkTS 编译零告警、接口层与模拟器端到端交互均已实测（2026-09-28 首轮 + 2026-09-30 复验），已勾选**
   - 实现要点：
     - **分工**：`service/InteractionController.ets`（互动状态与动作：赞/币/藏/三连 + 收藏夹弹层）、`components/ActionBar.ets`（播放页互动栏：四个入口 + 投币/收藏弹层 + 三连原生动画）、`components/CommentSection.ets`（评论区：一级 + 二级、排序、分页、发布/回复、点赞、删除）、`service/InteractionApi.ets`（接口层）、`service/ShareUtil.ets`（系统分享面板）、`model/Interaction.ets`（端侧模型）。播放页只接线：`ActionBar` 与 `CommentSection` 挂在「简介」页签下，替掉原先的 `play_pending` 占位
     - **长按三连（ITR-30）**：由 `LongPressGesture({duration: 1500})` 直接驱动 `InteractionController.doTriple()`——**不在控制器里另起定时器**（手势组件自带时长判定，重复计时会把手感拉成 3s；开发中一度如此，已修）。松手时 Tap 与 LongPress 在 Parallel 组下**都会命中**（与播放页双击/单击并存同一现象），而三连本身已含点赞，故用 `TAP_AFTER_LONG_PRESS_GUARD_MS = 300` 抑制紧随的单击——否则刚点上的赞会被自己取消
@@ -191,9 +192,29 @@
     - **ArkTS 约束下的一处写法**：`CommentItem` 是 interface，`{...c, like_cnt: n}` 会触发 `arkts-no-spread`（interface 不可展开）→ 收敛为 `clone()` + `replaceRoot()`/`replaceReply()` 三个具名方法做不可变替换，既过编译又集中了「哪一层要刷新」的逻辑
     - **契约以服务端实现为准核对**：评论雪花 id 在 JSON 里是**字符串**（`json:"id,string"`）；`/users/me/collections` 的 data **直接是数组**（非 `{list}` 包裹）；评论列表返回 `{list, total}`；`/comments/{id}/replies` 分页参数同为 `page_size`；`toggleFavorite` 请求体的 `collection_id` 用字符串（服务端按 int64 解析，空串=默认夹）
   - 验证结论（接口层，真实后端）：`go test ./...` 与 `go vet ./...` 全绿（本期零后端改动，回归确认）；`hvigorw assembleHap` **BUILD SUCCESSFUL（ArkTS 零告警）**；以本地后端（`http://10.0.2.2:8000` 对应宿主 `:8000`）逐项打通：**互动**——点赞 true→false（开关幂等）、投币 2 枚（自制上限）后再投返回「已经投过币啦」、收藏默认夹 `faved=true` 且收藏夹列表出现「默认收藏夹 default=1」、三连返回 `{liked:true, coin_count:2, faved:true}` 且硬币余额 6→4、互动状态聚合正确；**评论**——发一级评论 → 回复楼中楼（`reply_cnt=1`）→ 列表 hot/new 两种排序正确返回 → 评论点赞 `liked=true` → 楼中楼分页 total=1 → 删除自己的回复成功
-  - 未覆盖：**模拟器端到端走查未完成**（本次会话模拟器进程反复秒退，仅首页截图确认应用可正常渲染；互动栏与评论区的真机/模拟器交互实测待补）；真机待验；评论的 @用户与表情（CMT-01 的 P1 部分）与举报（CMT-06）本期不做；暗色模式下互动栏/评论区的观感未核对
-- [ ] M4-HMY-09 个人中心：资料与我的投稿、观看历史、收藏、未登录态入口、端侧偏好与进度缓存
+  - 验证结论（模拟器端到端交互，API 26 `Pura X View`）：在已登录态（`13800000002`）下走 `BVSEED0001`（唯一带转码流可播放的种子稿）实测——**点赞**开关（16↔15，实心/空心随状态切换）、**投币** 2 枚（自制上限）后再投被拦（"已经投过币啦"）、**收藏**进默认夹并弹出收藏夹选择、**长按三连**出"三连成功，感谢支持！"且赞未被随后的单击取消。首轮（2026-09-28）另实测：**发布评论**（计数 1→2）、**评论点赞**、**分享**调起系统面板。
+  - **本轮抓到并修掉两个真实缺陷（2026-09-28 发现、2026-09-30 复验）**：
+    - **收藏夹弹层渲染 `默认收藏夹[object Object]`**：`col.name + (col.is_default === 1 ? $r('...') : '')` 把 `$r()` 返回的 **Resource 对象**拼进字符串。改为名称与「（默认）」两个相邻 `Text`（不用字符串拼接）。复验：弹层显示 `默认收藏夹` + `（默认）`，全屏布局转储中**不含 `object Object`**
+    - **评论点赞计数不刷新**：`ForEach` 的 key 生成器只用 `c.id`，而 `CommentItem` 是**普通 interface（非 `@Observed`）**——key 不变时 ArkUI 不重建子项，`like_cnt` 更新后视图保持旧值。key 改为 `${index}#${c.id}#${c.like_cnt}#${c.reply_cnt}`（楼中楼同法加 `like_cnt`）。复验：点赞后计数由 1→2 且图标转实心，与服务端 `comment.like_cnt` 一致
+    - **一处误判已更正**：「2 条评论只渲染出 1 条」**不是丢项**——第二条根评论原本落在 y≈2240、而屏幕高 2232，属**视口截断**；下滑后两条根评论并列正常渲染。首轮的"丢项"结论作废（key 修复的真正收益是上一条的计数刷新）
+  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得）；评论的 @用户与表情（CMT-01 的 P1 部分）与举报（CMT-06）本期不做；暗色模式下互动栏/评论区的观感未核对
+- [x] M4-HMY-09 个人中心：资料与我的投稿、观看历史、收藏、未登录态入口、端侧偏好与进度缓存（2026-09-28 完成）
   - 覆盖：HMY-42、HMY-04
+  - 实现要点
+    - **装配**：`pages/profile/ProfilePage.ets` 一文件三结构——`ProfilePage`（壳层第三个页签，只按 `session.loggedIn` 分流）、`ProfileGuest`（未登录：图标 + 提示 + 「登录 / 注册」按钮推 `RouteName.LOGIN`）、`ProfileContent`（已登录主体：资料卡 + 投稿·历史·收藏三档 + 双列分页列表 + 退出登录）
+    - **列表状态刻意下沉到 `ProfileContent`**（而非外层）：登录成功使外层重新渲染到已登录分支 → 子组件全新创建、`aboutToAppear` 自然触发首屏拉取；退出登录随分支销毁一并清空。如此无需在登录/登出时手工重载或重置，登出后再登录也不会看到上一账号的残留列表
+    - **资料卡**：头像（无则 HarmonyOS Symbol 占位）+ 昵称 + `Lv{n}` 徽标（品牌主色字 + 品牌浅底）+ 个性签名（空则回落 `profile_signature_empty`「这个人很神秘，什么都没有写」，`maxLines(1)` 溢出省略）+ 右侧「退出登录」小胶囊。卡片走 `DliMaterial.surface()` + `.systemMaterial(DliMaterial.card())`；退出登录小胶囊按 M4-HMY-11 定下的「小控件用中性次级底色实填、不挂材质」口径处理
+    - **`Session` 补 `signature`**（`@Trace`）——`applyProfile` 写入、`reset` 清空，资料卡据此渲染
+    - **三档列表共用一套分页骨架**（沿用首页 `Refresh` + `Grid` + `LazyForEach` + `LoadMoreHint` + `ErrorStateView` 口径）：`LazyDataSource<VideoCard>` + `VideoCardItem`（开 `showDate`，用投稿/观看时间替掉播放量行）。**接口差异收敛为一个内部结构** `ProfilePageResult { list, total }`，`total = -1` 表示「该接口不返回 total」
+    - **hasMore 双口径**（按各接口实际契约取，不搞「一律满页推断」）：`/videos/history` 只返回 `{list}`，只能按「满页即还有」判定（`list.length === PAGE_SIZE`）；`/videos/mine`、`/users/me/favorites` 返回 `{list,total}`，按「已加载 < total」精确判定。三档由 `ProfileContent.fetchPage` 按 `tab` 分派
+    - **错误与刷新的分工**：首屏失败置 `ErrorStateView` + 重试；下拉刷新失败若已有数据则只弹 `feed_refresh_failed` toast（**不清列表**，与首页一致）；触底加载失败只把 `LoadMoreHint` 置 `failed` 态提供行内重试。`ErrCode.UNAUTHORIZED` 一律回落为 `session.hydrate()`——若令牌确已失效，分支自然切回未登录态
+    - **新增接口层**：`VideoApi.mine(page, size)` + 端侧模型 `MineResult`（`model/Video.ets`，注释里显式标注「返回 total，与 `/videos`、`/recommend/videos`、`/videos/history` 的满页口径不同」）；历史/收藏复用已有的 `VideoApi.history` 与 `InteractionApi.favorites`
+    - **字符串资源**：新增 7 条（`profile_signature_empty`、`profile_tab_mine/history/favorites`、`profile_empty_mine/history/favorites`）；「我的投稿」空态文案点明「投稿请到 Web 端」（鸿蒙端无投稿入口，本期不做）
+    - **退出登录**：`getUIContext().showAlertDialog`（`AlertDialog.show` 在 API 26 已废弃）确认后 `session.logout()`
+  - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL**（新增文件 ArkTS 零告警；仅 `media/VideoPlayer.ets` 4 条既有 `media` 能力告警）；`go test ./...` 全绿（本期零后端改动，回归确认）；接口契约以真实令牌对本地后端逐项核对（`/users/me` 含 `signature`/`level`；`/videos/mine` 与 `/users/me/favorites` 返回 `{list,total}`；`/videos/history` 只回 `{list}`）
+  - **模拟器端到端走查（API 26 `Pura X View`，2026-09-28）**：未登录态（图标 + 文案 + 登录入口）→ 验证码登录（`13800000002`）→ 资料卡昵称/`Lv`/签名回落文案正确 → **投稿**空态（日志 `tab=mine 共 0 项 total=0`）→ **历史** 2 条真实记录且顺序与接口一致（日志 `tab=history 共 2 项 total=-1`，触底置「没有更多了」）→ **收藏** 3 条真实记录（日志 `tab=favorites 共 3 项 total=3`）→ 点卡片正确进入播放页（标题与 bvid 对上）→ 返回 → 退出登录确认框（系统玻璃观感）→ 确认后回落未登录态
+  - **分页实测**：造 26 条观看历史（`BVSEED0001..0026`）后，接口 page1=20 / page2=6 正确；端侧日志 `tab=history 共 20 项 total=-1` 证实「不返回 total」一侧的满页 `hasMore` 判定生效
+  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得）；HMY-04 的三类端侧偏好键（`danmaku.settings`/`playback.local_progress`/`search.local_history`）已分别随 M4-HMY-07/06/05 落地实测，**本任务未新增偏好键**；个人信息编辑（改昵称/头像/签名）本期不做（Web 端已有）；暗色模式下的资料卡与列表观感未核对
 - [ ] M4-HMY-10 端侧验收：核心链路走查（登录 → 找内容 → 播放 → 弹幕 → 互动 → 个人中心）+ 性能指标测量（冷启动、起播、弹幕帧率、崩溃率、包体积）
   - 覆盖：[spec §4 成功指标](/specs/harmony/spec)
 - [x] M4-HMY-11 视觉：沉浸光感落地——底栏改 HDS 悬浮玻璃胶囊、材质赋色改中性系统色、氛围背景组件与壳层透明化、卡片/胶囊接入系统材质（2026-09-22 完成）
@@ -217,7 +238,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 11 | 7 |
-| **合计** | **11** | **7** |
+| M4 | 11 | 9 |
+| **合计** | **11** | **9** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
