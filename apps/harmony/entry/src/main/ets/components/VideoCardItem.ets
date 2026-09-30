@@ -40,12 +40,12 @@ export struct VideoCardItem {
           .objectFit(ImageFit.Cover)
           .borderRadius(DliRadius.MD)
       } else {
-        // 未设封面时不留白洞，用底色块占位（对齐 Web 端 default-cover 的角色）
-        Column()
+        // 未设封面时用品牌默认封面兜底（与 Web/H5/Admin 同一份派生产物，见 scripts/svg2png.mjs）
+        Image($r('app.media.default_cover'))
           .width('100%')
           .aspectRatio(16 / 9)
+          .objectFit(ImageFit.Cover)
           .borderRadius(DliRadius.MD)
-          .backgroundColor($r('app.color.border_default'))
       }
       if (this.video.duration > 0) {
         Text(formatDuration(this.video.duration))
