@@ -266,6 +266,53 @@ cd server; $env:DLIDLI_MIGRATE_DSN="mysql://root:dlidli123@tcp(127.0.0.1:3306)/d
 
 ---
 
+### 4.9 测试数据：批量导入开源视频素材
+
+> 用途：本地/测试环境需要成规模的真实稿件时，用开源素材批量走完整投稿链路（上传→转码→审核）。
+> 工具：`server/cmd/seedvideos`（支持本地素材、多用户均摊、幂等跳过）。
+
+**素材来源与许可**（**仅用许可清晰的素材，且登记出处**）：
+
+| 来源 | 许可 | 说明 |
+| --- | --- | --- |
+| [hhoppe/data](https://github.com/hhoppe/data) | **CC0-1.0**（公有领域） | GitHub 仓，作者主动放弃版权；12 个真实视频，体积 60KB~19MB |
+| [test-videos.co.uk](https://test-videos.co.uk/) | 开源影片片段 | Big Buck Bunny / Sintel / Jellyfish 各档分辨率与体积 |
+| [Xiph DERF](https://media.xiph.org/video/derf/) | 测试序列，可自由使用 | 视频编码领域标准测试序列（y4m 原始格式，**需转封装为 mp4**，y4m 不在后端白名单） |
+| [Blender 开放影片](https://download.blender.org/demo/movies/) | **CC-BY 3.0**（需署名） | 如 Tears of Steel（720p 约 355MB） |
+
+> ⚠️ **不要使用许可不明的素材**。GitHub 上许多名为 "demo/test videos" 的仓**没有 LICENSE**，默认版权保留，不可入库分发。本仓只用上表中许可明确的来源，并在稿件简介里写入 `素材许可 + 出处`（`-local` 模式会从 `manifest.json` 自动带入）。
+
+**下载素材**（清单与许可写在脚本里，产出 `manifest.json`）：
+
+```powershell
+# 下载器在 .dev-logs/seed-assets/（该目录已 gitignore，不入库）
+node .dev-logs/seed-assets/fetch.mjs --concurrency 5
+# 产出：.dev-logs/seed-assets/mp4/*.mp4 + manifest.json（含 sha256/分辨率/时长/许可/出处）
+```
+
+> 注意：本机若走系统代理（如 `127.0.0.1:7890`），**Node 内置 fetch 不读 `HTTP(S)_PROXY`**，下载须由 `powershell.exe`（WinINET）执行——`fetch.mjs` 已按此实现。
+
+**批量导入**（多用户均摊 + 幂等）：
+
+```powershell
+cd server
+$dsn = "root:dlidli123@tcp(127.0.0.1:3306)/dlidli?charset=utf8mb4&parseTime=True&loc=Local"
+go run ./cmd/seedvideos -local ../.dev-logs/seed-assets/mp4 -users 6 -dsn $dsn
+#   -local      本地素材目录（跳过网络下载）
+#   -users N    均摊到 N 个测试用户（各自自动注册，手机号 13900000101 起）
+#   -dsn        用于按 file_hash 幂等跳过已入库素材（强烈建议传）
+#   -dry-run    只打印分配计划
+```
+
+**注意事项（均为实测踩过的坑）**：
+
+- **`file_hash` 唯一键导致重复素材无法二次入库**：`upload_file.file_hash` 是唯一键，且秒传只对**同用户**生效。用同一批素材重复跑，会命中「跨用户同哈希」缺陷（见 [video tasks 缺陷登记](/specs/video/tasks)），表现为投稿报 `10004 该文件不属于当前用户`。**必须传 `-dsn` 启用幂等跳过**。
+- **转码是串行瓶颈**：`transcode.workers` 默认 **1**，大文件（如 372MB 的 ToS 实测约 11 分钟）会拖慢整批。批量导入建议分批跑，或临时调大 `workers`。
+- **短信验证码有 60s 冷却**（`smsSendCooldown`）：多用户连续登录会撞限流，脚本已内置 62s 退避重试；开发环境也可直接清 Redis 冷却键 `sms:cd:*` 加速。
+- **素材会真实占用磁盘**：`uploads/` 在宿主机目录（不在 Docker 卷内），导入前先看 §4.8 的备份要求与磁盘余量。本次 33 个素材约 484MB，转码后 HLS 产物另计。
+
+---
+
 ## 5. 生产上线部署
 
 生产采用**前后端分离**：前端构建为静态资源交给 Nginx/CDN；后端编译为单二进制常驻运行；中间件用托管实例。

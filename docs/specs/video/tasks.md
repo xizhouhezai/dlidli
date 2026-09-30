@@ -34,6 +34,27 @@
 - [x] M3-VID-01 后端：上传文件归属校验（投稿前 `uploadSvc.GetUserFile(ctx, uid, fileID)` 校验文件归属，跨用户秒传不再暴露他人 file_id，杜绝越权复用；`ensureOwnership` 单测通过；VID-24 的 EARS 逐条核对） `2026-08-25`
   - 覆盖：VID-24
 
+## 缺陷登记（2026-09-30 种子数据导入时发现）
+
+> 背景：为测试数据导入 33 个开源素材并均摊到 6 个新用户，过程中撞出两处与 VID-24 归属校验相关的缺陷。**均已在 `cmd/seedvideos` 侧规避，但后端本身未修**（避免在种子数据任务里夹带后端改动）。
+
+- [ ] `upload/complete` 在 `file_hash` 唯一键冲突时返回**他人**的 `file_id`（隐患，可致跨用户数据串用）
+  - 现象：新用户上传一个**已存在的同哈希文件**（如与旧记录同源的公开测试片），`complete` 返回 200 且 `err == nil`，但 `data.file_id` 指向**别人的文件记录**；随后投稿被 VID-24 拦下报 `10004 该文件不属于当前用户`
+  - 根因链：① `upload_file.file_hash` 是**唯一键**（`uk_hash`）；② `Repo.Create` 在命中 `gorm.ErrDuplicatedKey` 时**回退 `FindByHash` 并返回那条已存在记录**（注释写的是「并发合并同一文件」场景）；③ `Service.Complete` 对 `Create` 的返回值**未校验归属**，直接当作本次上传结果返回；④ 因此错误不显形，直到投稿阶段才以 10004 暴露
+  - 影响面：真正的并发合并（同一用户重传）走这条回退是正确的；**跨用户同哈希**（公开素材、二次投稿常见）则产出一个**有害返回值**——调用方拿到的 file_id 不属于自己
+  - 建议修法（择一，需评估）：① `Create` 命中冲突时改为**返回错误**，由 `Complete` 决定语义；② `Complete` 校验 `record.UserID == userID`，不等则返回明确的「文件已存在且归属他人」错误码，而不是静默返回他人记录；③ `upload_file` 的 `uk_hash` 放宽为 `(user_id, file_hash)` 联合唯一（存储成本换语义正确，但同一文件会分用户各存一份）
+  - 复现：任选一个已入库文件的字节副本，用另一个账号走 `init → parts → complete → POST /videos`，即可复现 10004
+- [ ] `upload/init` 的**断点续传会话键**只按哈希索引、不含用户（`up:byhash:<hash>`），存在跨用户会话串用
+  - 现象：`service.go` 的 `Init` 在秒传未命中时，用 `up:byhash:<hash>` 查找未完成会话并**直接复用该 uploadID**；而 `session()` 的归属校验在 `UploadPart`/`Complete` 里才执行——此时报 `ErrForbidden`，表现为「上传莫名被拒」，而不是「会话不存在」
+  - 说明：该分支下的**越权写入被 `session()` 挡住了**（`owner != uid → ErrForbidden`），故**不是可利用的越权漏洞**；但**语义不对**——B 用户拿到 A 的 uploadID 后只会撞 403，而非新建自己的会话
+  - 受影响前提：A 的上传会话在 24h TTL 内未完成且未清理
+  - 建议修法：键改为 `up:byhash:<uid>:<hash>`（或先校验归属再复用）
+  - 复现：用户 A `init` 后不 `complete`；用户 B 对同一文件 `init`，观察返回的 `upload_id` 与 B 的首次上传不一致
+- [x] `cmd/seedvideos` 自身的三处健壮性缺陷（**已在本次修复**）
+  - ① `upload`/`submit` 只看 HTTP 状态、**不校验响应体的业务码 `code`**，接口报错时仍返回空 `file_id`/空 `bvid` 且 `err == nil`，制造**假成功**（本次即因此先误报「成功 3 条」而实际 0 条入库）；已补 `code != 0` 校验与空值断言
+  - ② `waitTranscode` 固定 180s，对 372MB 的大文件不够（实测 ToS 转码约 11 分钟）；已放宽到 600s
+  - ③ 无幂等：重复运行会对已入库素材再次投稿并撞上上述哈希冲突；已新增 `-dsn` 参数，按 `upload_file.file_hash` 预过滤已入库素材
+
 ## 进度
 
 | 里程碑 | 任务数 | 已完成 |
