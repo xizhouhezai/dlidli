@@ -38,9 +38,13 @@ type Source struct {
 	Hash      string // 文件 SHA-256（本地素材预计算，用于幂等跳过）
 }
 
-// filterExisting 跳过已入库（file_hash 命中 upload_file）的素材。
-// 背景：upload_file.file_hash 是唯一键，且秒传只对「同用户」复用；重复投稿同一文件
-// 会因归属校验（VID-24）失败。种子脚本据此幂等——哈希已存在则视为该素材已入库。
+// filterExisting 跳过「已生成过稿件」的素材，保证脚本可重复运行而不产生重复数据。
+//
+// 判据是 video_stream.play_path（原画流）是否已指向该文件的内容寻址 key
+// （store_key 形如 videos/source/<sha256><ext>），而不是 upload_file.file_hash：
+//   - 0033 迁移后 upload_file 唯一键为 (user_id, file_hash)，同一文件**允许多个用户各登记一条**，
+//     故「哈希已存在」不再等价于「已入库」，用它做幂等判据会误跳过（新用户其实可以正常投稿）。
+//   - 稿件一旦生成，其原画流 key 必然含该哈希，是最贴近「这份素材已经用过了」的信号。
 func filterExisting(sources []Source, dsn string) (kept []Source, skipped []string, err error) {
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -51,7 +55,9 @@ func filterExisting(sources []Source, dsn string) (kept []Source, skipped []stri
 			s.Hash = sha256File(s.LocalPath)
 		}
 		var n int64
-		if err := db.Table("upload_file").Where("file_hash = ?", s.Hash).Count(&n).Error; err != nil {
+		if err := db.Table("video_stream").
+			Where("play_path LIKE ?", "videos/source/"+s.Hash+"%").
+			Count(&n).Error; err != nil {
 			return nil, nil, err
 		}
 		if n > 0 {
