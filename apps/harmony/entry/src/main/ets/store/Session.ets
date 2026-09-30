@@ -17,6 +17,7 @@ export class Session {
   @Trace loggedIn: boolean = false;
   @Trace nickname: string = '';
   @Trace avatar: string = '';
+  @Trace signature: string = '';
   @Trace level: number = 0;
 
   /** 登录成功：落凭证 + 填充本地身份 */
@@ -70,6 +71,7 @@ export class Session {
     this.loggedIn = true;
     this.nickname = profile.nickname;
     this.avatar = resolveMediaUrl(profile.avatar);
+    this.signature = profile.signature;
     this.level = profile.level;
   }
 
@@ -77,6 +79,7 @@ export class Session {
     this.loggedIn = false;
     this.nickname = '';
     this.avatar = '';
+    this.signature = '';
     this.level = 0;
   }
 }

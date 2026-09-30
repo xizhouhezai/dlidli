@@ -225,6 +225,34 @@
       "value": "退出后需重新登录，确定退出当前账号吗？"
     },
     {
+      "name": "profile_signature_empty",
+      "value": "这个人很神秘，什么都没有写"
+    },
+    {
+      "name": "profile_tab_mine",
+      "value": "投稿"
+    },
+    {
+      "name": "profile_tab_history",
+      "value": "历史"
+    },
+    {
+      "name": "profile_tab_favorites",
+      "value": "收藏"
+    },
+    {
+      "name": "profile_empty_mine",
+      "value": "还没有投稿，投稿请到 Web 端"
+    },
+    {
+      "name": "profile_empty_history",
+      "value": "还没有观看记录"
+    },
+    {
+      "name": "profile_empty_favorites",
+      "value": "还没有收藏任何视频"
+    },
+    {
       "name": "play_quality",
       "value": "清晰度"
     },
