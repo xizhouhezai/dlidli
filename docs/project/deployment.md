@@ -44,7 +44,7 @@ pnpm install
 # 1. 起中间件（二选一）
 #    A) 有 Docker：一键起 MySQL/Redis/Kafka/MinIO
 docker compose -f server/deploy/docker-compose.yaml up -d
-#    B) 无 Docker：本地自备 MySQL(3307) + Redis(6379)，见 §4.1
+#    B) 无 Docker：本地自备 MySQL + Redis（默认端口见 §4.1，注意本机 3306/3307 是两个独立实例）
 
 # 2. 初始化数据库（建表）
 cd server && go run ./cmd/migrate && cd ..
@@ -88,7 +88,10 @@ docker compose -f server/deploy/docker-compose.yaml ps   # 查看状态
 CREATE DATABASE IF NOT EXISTS dlidli DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-默认配置 `server/configs/dev.yaml` 指向 MySQL `127.0.0.1:3307 root/root`、Redis `127.0.0.1:6379`。按你的实际端口/账密调整 DSN。
+`server/configs/dev.yaml` 默认指向 **MySQL `127.0.0.1:3306`、`root/dlidli123`**（对齐方式 A 的 compose 映射）与 **Redis `127.0.0.1:6379`**。用方式 B 时按你的实际端口/账密改 DSN。
+
+> ⚠️ **两个本地 MySQL 实例极易混淆（曾导致数据"丢失"事故）**：本机 phpstudy 自带实例在 **3307**（`root/root`，`staging.yaml` 也用它连 `dlidli_staging`），Docker 实例在 **3306**（`root/dlidli123`，库名 `dlidli`）。二者是**完全独立的两套数据**，互不联通。
+> 若你的稿件"在但播不了"、或首页只剩测试数据，先确认后端实际连的是哪一个：`curl http://127.0.0.1:8000/health` 看组件连通性，再用 `SELECT COUNT(*) FROM video` 比对两边行数。详见 §4.8。
 
 ### 4.2 安装前端依赖
 
@@ -102,7 +105,7 @@ pnpm install     # 根目录执行，一次性装齐 web/admin/h5/docs/packages 
 
 ```yaml
 mysql:
-  dsn: "root:root@tcp(127.0.0.1:3307)/dlidli?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:dlidli123@tcp(127.0.0.1:3306)/dlidli?charset=utf8mb4&parseTime=True&loc=Local"
 redis:
   addr: 127.0.0.1:6379
 jwt:
@@ -167,6 +170,99 @@ pnpm docs:dev     # 文档站   http://localhost:5173
 | 前端 `/api` 404 | 后端未启动，或 vite proxy 目标端口与后端不一致 |
 | 管理后台无法登录 | 后端首启才创建 admin/admin123；确认 DB 已迁移 |
 | 端口被占用 | Vite 自动换端口，以日志为准；后端改 `app.port` 或杀占用进程 |
+| 稿件在、但首页看不到 / 全部"暂无可播放的清晰度" | **数据库指错了**：应用连的库不是入库时那个实例，或库被重建过。按 §4.8 核对与恢复 |
+| 上传/转码产物还在，但库里查不到对应稿件 | 同上。`uploads/` 不随数据库备份，重建库后元数据会与文件脱节 |
+
+---
+
+### 4.8 数据备份与恢复
+
+> ⚠️ **本地数据分两处存放，缺一不可**。二者生命周期独立，只备份其中一个会导致"文件在、记录没了"或"记录在、文件 404"。
+
+| 数据 | 位置 | 是否进 Git | 说明 |
+| --- | --- | --- | --- |
+| 业务数据 | MySQL 数据卷 `dlidli-dev_mysql-data`（容器内 `/var/lib/mysql`） | 否 | 稿件/用户/评论/弹幕/互动等全部元数据 |
+| **媒体文件** | `server/uploads/`（宿主机目录，**不在 Docker 卷内**） | 否（被 `.gitignore` 忽略，可 `git check-ignore -v server/uploads` 复核） | 原片 `videos/source/`、HLS 切片 `videos/hls/<video_id>/`、封面 `covers/`、头像 `avatars/` |
+
+**为什么必须一起备份**：`uploads/` 既不在版本库、也不在 MySQL 数据卷里，是**完全无备份的孤岛**。而 `video_stream.play_path` 存的是**相对 `uploads/` 的路径**（如 `videos/hls/<id>/<part>/<quality>/index.m3u8`），`video.cover` 同理。因此重建数据库卷后，磁盘上的转码产物虽仍在，却**没有任何记录指向它们**——表现为"稿件全部消失"或"暂无可播放的清晰度"。
+
+**备份命令**（PowerShell，输出到 `.dev-logs/`，该目录已 gitignore）：
+
+```powershell
+$bk = ".dev-logs/db-backup-$(Get-Date -Format yyyyMMdd-HHmmss)"
+New-Item -ItemType Directory -Force -Path $bk | Out-Null
+
+# ① 数据库（Docker 实例 3306）
+docker exec dlidli-mysql sh -c `
+  "mysqldump -uroot -pdlidli123 --single-transaction --routines --triggers --events --default-character-set=utf8mb4 --databases dlidli > /tmp/db.sql"
+docker cp dlidli-mysql:/tmp/db.sql "$bk/db.sql"
+
+# ② 媒体文件（必须单独备份）
+Copy-Item -Recurse -Force server/uploads "$bk/uploads"
+```
+
+**恢复顺序**（先库后文件，顺序反了不影响结果，但都必须在同一批次）：
+
+```powershell
+# ① 恢复数据库
+docker cp "$bk/db.sql" dlidli-mysql:/tmp/db.sql
+docker exec dlidli-mysql sh -c "mysql -uroot -pdlidli123 < /tmp/db.sql"
+# 若只想补结构、不动数据，用增量迁移：cd server && go run ./cmd/migrate
+
+# ② 恢复媒体文件
+Copy-Item -Recurse -Force "$bk/uploads/*" server/uploads/
+
+# ③ 核对两边是否一致（关键一步）
+```
+
+**一致性核对**（迁移/恢复后**必须**执行，`path` 与磁盘一一对应才算成功）：
+
+```powershell
+# 所有 play_path 指向的文件是否都在磁盘上（缺失应为 0）
+docker exec dlidli-mysql mysql -uroot -pdlidli123 dlidli -N -e "SELECT play_path FROM video_stream;" |
+  ForEach-Object { if (-not (Test-Path "server/uploads/$_")) { "缺失: $_" } }
+
+# 库内 video 数 vs 磁盘 HLS 目录数（差距大即为脱节）
+docker exec dlidli-mysql mysql -uroot -pdlidli123 dlidli -N -e "SELECT COUNT(*) FROM video;"
+(Get-ChildItem server/uploads/videos/hls -Directory).Count
+```
+
+**从 `uploads/` 反推恢复线索**（元数据已丢但文件还在时）：
+
+- HLS 目录名**就是 `video_id`**：`uploads/videos/hls/<video_id>/..`
+- 封面名**含 `video_id`**：`uploads/covers/auto_<video_id>.jpg`
+- 但**标题/UP主/简介/标签等人工信息无法从磁盘还原**——这些只在数据库里。所以备份数据库不是可选项。
+- 若手头有旧的本地 MySQL 实例（如 phpstudy 的 3307），**优先从它整库迁回**，比从文件反推完整得多（下条）。
+
+**从另一个 MySQL 实例整库迁回**（本机 3306/3307 双实例场景，2026-09-30 实战）：
+
+```powershell
+$old = "D:\phpstudy_pro\Extensions\MySQL8.0.12\bin\mysqldump.exe"   # 以实际安装路径为准
+$bk  = ".dev-logs/db-migrate-$(Get-Date -Format yyyyMMdd-HHmmss)"
+New-Item -ItemType Directory -Force -Path $bk | Out-Null
+
+# ① 双份备份：旧库与当前库都要备（当前库用于回滚）
+& $old --host=127.0.0.1 --port=3307 --user=root --password=root `
+  --single-transaction --routines --triggers --events --default-character-set=utf8mb4 `
+  --databases dlidli --result-file="$bk/old-3307.sql"
+docker exec dlidli-mysql sh -c `
+  "mysqldump -uroot -pdlidli123 --single-transaction --routines --triggers --events --default-character-set=utf8mb4 --databases dlidli > /tmp/new-3306.sql"
+docker cp dlidli-mysql:/tmp/new-3306.sql "$bk/new-3306.sql"
+
+# ② 覆盖导入（先确认旧库确实是想要的那份：SELECT COUNT(*) FROM video;）
+docker cp "$bk/old-3307.sql" dlidli-mysql:/tmp/old.sql
+docker exec dlidli-mysql mysql -uroot -pdlidli123 -e "DROP DATABASE IF EXISTS dlidli;"
+docker exec dlidli-mysql sh -c "mysql -uroot -pdlidli123 < /tmp/old.sql"
+
+# ③ 补齐旧库可能缺的迁移（旧库 schema 版本可能落后于当前代码）
+cd server; $env:DLIDLI_MIGRATE_DSN="mysql://root:dlidli123@tcp(127.0.0.1:3306)/dlidli?multiStatements=true"; go run ./cmd/migrate
+
+# ④ 逐表比对行数（不一致应为 0），再跑 §4.8 的路径核对
+```
+
+> 注意：迁移前务必确认**两个库的表结构兼容**（`SELECT version FROM schema_migrations`）。若旧库版本较新则无需 ③；若旧库缺少新表，③ 会补上。
+
+**上线检查**：生产（§5.4）必须把 `uploads/` 对应的对象存储桶与数据库**同周期备份**，二者恢复点目标（RPO）应一致。
 
 ---
 
@@ -309,6 +405,7 @@ pnpm h5:build                       # H5：产出 apps/h5/dist/build/h5，按普
 - [ ] JWT 密钥、DB/Redis 密码均由环境变量注入，未进仓库
 - [ ] 上线前已执行数据库迁移
 - [ ] 存储切换为对象存储（MinIO/OSS），`baseUrl` 指向 CDN
+- [ ] 对象存储桶与数据库**同周期备份**且 RPO 一致（见 §4.8）
 - [ ] Nginx SPA 回退、`/api` 与 `/static` 反代正确
 - [ ] 管理后台独立域名 + 访问控制
 - [ ] 后端进程守护（systemd）+ 日志采集 + `/metrics` 接入监控
