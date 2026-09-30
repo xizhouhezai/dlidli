@@ -2,6 +2,7 @@ import { HttpClient } from './HttpClient';
 import {
   Category,
   HistoryResult,
+  MineResult,
   PartListResult,
   ProgressResult,
   VideoCard,
@@ -77,6 +78,17 @@ export class VideoApi {
     query.set('page_size', `${size}`);
     const res: HistoryResult = await HttpClient.get<HistoryResult>(`${PATH_VIDEOS}/history`, { query: query });
     return res.list;
+  }
+
+  /**
+   * 我的投稿（HMY-42，与 Web 端「我的稿件」同一接口）。需登录。
+   * 该接口返回 total，故调用方按 `已加载数 < total` 判断 hasMore，比满页推断更准。
+   */
+  static mine(page: number, size: number): Promise<MineResult> {
+    const query: Map<string, string> = new Map<string, string>();
+    query.set('page', `${page}`);
+    query.set('page_size', `${size}`);
+    return HttpClient.get<MineResult>(`${PATH_VIDEOS}/mine`, { query: query });
   }
 
   /** 读取跨端续播位置（秒）；服务端无记录返回 0。需登录 */

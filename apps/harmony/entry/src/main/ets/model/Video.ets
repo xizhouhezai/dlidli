@@ -97,3 +97,12 @@ export interface ProgressResult {
 export interface HistoryResult {
   list: VideoCard[];
 }
+
+/**
+ * /videos/mine 的响应包裹（**返回 total**，可据此精确判断是否还有下一页；
+ * 与 /videos、/recommend/videos、/videos/history 的「满页即还有」口径不同）。
+ */
+export interface MineResult {
+  list: VideoCard[];
+  total: number;
+}

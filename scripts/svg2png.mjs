@@ -178,6 +178,8 @@ for (const t of [
   'apps/web/src/assets/default-cover.png',
   'apps/h5/src/static/default-cover.png',
   'apps/admin/src/assets/default-cover.png',
+  // 鸿蒙端走资源目录（`$r('app.media.default_cover')`）；文件名只能是小写字母/数字/下划线
+  'apps/harmony/entry/src/main/resources/base/media/default_cover.png',
 ]) {
   await mkdir(path.dirname(abs(t)), { recursive: true })
   const plate = await sharp(Buffer.from(cover), { density: 288 })
@@ -231,6 +233,10 @@ const archive = [
   ['apps/harmony/AppScope/resources/base/media/foreground.png', 'harmony-foreground-1024.png'],
   ['apps/harmony/entry/src/main/resources/base/media/startIcon.png', 'harmony-startIcon-152.png'],
   ['apps/web/src/assets/default-cover.png', 'cover-1280x720.png'],
+  [
+    'apps/harmony/entry/src/main/resources/base/media/default_cover.png',
+    'harmony-default_cover-1280x720.png',
+  ],
 ]
 await mkdir(abs(DIST), { recursive: true })
 for (const [from, to] of archive) await copyFile(abs(from), abs(`${DIST}/${to}`))
