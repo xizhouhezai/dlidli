@@ -331,15 +331,24 @@ export struct ActionBar {
       if (this.acts.favPopVisible) {
         Column({ space: DliSpace.XS }) {
           ForEach(this.acts.collections, (col: import('../model/Interaction').CollectionItem) => {
-            Text(col.name + (col.is_default === 1 ? $r('app.string.act_fav_default_suffix') : ''))
-              .fontSize(DliFont.BODY_SM)
-              .fontColor($r('app.color.text_primary'))
-              .padding({ left: DliSpace.MD, right: DliSpace.MD, top: DliSpace.SM, bottom: DliSpace.SM })
-              .borderRadius(DliRadius.SM)
-              .backgroundColor($r('app.color.surface_secondary'))
-              .onClick(() => {
-                this.doFav(col.id);
-              })
+            // 名称与「（默认）」分两个 Text——`$r()` 是 Resource 对象，
+            // 拼进字符串会渲染成 `[object Object]`（曾如此）
+            Row() {
+              Text(col.name)
+                .fontSize(DliFont.BODY_SM)
+                .fontColor($r('app.color.text_primary'))
+              if (col.is_default === 1) {
+                Text($r('app.string.act_fav_default_suffix'))
+                  .fontSize(DliFont.BODY_SM)
+                  .fontColor($r('app.color.text_tertiary'))
+              }
+            }
+            .padding({ left: DliSpace.MD, right: DliSpace.MD, top: DliSpace.SM, bottom: DliSpace.SM })
+            .borderRadius(DliRadius.SM)
+            .backgroundColor($r('app.color.surface_secondary'))
+            .onClick(() => {
+              this.doFav(col.id);
+            })
           }, (col: import('../model/Interaction').CollectionItem) => col.id)
         }
         .width('100%')

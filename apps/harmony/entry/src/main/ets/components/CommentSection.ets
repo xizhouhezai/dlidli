@@ -79,6 +79,7 @@ export struct CommentSection {
       const res = await InteractionApi.listCommentsPaged(this.bvid, this.sort, this.page, PAGE_SIZE);
       this.items = reset ? res.list : [...this.items, ...res.list];
       this.total = res.total;
+      Logger.info(TAG, `评论加载：sort=${this.sort} page=${this.page} 共 ${this.items.length} 项 total=${this.total} ids=${this.items.map((x: CommentItem) => x.id).join(',')}`);
     } catch (err) {
       showToast(this.getUIContext(), (err as ApiError).message);
     } finally {
@@ -567,7 +568,7 @@ export struct CommentSection {
         }
         .width('100%')
         .alignItems(VerticalAlign.Top)
-      }, (r: CommentItem) => r.id)
+      }, (r: CommentItem, index: number) => `${index}#${r.id}#${r.like_cnt}`)
 
       if ((root.replies?.length ?? 0) < root.reply_cnt) {
         Text($r('app.string.cmt_expand_more', root.reply_cnt))
@@ -611,7 +612,7 @@ export struct CommentSection {
         }
         .width('100%')
         .alignItems(HorizontalAlign.Start)
-      }, (c: CommentItem) => c.id)
+      }, (c: CommentItem, index: number) => `${index}#${c.id}#${c.like_cnt}#${c.reply_cnt}`)
 
       if (this.items.length < this.total) {
         Button(this.loading ? $r('app.string.feed_loading_more') : $r('app.string.cmt_load_more'))
