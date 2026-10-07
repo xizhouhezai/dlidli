@@ -61,12 +61,12 @@ apps/harmony/
 
 | 决策点 | 决策 | 理由 | 备选方案 |
 | --- | --- | --- | --- |
-| 上传通道 | **`@ohos.request` 的 `uploadFile`（`UploadTask`）**，而非现有 `HttpClient` | 现有 `HttpClient` 只做 JSON（`extraData = JSON.stringify(body)`，`HttpDataType.STRING`），**不具备二进制/大文件能力**。`request.uploadFile` 是系统级上传任务：支持裸文件、进度回调（`on('progress')`）、**后台传输（应用切后台/锁屏不中断）**、断点字段（`begins`/`ends`/`index`）——恰好覆盖 HMY-50 的三条端侧差异 | ArkTS 手写 `@ohos.net.http` 传 ArrayBuffer（否：需自行切片与重试，且**无后台传输**）；`@ohos.net.rcp`（否：无专用上传任务与进度语义） |
+| 上传通道 | **A 路线：`@ohos.request` 的 `uploadFile`（`UploadTask`）为主**，`HttpClient` 的二进制 PUT 作为降级路径 | 2026-10-07 实测定论（方法与证据见 §6.1 首条）：`uploadFile` 支持 `method:'PUT'`，且在「显式 `begins`/`ends` + 单文件」下把**该字节区间作为 HTTP body 裸发**（后端落盘长度与区间严格相等，`complete` 的服务端 SHA-256 校验通过），**后端零改动**；另带系统级后台传输与 `on('progress')`、断点字段（`begins`/`ends`——实测为真字节区间）。B 路线同样实测跑通（`extraData` 传 `ArrayBuffer` + `HttpDataType.ARRAY_BUFFER`），但需自管切片/重试与保活 | 仅 B 路线（否：失去系统级后台传输，锁屏保活要自建，见 §6.1 第二条）；`@ohos.net.rcp`（否：无专用上传任务与进度语义）；改后端新增 multipart 变体（否：实测无必要，保住零后端改动） |
 | 分片协议 | **复用后端既有分片接口，零后端改动** | 后端 `/upload/init`（秒传+断点恢复）、`PUT /upload/{id}/parts/{index}`（**裸二进制 body**，见 `packages/api-client` 的 `putRaw`）、`POST /upload/{id}/complete` 已完备（chunk 5MB / 上限 8GB / 白名单 mp4·mov·mkv·flv·avi） | 整文件直传（否：8GB 级文件必超时且不可续传）；新增端侧专用上传接口（否：契约分叉，无必要） |
 | 文件选取 | **`@ohos.file.picker` 的 `PhotoViewPicker` / `DocumentViewPicker`** | 系统选择器直接返回 `uri`，交给 `request.uploadFile` 的 `files: [{ filename, name, uri }]` 使用，**无需申请读媒体库权限**（选择器是授权入口） | 申请 `READ_MEDIA` 直读相册（否：权限面大、需用户额外授权，系统选择器已够用） |
 | 哈希与秒传 | **端侧算 SHA-256**（`@ohos.file.hash` 或 crypto framework 流式读取），命中秒传则跳过上传 | 后端 `InitReq.file_hash` 为必填且长度须为 64 位 hex；秒传可让重复投稿零上传 | 不算哈希传空（否：后端 binding `required,len=64` 直接拒）；仅按文件名/大小推断（否：不可靠且后端不支持） |
 | 上传态与草稿 | **`upload_file` 会话由后端持有，端侧只存「稿件草稿」**（标题/简介/分区/标签/file_id/本地封面路径）于 `preferences` | 后端已用 Redis 存上传会话（`up:sess:*`/`up:parts:*`，TTL 24h）并支持 `GET /upload/{id}` 查已传分片，**端侧无需自建分片账本**；草稿只解决"填了一半退出"的场景 | 端侧自建分片状态表（否：与后端 Redis 会话重复，且不一致时更难排查）；不做草稿（否：HMY-52 明确要求） |
-| 封面处理 | **`@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9**，再以 `multipart/form-data` 传 `POST /videos/cover`（字段名 `file`） | 后端封面接口是 `c.FormFile("file")` multipart（**与分片的裸 body 不同**），限 5MB / jpg·png·webp；端侧先裁切可避免上传后被裁掉主体 | 直接传原图（否：相册图常见 4:3/竖图，后端按 16:9 消费会裁掉内容）；复用 `request.uploadFile`（可行，但该接口是 multipart 表单，用 `HttpClient` 需扩展 multipart 能力，二者择一，见下条风险） |
+| 封面处理 | **`@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9**，再以 `multipart/form-data` 传 `POST /videos/cover`（字段名 `file`） | 后端封面接口是 `c.FormFile("file")` multipart（**与分片的裸 body 不同**），限 5MB / jpg·png·webp；端侧先裁切可避免上传后被裁掉主体 | 直接传原图（否：相册图常见 4:3/竖图，后端按 16:9 消费会裁掉内容）；**复用 `request.uploadFile` 传封面（否/待验：HMY-50 实测该 API 在给定 `begins`/`ends` 时发的是裸字节区间 body，并非 multipart 信封；它能否产出 multipart 表单未实测，故封面按「扩展 `HttpClient` 支持 multipart」实现，HMY-52 落地时再复核）** |
 | 期望类型 | `@ohos.request` / `@ohos.file.picker` / `@ohos.multimedia.image` 按 OpenAPI **手写端侧模型**（沿用既有口径） | 与全网一致：swag 产物无响应模型，手写 + 真实响应核对；本次新增 `model/Upload.ets`（`InitResp`/`CompleteResp`/`Draft`）与 `SubmitReq` | 生成器（否：不可行，见 §6） |
 | 提交与状态回看 | 复用 `POST /videos`（`SubmitReq`）与 `GET /videos/mine` | 两者均已存在，且 `MineResult` 已在 M4-HMY-09 落地；`video.status` 枚举（0 草稿/1 上传中/2 转码中/3 待审核/4 已发布/5 已驳回）可直接驱动 HMY-53 的状态展示 | 新增状态查询接口（否：`/videos/mine` 已含 status 与 reject_reason） |
 
@@ -188,11 +188,22 @@ apps/harmony/
 
 ### 6.1 投稿专项风险（M4 追加，2026-09-30 预研）
 
-- [ ] **`@ohos.request` 与后端分片协议的对接方式（首要未决项）**：后端分片接口是 **`PUT` + 裸二进制 body**（`packages/api-client` 的 `putRaw`），而 `request.uploadFile` 的 `UploadConfig` 走的是 **multipart 表单**（`files` + `data`），`method` 字段在 SDK 声明中为 `string` 但**未见 `PUT` 用法示例**。两条路线待实测择一：
-  - **A. 用 `request.uploadFile` 直传文件**：需确认 ① 能否发 `PUT`（后端只注册了 `PUT /:id/parts/:index`）；② 无需服务端改 multipart 解析；③ 能否只传"文件的某一段"（`begins`/`ends` 语义是否为字节区间）。**若后端不接受 multipart，则须改后端加一个 multipart 变体（破坏"零后端改动"口径）**。
-  - **B. 扩展端侧 `HttpClient` 支持二进制 body**：`http.HttpRequestOptions` 的 `extraData` 可直接传 `ArrayBuffer`（配 `HttpDataType.ARRAY_BUFFER`），自制 PUT 分片；**代价是失去系统级后台传输**，HMY-50 的"切后台不中断"需自行用 `backgroundTaskManager` 申请长时任务保活。
-  - 结论未定前，**不得开工 HMY-50**；预研应作为 M4-HMY-50 的前置任务先做掉（预计半天，用真实 5MB+ 文件对真后端跑通即可定论）。
-- [ ] **后台传输的保活边界**：即便走 `request.uploadFile`，系统对后台任务仍有约束（长时任务需声明 `backgroundModes`，且可能受省电策略影响）。HMY-50 的"锁屏继续上传"需在真机上以"锁屏 + 切后台 5 分钟"实测确认，**模拟器结论不作数**。
+- [x] **上传通道与后端分片协议对接（2026-10-07 已定论，M4-HMY-50）——结论：A 路线（`request.uploadFile`）可行且为主路线，后端零改动成立；B 路线亦可行，仅作降级**。
+  - **实测方法（可复现）**：`apps/harmony` 加一次性探针页（跑完即删，树中不留痕），对本地真实后端（`http://10.0.2.2:8000`，MySQL/Redis 均 up）用**真实 11 MiB / 130 MiB 文件**跑完整分片链路（init → 逐片 PUT → complete）；判定**不读端侧自述**，直接读后端落盘产物 `server/uploads/chunks/<uploadId>/<index>.part` 的字节数与 `complete` 结果。
+  - **A 路线全链路跑通**：`method:'PUT'` 被接受；3 个分片（5MB/5MB/1MB）全部 `responseCode=0`，`POST /upload/{id}/complete` 返回 `file_id`——**服务端把合并结果算出 SHA-256 与 `file_hash` 比对通过**，这是端到端正确性的硬判据。
+  - **① 能否发 PUT —— 能**：`UploadConfig.method` 的 SDK 声明即写明「value can be **POST** or **PUT**」（`@ohos.request.d.ts`，since 6），实测 `PUT` 直接生效。
+  - **② 后端是否接受 multipart —— 实测结论是「A 根本不走 multipart」**：`files` 的文档虽写 "submitted in multipart/form-data format"，但**在显式给出 `begins`/`ends` 且 `files` 只有一个元素时，发出去的就是该字节区间本身的裸 HTTP body**——后端 `io.Copy(c.Request.Body, …)` 落盘长度与请求区间**严格相等**（`[3145851, 8388600]` → `000000.part = 5242750` 字节，不多一个字节的边界开销）。故**不需要 multipart 变体，零后端改动成立**。
+  - **③ `begins`/`ends` 是否为字节区间 —— 是（闭区间）**：声明为 "File start point / end point to read …, in bytes … closed interval"；实测只传文件中间一段，后端落盘长度恰为 `ends - begins + 1`。**每片的请求体就是那一段字节，后端无需改动即可按整片 5MB 接收**。
+  - **④ 切后台是否持续 —— 行为已实测，边界仍未测**：切后台（`moveAbilityToBackground()`）后**分片仍在持续上传**（26 片全部落盘，且后台期间 JS 心跳持续到 174s），未见系统级暂停——系统上传任务确实把网络请求与页面生命周期解耦。**但两个坑与一条边界必须记住**：
+    - **坑 1：切后台后进程可能被回收**。同尺寸对照中，切后台瞬间进程被 WMS 销毁（日志 `aboutToDisappear`），后台阶段零进展；另一轮则全程存活完成。即「进程存活」是后台持续的前提，**不能只看"切后台没暂停"**；长任务需配 `backgroundTaskManager.startBackgroundRunning` 申请长时任务（并声明 `backgroundModes`）才能稳定保活。
+    - **坑 2：系统有「独立后台传输」上限，超限直接报错**。首次用 100 片 × 1MiB 齐发时，后半段返回 `401 … GetInternalPath failed, file is not valid`（100 个任务超出系统并发后台传输数）；**串行 + 单片完成再发**则稳定通过。
+    - **边界（须真机确认）**：锁屏 + 切后台 5 分钟的长时任务保活、省电策略影响，模拟器结论**不作数**，仍按 §6.1 第二条待真机复验。
+  - **B 路线亦跑通（降级路径）**：扩展 `HttpClient` 传二进制——`HttpRequestOptions.extraData` 传 `ArrayBuffer` + `expectDataType: HttpDataType.ARRAY_BUFFER`，`Content-Type: application/octet-stream`，自切 5MB 片 PUT；三片均 200、`complete` 的 SHA-256 校验通过。**代价**：失去系统级后台传输（锁屏保活要自建），且需自管切片/重试/进度。
+  - **落地约束（供 HMY-51）**：`files[].uri` 只认 `internal://cache/<相对 cacheDir 路径>` 形态，**`fileIo` 给出的绝对 `file://…` 形态会报 `401 … GetInternalPath failed`**；`config.index` 是 `files` 数组下标（单文件时必须为 `0`），**不是分片序号**；`data` 非空不会把 body 变成 multipart 信封（实测仍为裸 body）。
+  - **并发教训**：切勿在循环里密集 `await request.uploadFile()`——实测 100 次齐发触发 `appfreeze THREAD_BLOCK_6S`（主线程阻塞 6s 被杀）。分片任务必须**限并发（建议 ≤2）或严格串行**。
+  - **结论口径**：以上均为 **API 26 x86 模拟器（`Pura X View`）所得**；「协议适配 / PUT / 字节区间 / 裸 body」属协议层结论，可直接用于实现；**后台传输的保活边界属设备行为，须真机确认**。
+- [ ] **选片 URI 到 `request.uploadFile` 的交接（HMY-51 待验，未包含在本轮预研内）**：本轮实测用的是**应用沙箱 cache 文件**，可用形态确认为 `internal://cache/<相对 cacheDir 路径>`；而 `@ohos.file.picker` 返回的是**媒体库/文档 URI**（如 `file://media/Photo/…`），`request.uploadFile` 是否直接接受**未实测**（其 `File.uri` 文档只给了 `internal://cache/…` 一个示例，未枚举 picker 形态）。**建议 HMY-51 的稳妥做法**：选片后先 `fileIo.copy` 到应用 cache 目录再用 `internal://cache/…` 投递（本轮已验证该形态可用），代价是**多一次整文件拷贝**，大文件需评估耗时与磁盘占用；若实测 picker URI 可直接投递则省掉这次拷贝。**此项不阻塞 HMY-51 开工**（两条路都不改后端），但需在 HMY-51 内先定。
+- [ ] **后台传输的保活边界**：即便走 `request.uploadFile`，系统对后台任务仍有约束（长时任务需声明 `backgroundModes`，且可能受省电策略影响）。HMY-50 的"锁屏继续上传"需在真机上以"锁屏 + 切后台 5 分钟"实测确认，**模拟器结论不作数**。2026-10-07 补：模拟器已实测到「切后台后上传持续（心跳至 174s）」但**同尺寸对照中出现切后台即被回收进程**的情形，故保活不能只依赖"系统任务解耦"的观察，HMY-51 必须显式申请长时任务。
 - [ ] **端侧算大文件 SHA-256 的耗时**：8GB 文件全量哈希在端侧可能达数十秒。需实测并决定策略（如对 > 500MB 的文件改用"抽样哈希 + 尺寸"做弱秒传，或直接跳过秒传改由后端在合并时校验）。**后端 `file_hash` 是必填 `len=64`**，跳过秒传仍须算完哈希，故此耗时无法回避，只能优化或后端放宽。
 - [ ] **`uploads/` 与数据库的一致性运维**（承本仓 [部署文档 §4.8](/project/deployment)）：投稿功能上线后，端侧产生的媒体文件同样落在 `server/uploads/`（**不在 Docker 卷内、被 gitignore**），**该目录与数据库必须同周期备份**，否则重演 2026-09-30 的"文件在、元数据丢"事故。此项为运维约束，非端侧代码问题，但投稿上线前应在 [deployment](/project/deployment) 的检查清单中确认。
 - [ ] **草稿的清理策略**：本地草稿（`preferences`）与服务端上传会话（Redis TTL 24h）生命周期不一致——草稿可能引用已被清理的上传会话。需定义：进入草稿时**先 `GET /upload/{id}` 校验会话是否仍有效**，失效则提示"上传已过期，需重新选择文件"。

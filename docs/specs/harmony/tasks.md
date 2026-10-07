@@ -238,18 +238,25 @@
 
 > **口径变更（2026-09-30）**：[spec §1](/specs/harmony/spec) 原定「投稿不在本期范围、引导至 Web」，V1.3 起端侧扩为**观看 + 创作**。M4 的结论并未作废——它是**阶段性范围决策**，而技术预研（见 [plan §2.1](/specs/harmony/plan)）已确认端侧具备完整投稿能力。**创作者中心（数据看板/收益/合集管理）仍只在 Web**，端侧不承接。
 
-- [ ] M4-HMY-50 投稿预研：`@ohos.request` 与后端分片协议的对接方式定论（**阻塞 HMY-51，必须先做**）
+- [x] M4-HMY-50 投稿预研：`@ohos.request` 与后端分片协议的对接方式定论（**阻塞 HMY-51，必须先做**）
   - 覆盖：—（工程；为 HMY-50~54 定实现方案）
   - 背景：后端分片是 **`PUT` + 裸二进制 body**（`packages/api-client` 的 `putRaw`），而 `request.uploadFile` 的 `UploadConfig` 走 **multipart 表单**（`files` + `data`），SDK 未见 `PUT` 示例。两条路线必须实测择一，详见 [plan §6.1](/specs/harmony/plan)
   - 判定项（用真实 ≥5MB 文件对本地后端跑通即可定论）：① `request.uploadFile` 能否发 `PUT`；② 后端是否接受 multipart（若不接受，B 路线或"加后端 multipart 变体"需二选一）；③ `begins`/`ends` 是否为**字节区间**语义（决定能否只传一段）；④ 切后台/锁屏时上传是否持续（`backgroundModes` 声明是否必需）
-  - 产出：把定论写回 [plan §2.1](/specs/harmony/plan) 的「上传通道」行与 §6.1 首条，并据此确定 HMY-51 的实现形态
-  - 前置：本地后端 + MySQL/Redis 已起（见 [部署文档](/project/deployment)）；模拟器 API 26 `Pura X View` 就绪
-  - 注意：**模拟器的后台/锁屏保活结论不作数**，须记「待真机确认」
+  - **实测方法（2026-10-07）**：`apps/harmony` 临时加一次性探针页（跑完即删，树中不留痕），对本地真实后端（模拟器内 `http://10.0.2.2:8000`，MySQL/Redis 均 up）用**真实 11 MiB / 130 MiB 文件**跑完整链路（init → 逐片 PUT → complete）。判定**不读端侧自述**，直接读后端落盘产物 `server/uploads/chunks/<uploadId>/<index>.part` 的字节数与 `complete` 的服务端 SHA-256 校验结果。
+  - 验证结论：**A 路线可行且为主路线；B 路线亦可行，作降级。后端零改动成立。**
+    - **① PUT：能**。SDK 声明即写「value can be **POST** or **PUT**」（`@ohos.request.d.ts`，since 6），实测 3 片全部 `responseCode=0`。
+    - **② multipart：A 根本不走**。`files` 文档虽写 "multipart/form-data"，但**显式给 `begins`/`ends` 且 `files` 仅一项时，发出的是该字节区间的裸 body**——后端落盘长度与请求区间严格相等（`[3145851,8388600]` → `000000.part = 5242750` 字节），**无边界开销，无需后端 multipart 变体**。
+    - **③ `begins`/`ends`：真字节闭区间**。落盘恰为 `ends - begins + 1`；可按 5MB 整片切，后端无需改动。
+    - **④ 后台：行为已实测、边界未测**。切后台（`moveAbilityToBackground()`）后分片仍持续上传（26 片全部落盘，后台 JS 心跳持续至 174s）。但发现**两个坑**：切后台后**进程可能被回收**（同尺寸对照中切后台即被 WMS 销毁、后台零进展），且**系统有独立后台传输并发上限**（100 片齐发时后半段报 `401 … GetInternalPath failed, file is not valid`）。**锁屏 + 切后台 5 分钟的长时任务保活属真机项，模拟器不作数**（见 plan §6.1 第二条）。
+    - **B 路线**：`extraData` 传 `ArrayBuffer` + `HttpDataType.ARRAY_BUFFER` + `Content-Type: application/octet-stream`，三片 200、`complete` SHA-256 通过；代价是失去系统级后台传输、需自管切片/重试/进度。
+    - **端到端硬判据**：A/B 两条路线的 `POST /upload/{id}/complete` 均返回 `file_id`，即**服务端把合并结果算出的 SHA-256 与端侧 `file_hash` 比对通过**。
+  - 落地约束（已写入 plan §6.1，供 HMY-51 直接照做）：`files[].uri` 只认 `internal://cache/<相对 cacheDir 路径>`，**绝对 `file://` 形态报 `401 GetInternalPath failed`**；`config.index` 是 `files` 数组下标（单文件必须为 `0`），**不是分片序号**；`data` 非空不会切成 multipart 信封；**切勿在循环里密集发起上传任务**（100 次齐发实测触发 `appfreeze THREAD_BLOCK_6S`），必须限并发（建议 ≤2）或严格串行。
+  - 未覆盖：锁屏/长时任务的保活边界、真机吞吐与弱网重试——均待真机；模拟器仅为 API 26 x86 环境。
 
 - [ ] M4-HMY-51 投稿上传链路：选片、分片上传、断点续传、秒传、进度可见
   - 覆盖：HMY-50、HMY-54
-  - 实现要点（待 HMY-50 定论后细化）：
-    - `@ohos.file.picker` 选片取 `uri`；`@ohos.request` 或扩展后的 `HttpClient` 传分片（择一，见 HMY-50）
+  - 实现要点（HMY-50 已定论：走 A 路线 `request.uploadFile`，见上条）：
+    - `@ohos.file.picker` 选片取 `uri`；分片用 `@ohos.request` 的 `request.uploadFile`（`method:'PUT'` + `begins`/`ends` 字节区间 + `files[].uri` 取 `internal://cache/…` 形态），**串行或限并发 ≤2**
     - 端侧算 SHA-256 → `POST /upload/init`；`fast=true` 直接拿 `file_id`；否则按 `chunk_size` 切片依 `uploaded` 数组**只传缺失分片**
     - 进度用 `on('progress')` 或按分片计数上报；`POST /upload/{id}/complete` 收口
     - 新增 `service/UploadApi.ets` 与 `model/Upload.ets`（手写模型，字段以 OpenAPI 为准）
