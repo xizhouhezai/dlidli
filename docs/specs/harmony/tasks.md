@@ -250,7 +250,7 @@
     - **④ 后台：行为已实测、边界未测**。切后台（`moveAbilityToBackground()`）后分片仍持续上传（26 片全部落盘，后台 JS 心跳持续至 174s）。但发现**两个坑**：切后台后**进程可能被回收**（同尺寸对照中切后台即被 WMS 销毁、后台零进展），且**系统有独立后台传输并发上限**（100 片齐发时后半段报 `401 … GetInternalPath failed, file is not valid`）。**锁屏 + 切后台 5 分钟的长时任务保活属真机项，模拟器不作数**（见 plan §6.1 第二条）。
     - **B 路线**：`extraData` 传 `ArrayBuffer` + `HttpDataType.ARRAY_BUFFER` + `Content-Type: application/octet-stream`，三片 200、`complete` SHA-256 通过；代价是失去系统级后台传输、需自管切片/重试/进度。
     - **端到端硬判据**：A/B 两条路线的 `POST /upload/{id}/complete` 均返回 `file_id`，即**服务端把合并结果算出的 SHA-256 与端侧 `file_hash` 比对通过**。
-  - 落地约束（已写入 plan §6.1，供 HMY-51 直接照做）：`files[].uri` 只认 `internal://cache/<相对 cacheDir 路径>`，**绝对 `file://` 形态报 `401 GetInternalPath failed`**；`config.index` 是 `files` 数组下标（单文件必须为 `0`），**不是分片序号**；`data` 非空不会切成 multipart 信封；**切勿在循环里密集发起上传任务**（100 次齐发实测触发 `appfreeze THREAD_BLOCK_6S`），必须限并发（建议 ≤2）或严格串行。
+  - 落地约束（已写入 plan §6.1，供 HMY-51 直接照做）：已验证可用的 `files[].uri` 是 `internal://cache/<相对 cacheDir 路径>`，**绝对 `file://` 形态报 `401 GetInternalPath failed`**；picker 返回的媒体库 URI 是否可直接投递**未测**（见 plan §6.1 待验项）；`config.index` 是 `files` 数组下标（单文件必须为 `0`），**不是分片序号**；`data` 非空不会切成 multipart 信封；**切勿在循环里密集发起上传任务**（100 次齐发实测触发 `appfreeze THREAD_BLOCK_6S`），必须限并发（建议 ≤2）或严格串行。
   - 未覆盖：锁屏/长时任务的保活边界、真机吞吐与弱网重试——均待真机；模拟器仅为 API 26 x86 环境。
 
 - [ ] M4-HMY-51 投稿上传链路：选片、分片上传、断点续传、秒传、进度可见
