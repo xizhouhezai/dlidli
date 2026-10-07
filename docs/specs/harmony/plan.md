@@ -196,10 +196,10 @@ apps/harmony/
   - **③ `begins`/`ends` 是否为字节区间 —— 是（闭区间）**：声明为 "File start point / end point to read …, in bytes … closed interval"；实测只传文件中间一段，后端落盘长度恰为 `ends - begins + 1`。**每片的请求体就是那一段字节，后端无需改动即可按整片 5MB 接收**。
   - **④ 切后台是否持续 —— 行为已实测，边界仍未测**：切后台（`moveAbilityToBackground()`）后**分片仍在持续上传**（26 片全部落盘，且后台期间 JS 心跳持续到 174s），未见系统级暂停——系统上传任务确实把网络请求与页面生命周期解耦。**但两个坑与一条边界必须记住**：
     - **坑 1：切后台后进程可能被回收**。同尺寸对照中，切后台瞬间进程被 WMS 销毁（日志 `aboutToDisappear`），后台阶段零进展；另一轮则全程存活完成。即「进程存活」是后台持续的前提，**不能只看"切后台没暂停"**；长任务需配 `backgroundTaskManager.startBackgroundRunning` 申请长时任务（并声明 `backgroundModes`）才能稳定保活。
-    - **坑 2：系统有「独立后台传输」上限，超限直接报错**。首次用 100 片 × 1MiB 齐发时，后半段返回 `401 … GetInternalPath failed, file is not valid`（100 个任务超出系统并发后台传输数）；**串行 + 单片完成再发**则稳定通过。
+    - **坑 2：系统有「独立后台传输」上限，超限直接报错**。首次用 100 片 × 1MiB 齐发时，后半段返回 `401 … GetInternalPath failed, file is not valid`（**注：报错文案未点明原因，判为并发超限系据「改串行后即全程通过」推断**）；**串行 + 单片完成再发**则稳定通过。
     - **边界（须真机确认）**：锁屏 + 切后台 5 分钟的长时任务保活、省电策略影响，模拟器结论**不作数**，仍按 §6.1 第二条待真机复验。
   - **B 路线亦跑通（降级路径）**：扩展 `HttpClient` 传二进制——`HttpRequestOptions.extraData` 传 `ArrayBuffer` + `expectDataType: HttpDataType.ARRAY_BUFFER`，`Content-Type: application/octet-stream`，自切 5MB 片 PUT；三片均 200、`complete` 的 SHA-256 校验通过。**代价**：失去系统级后台传输（锁屏保活要自建），且需自管切片/重试/进度。
-  - **落地约束（供 HMY-51）**：`files[].uri` 只认 `internal://cache/<相对 cacheDir 路径>` 形态，**`fileIo` 给出的绝对 `file://…` 形态会报 `401 … GetInternalPath failed`**；`config.index` 是 `files` 数组下标（单文件时必须为 `0`），**不是分片序号**；`data` 非空不会把 body 变成 multipart 信封（实测仍为裸 body）。
+  - **落地约束（供 HMY-51）**：本轮已验证可用的 `files[].uri` 形态是 `internal://cache/<相对 cacheDir 路径>`，**`fileIo` 给出的绝对 `file://…` 形态会报 `401 … GetInternalPath failed`**（其余形态是否可用见下条待验项）；`config.index` 是 `files` 数组下标（单文件时必须为 `0`），**不是分片序号**；`data` 非空不会把 body 变成 multipart 信封（实测仍为裸 body）。
   - **并发教训**：切勿在循环里密集 `await request.uploadFile()`——实测 100 次齐发触发 `appfreeze THREAD_BLOCK_6S`（主线程阻塞 6s 被杀）。分片任务必须**限并发（建议 ≤2）或严格串行**。
   - **结论口径**：以上均为 **API 26 x86 模拟器（`Pura X View`）所得**；「协议适配 / PUT / 字节区间 / 裸 body」属协议层结论，可直接用于实现；**后台传输的保活边界属设备行为，须真机确认**。
 - [ ] **选片 URI 到 `request.uploadFile` 的交接（HMY-51 待验，未包含在本轮预研内）**：本轮实测用的是**应用沙箱 cache 文件**，可用形态确认为 `internal://cache/<相对 cacheDir 路径>`；而 `@ohos.file.picker` 返回的是**媒体库/文档 URI**（如 `file://media/Photo/…`），`request.uploadFile` 是否直接接受**未实测**（其 `File.uri` 文档只给了 `internal://cache/…` 一个示例，未枚举 picker 形态）。**建议 HMY-51 的稳妥做法**：选片后先 `fileIo.copy` 到应用 cache 目录再用 `internal://cache/…` 投递（本轮已验证该形态可用），代价是**多一次整文件拷贝**，大文件需评估耗时与磁盘占用；若实测 picker URI 可直接投递则省掉这次拷贝。**此项不阻塞 HMY-51 开工**（两条路都不改后端），但需在 HMY-51 内先定。
