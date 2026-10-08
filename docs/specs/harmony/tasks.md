@@ -240,7 +240,7 @@
 
 - [x] M4-HMY-50 投稿预研：`@ohos.request` 与后端分片协议的对接方式定论（**阻塞 HMY-51，必须先做**）
   - 覆盖：—（工程；为 HMY-50~54 定实现方案）
-  - 背景：后端分片是 **`PUT` + 裸二进制 body**（`packages/api-client` 的 `putRaw`），而 `request.uploadFile` 的 `UploadConfig` 走 **multipart 表单**（`files` + `data`），SDK 未见 `PUT` 示例。两条路线必须实测择一，详见 [plan §6.1](/specs/harmony/plan)
+  - 背景（立项时的**假设**，已被下方实测修正）：后端分片是 **`PUT` + 裸二进制 body**（`packages/api-client` 的 `putRaw`），而 `request.uploadFile` 的 `UploadConfig` 的 `files` 文档写 "multipart/form-data"，SDK 未见 `PUT` 示例——当时的推断是「uploadFile 只能发 multipart、二者不兼容」。两条路线必须实测择一，详见 [plan §6.1](/specs/harmony/plan)。**实测结论：该推断不成立**，帧格式由 `method` 决定（`PUT`→裸 body、`POST`→multipart），见下方②
   - 判定项（用真实 ≥5MB 文件对本地后端跑通即可定论）：① `request.uploadFile` 能否发 `PUT`；② 后端是否接受 multipart（若不接受，B 路线或"加后端 multipart 变体"需二选一）；③ `begins`/`ends` 是否为**字节区间**语义（决定能否只传一段）；④ 切后台/锁屏时上传是否持续（`backgroundModes` 声明是否必需）
   - **实测方法（2026-10-07 初测 / 2026-10-08 复测，均为 `apps/harmony` 一次性探针页、跑完即删）**：对本地真实后端（模拟器内 `http://10.0.2.2:8000`，MySQL/Redis 均 up）跑完整链路（init → 逐片 PUT → complete）。判定**不读端侧自述**：① 读后端落盘 `server/uploads/chunks/<uploadId>/<index>.part` 的字节数；② 读 `complete` 结果；③ **宿主机对合并成品 `server/uploads/videos/source/<sha>.mp4` 重算 SHA-256 并与文件名（=端侧上报 `file_hash`）比对**。2026-10-08 复测用**端侧自生成的确定性填充文件**（1 KB / 5 MB / 9 MB / 11 MB / 20 MB / 25 MB / 30 MB；生成方式受限于 hdc 无法写入应用沙箱，故由端侧在 cacheDir 自建并做首/中/尾抽点校验），**11 MB / 9 MB / 25 MB 三份成品 size 与 sha256 全部 MATCH**。
   - **验证结论**：**A 路线可行且为主路线；B 路线亦可行，作降级。后端零改动成立。**
