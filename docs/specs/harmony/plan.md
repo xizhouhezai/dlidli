@@ -141,6 +141,8 @@ apps/harmony/
 ```
 
 > 落地细节与实测结论见 [tasks M4-HMY-07](/specs/harmony/tasks)（含 WS 的 Origin 阻塞与降级轮询、§7.2 黑边分支的实测几何与一处越界缺陷修复）。
+>
+> **§7.2 影音娱乐场景「无黑边时同屏弹幕不宜过多」的落地与实测**：同屏密度由 `DanmakuSettings.densityRatio()`（0.7/1/1.3）与轨道数（`trackCount`，含 `MAX_ACTIVE=240` 封顶）共同控制；**2026-10-08 实测**：把该片源灌到 1000 条同屏候选、与仅 45 条对比，播放页帧率**都锁在片源 30fps（p50 = 32.00ms）**，即该档位在模拟器上不是瓶颈（真机口径见 §6「材质叠加帧率实测」）。
 
 **登录与会话**（承 ACC-01/03/06）：
 
@@ -164,7 +166,7 @@ apps/harmony/
   - **操作口径**：先确认 SystemUI 就绪（`com.ohos.sceneboard` 进 FOREGROUND / `hidumper -s WindowManagerService` 窗口数 > 0）再安装与启动；不在启动窗口期反复 `snapshot_display`。命令速查见 [tasks M4-HMY-01](/specs/harmony/tasks)。
   - **附带结论**：模拟器为 **API 26 / guest `7.0.0.106(SP1DEVC00E999R4P11)` / abi `x86_64`**；**未签名 HAP 可直接 `hdc install` 成功**——本机本地验证**无需配置 `signingConfigs`**，可砍掉签名前置。
   - **沉浸光感是否生效（2026-09-22 已验，见下条「沉浸光感落地」）**：当时判「浅色纯色底无可比对参照」只说对了一半——**材质确实生效了**（`supported=true`、应用级开关 `state=ENABLE`、全局档 `level=EXQUISITE`），但**纯色底上玻璃本来就看不出**，真因在背景而非能力。
-- [ ] **弹幕 Canvas 性能上限**：同屏弹幕满载下的帧率与内存需实测（spec §4 要求 ≥ 55fps）。2026-09-22 补：轨道渲染已由 M4-HMY-07 落地，但**帧率/内存未测**，归 M4-HMY-10 端侧验收（同一处一并测控制层材质叠加的开销，见 §7.2 末条）。
+- [ ] **弹幕 Canvas 性能上限：帧率已测，阈值与内存待真机（2026-10-08 部分收口）**：同屏弹幕满载下的帧率已测——**播放页恒锁在片源帧率上**（片源 30fps → p50 帧间隔恒为 32.00ms），**同屏 45 条与灌满 1000 条、弹幕开与关，帧率都无差异**，即该窗口内 Canvas 逐帧重绘不是瓶颈（活动条数受 `MAX_ACTIVE=240` 与轨道数封顶）。**仍未收口的两项**：① **spec §4 的「≥55fps」本轮无法验证**——示例片源本身只有 30fps，要验该阈值须用 ≥60fps 片源；② **内存与长时稳定性未测**（采样窗口为秒级）。两项均归真机。方法见下条「材质叠加帧率实测」。
 - [ ] **弹幕 WS 的 Origin 白名单（2026-09-22 实测，归线上配置）**：ArkTS 的 WebSocket **自生成 Origin**（默认 `http://<host>`，不带端口；API 26 起 `supportOriginPort` 可带上），而服务端 `CheckOrigin` 对 `allow_origins` 做**精确匹配**——dev 白名单（`http://localhost:5173~5175`）不含端侧来源，故直连 `ws://10.0.2.2:8000` 握手 403，端侧只能降级为 15s 分段轮询。**dev 联调可临时同源绕过（做法见 [tasks M4-HMY-07](/specs/harmony/tasks)），生产必须让服务端白名单纳入 App 的实际 Origin，或同源部署 `wss://<正式域名>`**；本期零后端改动，未动白名单。
 - [x] **状态管理版本（已解决，2026-09-21）**：壳层 `pages/Index.ets` 以 **ArkUI 状态管理 V2**（`@Entry @ComponentV2` / `@Local` / `@Param`）实写并通过 API 26 编译（`assembleHap` BUILD SUCCESSFUL），**定版 V2**，不再保留 V1 备选。
 - [x] **目标 API 版本选择（已解决，2026-09-21）**：DevEco 升级至 **26.0.0.821** 后内置 SDK 为 **HarmonyOS 26.0.0 / API 26**（version 26.0.0.105），模拟器镜像 **API 26 / 7.0.0.106**（`D:/Program Files/Huawei/sdk/system-image/HarmonyOS-7.0.0/phone_all_x86`）已就位，实例含 Mate 70 Pro / Mate 80 Pro Max / Pura 90 / Pura X View。**`compileSdkVersion` 与 `compatibleSdkVersion` 均取 26**，原"编译 24 / 运行时 23"的双口径已失效，历史结论仅备查。
@@ -177,7 +179,11 @@ apps/harmony/
   - **关键经验：玻璃靠「折射背景」显形，均匀纯色底上材质等于不可见**。实测把 `materialColor` 不透明度从 13% 逐级加到 35%，在近白底上始终看不出边界——**材质本身是"透"而不是"填"**。因此：① 氛围底是材质可读的前提（见 §2「玻璃的可读性前提」），但**氛围底要克制**：品牌粉铺到 30% 时界面到处是半透明的粉，反而割裂，最终收敛为顶部 ≈3% 的洗色 + 光斑 ≤12%；② 材质赋色必须取**中性**（页面白 → 材质用次级灰），染品牌色既稀释品牌又让玻璃失去中性底；③ 需要保形的小控件直接用同色 `backgroundColor` 实填、不挂材质（见 §2「小控件的边界」）；④ 判定材质是否生效**不能靠纯色底上的观感**，要用能力探测取值 + 滚动内容从胶囊下穿过时的折射。
   - **底栏最终形态：HDS 悬浮胶囊，不是自绘 Tabs**。首版用 `Tabs(barPosition: End)` + `barFloatingStyle({ maskColor, systemMaterial })`，出来仍是"整宽底栏 + 蒙层"。改为 `HdsTabs`（`@kit.UIDesignKit`）后：`barMode(BarMode.Fixed)` + `scrollable(false)` + `divider({mode: DividerMode.NONE})` + `barFloatingStyle({ barBottomMargin: 16, adaptToHandedness: true, barWidth: { smallWidth: 294, mediumWidth: 328, largeWidth: 328 }, systemMaterialEffect: { materialType: MaterialType.ADAPTIVE, materialLevel: MaterialLevel.ADAPTIVE } })`；**窄 `barWidth` 才是"胶囊"的来源**。`barOverlap(true)` 要求页面滚动内容留出底部空白（`DliSize.TAB_RESERVED = 96`），否则最后一行被胶囊压住。能力不足时降级为 `MaterialType.NONE` + `MaterialLevel.SMOOTH`（经 `hdsMaterial.getSystemMaterialTypes()` 判定）。**不引入 `HdsTabsController`**：`index` 绑定已够用（标题栏搜索胶囊点按切页签实测生效），少一个成员变量。
   - **HDS（`@kit.UIDesignKit`）分域使用**：`HdsTabs` 已升为主线用于**底栏**（见上条，本机 `@since 6.0.0(20)` 起内置）；其余 HDS 组件（`HdsVisualComponent` 等，`@since 6.1.0(23)`）本期未使用——内容区的材质仍走 `uiMaterial` 通用属性，二者分域不重叠。若后续需兼容低版本设备，HDS 系可作降级路径。
-  - 页面内容区（播放器控制层、评论面板、弹幕面板）改用材质**同样可挂**，其观感与功耗开销待 M4-HMY-06/07 落地时实测（弹幕层逐帧重绘，是否与材质叠加掉帧需单独验）。
+  - 页面内容区（播放器控制层、评论面板、弹幕面板）改用材质**同样可挂**；其观感已随 M4-HMY-06/07 落地，**帧率开销已于 2026-10-08 实测收口（见下条）**。
+  - **材质叠加帧率实测（2026-10-08，API 26 模拟器 `Pura X View`，应用零改动；方法与逐项数值见 [tasks M4-HMY-01](/specs/harmony/tasks)）**：
+    - **方法**：`hitrace -t N -b 65536 -o <f> graphic ace animation` 抓帧，数应用进程的 `B|<pid>|H:OnVsyncEvent` 条数，**帧率 = (条数-1) ÷ 首末 `now` 纳秒差**。两条铁律：① 静止时该标记为 **0**（系统按需出帧），**不能用「固定窗口数帧数」**；② 模拟器上 `hidumper … fpsCount` 恒为 `Refresh Rate:60, Count:1`、`SP_daemon -f/-ohtestfps` 恒为 `fps=0`，**三者只有 hitrace 可用**。交叉印证取 RenderService 侧 `RSUniRenderThread::Render` 与 **`wouldDrawLargeAreaBlur`（材质模糊路径）**。
+    - **结论（模拟器可得）**：**帧率测不出材质差**——首页滚动材质开/关均顶满 **60.6 / 61.1 fps**；播放页锁在片源 30fps（p50 = 32.00ms），弹幕开/关、45 条 vs 1000 条**都无差异**。**但开销真实存在**：同载荷下材质模糊路径绘制次数 **1664/720/608 对 528/336/432**（逐轮 3.15× / 2.14× / 1.41×），只是被 60Hz 上限下的余量吸收。
+    - **须真机确认（不得外推）**：① 模拟器为 **x86_64 软件渲染**（`hmos.emulator` / `abilist x86_64`，宿主 Intel Arc 转译），材质模糊的**绝对开销与掉帧风险**必测真机；② **功耗/发热在模拟器上不可得**——`SP_daemon -p` 报 `RK does not support power acquisition`、电池为虚拟值，**功耗结论必须真机测**；③ spec §4「同屏弹幕满载 ≥55fps」须用 ≥60fps 片源在真机验证；④ 长时（>5min）播放的稳定性与内存增长未测。
 - [x] **OpenAPI → ArkTS 类型生成（已解决，2026-09-21：判定为不可行，改为手写）**：实测 `server/docs/swagger.json`（swagger 2.0，64 个 path / 82 个响应）：**82 个响应 schema 无一例外全是 `$ref: #/definitions/github_com_dlidli_server_internal_pkg_response.Body`**，而该 `Body` 的 `data` 字段是空 schema `{}`（等价 `any`）；13 个 `definitions` 里只有**请求体**（且多为 admin 域）有结构。
   - **结论**：生成器无料可生——产出只有统一包裹与少量请求体，端侧真正需要的响应模型（稿件详情、弹幕分段、搜索结果…）一个都拿不到。**放弃生成路线，改为手写端侧模型 + 契约核对**。
   - **根因与不可解性**：根因在后端 handler 未标注具体响应类型，修它必须改后端，与本期「零后端改动」冲突。后续若要重开生成，需后端先为响应引入泛型 DTO 标注（如 `response.BodyOf[T]`），届时再评估。

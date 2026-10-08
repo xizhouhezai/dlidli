@@ -6,7 +6,7 @@
 
 ## M4（W49+）观看端
 
-- [ ] M4-HMY-01 预研：原生技术链路可行性（AVPlayer 播后端签名 m3u8；`@ohos.net.webSocket` 连弹幕 WS；`@ohos.net.http` 跑通登录与视频列表；ArkUI 状态管理 V2 写法；沉浸光感在 API 26 模拟器上的实际表现）
+- [x] M4-HMY-01 预研：原生技术链路可行性（AVPlayer 播后端签名 m3u8；`@ohos.net.webSocket` 连弹幕 WS；`@ohos.net.http` 跑通登录与视频列表；ArkUI 状态管理 V2 写法；沉浸光感在 API 26 模拟器上的实际表现）（2026-10-08 完成）
   - 覆盖：—（工程；为 HMY-01/03/10/20/22 定实现方案）
   - 前置：DevEco 26.0.0.821 + SDK API 26 + 模拟器镜像 API 26（`D:/Program Files/Huawei/sdk/system-image/HarmonyOS-7.0.0/phone_all_x86`）已就位，实例名 **`Pura X View`**（apiVersion 26.0.0 / guest 7.0.0.106）。模拟器视频硬解受限时播放结论记「待真机确认」，**不得据此判定鸿蒙不支持 HLS**
   - 连设备口径（2026-09-21 实测）：模拟器**不注册为 USB 目标**，只跑 `hdc list targets` 恒为 `[Empty]`；须先 `hdc tconn 127.0.0.1:5555`（模拟器监听 `127.0.0.1:5555`），连上后 `list targets -v` 由 `TCP Offline` 转 Online；未就绪时 shell/install 报 `[E001005] Device not found or connected`。另行拉起模拟器的命令行可从 DevEco `idea.log` 的 `LocalDeviceConnection - start hvd log` 抄取：`Emulator.exe -hvd "<实例名>" -path "D:/Program Files/Huawei/Emulator/deployed" -t <pipe> -imageRoot "D:/Program Files/Huawei/sdk"`；`hdc file recv` 的本地路径须写 Windows 反斜杠形式并在 Git Bash 下关掉路径转换，否则被当相对路径
@@ -14,7 +14,43 @@
   - 可用结论（同期实测）：模拟器运行时 **API 26 / guest `7.0.0.106(SP1DEVC00E999R4P11)` / abi `x86_64`**；**未签名 HAP 可直接 `hdc install` 成功**，本地验证无需配置 `signingConfigs`
   - 模拟器操作速查：安装 `hdc -t 127.0.0.1:5555 install -r <hap>`（`<hap>` 务必用**相对路径**：先 `cd` 到产物目录；Git Bash 下传 Windows 绝对路径会被 hdc 拼成 `<当前目录>/D:/...` 而报 `Error opening file`，安装失败后紧接着的 `aa start` 就报 `10104001`，极易误判成包名问题）；启动 `hdc -t … shell "aa start -a EntryAbility -b com.dlidli.app -m entry"`；点击用 `hdc -t … shell "uitest uiInput click <x> <y>"`（`uinput -T -m x y x y` 等长 trace 不触发点击）；取控件实际矩形用 `uitest dumpLayout -p /data/local/tmp/layout.json` 再 `hdc file recv`（本次即以它纠正了 1719→2064 的坐标误判）；截图 `snapshot_display -f <路径>` + `file recv`
   - 视觉预研要点（降级为实测确认，设计侧结论已定稿见 [plan §2/§6](/specs/harmony/plan)）：① `uiMaterial.isImmersiveMaterialSupported()` 在 x86 模拟器返回什么；② `getMaterialInfo()`/`getGlobalMaterialLevel()` 的实际取值（x86 模拟器算力档位可能非高/中档，`style`/`colorInvert` 等可能不生效）；③ 在 `Navigation` 标题栏与 `Tabs` 底部标签栏上挂 `ImmersiveMaterial` 的实际观感与帧率开销；④ 结论若为模拟器不支持，**不得据此判定真机不支持**，记「待真机确认」
-  - **预研进度（2026-09-21 起，2026-09-22 补记）**：预研项中的**网络层已随 M4-HMY-03 实测覆盖**——`@ohos.net.http` 走通真实后端（首页分区列表 12 项）、超时/失败重试与 401 续期链路均已验，且模拟器可达宿主机（`10.0.2.2:8000`），结论见 M4-HMY-03；**AVPlayer HLS 播放已随 M4-HMY-06 实测覆盖**（后端签名 m3u8 真实解码出画 + 清晰度切换 + 签名临期换源续播 + 横屏全屏，结论见 M4-HMY-06）；**沉浸光感已随 M4-HMY-11 实测覆盖**（`supported=true`/`state=ENABLE`/`level=EXQUISITE`，结论见 M4-HMY-11 与 [plan §6](/specs/harmony/plan)）；**弹幕 WS 通道已随 M4-HMY-07 实测覆盖**（`@ohos.net.webSocket` 与 Go Hub 互通无碍，唯一阻塞是服务端 Origin 白名单未含客户端来源，端侧无从绕过；降级轮询链路与真实帧上屏均已验，结论见 M4-HMY-07）。**至此预研四项全部收口**
+  - **预研进度（2026-09-21 起，2026-09-22 补记）**：预研项中的**网络层已随 M4-HMY-03 实测覆盖**——`@ohos.net.http` 走通真实后端（首页分区列表 12 项）、超时/失败重试与 401 续期链路均已验，且模拟器可达宿主机（`10.0.2.2:8000`），结论见 M4-HMY-03；**AVPlayer HLS 播放已随 M4-HMY-06 实测覆盖**（后端签名 m3u8 真实解码出画 + 清晰度切换 + 签名临期换源续播 + 横屏全屏，结论见 M4-HMY-06）；**沉浸光感已随 M4-HMY-11 实测覆盖**（`supported=true`/`state=ENABLE`/`level=EXQUISITE`，结论见 M4-HMY-11 与 [plan §6](/specs/harmony/plan)）；**弹幕 WS 通道已随 M4-HMY-07 实测覆盖**（`@ohos.net.webSocket` 与 Go Hub 互通无碍，唯一阻塞是服务端 Origin 白名单未含客户端来源，端侧无从绕过；降级轮询链路与真实帧上屏均已验，结论见 M4-HMY-07）
+  - **材质叠加的帧率/功耗实测（2026-10-08 完成，末项收口）**：见下条「材质帧率实测」；**至此预研五项全部收口**
+  - **材质帧率实测（2026-10-08，API 26 模拟器 `Pura X View`，app 零改动）**
+    - **可复现测量方法（纯外部采集，不依赖应用埋点）**：应用进程每收到一次 UI vsync 会写一条 trace 标记，故用 `hitrace` 抓帧数即可反推真实出帧率——
+      ```sh
+      PID=$(pidof com.dlidli.app)
+      hitrace -t 10 -b 65536 -o /data/local/tmp/perf.ftrace graphic ace animation
+      grep "B|$PID|H:OnVsyncEvent" /data/local/tmp/perf.ftrace | sed -n 's/.*now:\([0-9]*\).*/\1/p' > frames.txt
+      # 帧率 = (行数-1) / (末条 now - 首条 now) 秒；条目自带纳秒时间戳，宿主机侧算分位数
+      ```
+      同一份 trace 里另可取 RenderService（pid 800）侧计数作交叉印证：`RSUniRenderThread::Render`（出图次数）、`RSSurfaceRenderNodeDrawable::OnDraw`（节点绘制）、**`wouldDrawLargeAreaBlur`（大面积模糊绘制，即沉浸光感的模糊路径）**、`RSFilterCacheManager::ClearFilterCache`。
+      **两条必须遵守的口径**：① **不能用「固定窗口内数帧数」**——实测**静止时该标记为 0**（系统按需出帧，无新帧就不画），必须用「帧数 ÷ 首末时间戳跨度」；② **`hidumper -s RenderService -a fpsCount` 在模拟器上恒返回 `Refresh Rate:60, Count:1`（不随滚动变化），`SP_daemon -f` 与 `SP_daemon -ohtestfps` 恒返回 `fps=0`**——本机这两个口径都取不到值，**只有 hitrace 这条路径有效**（二者为何为空值本轮未深究，未取到即不用）。
+    - **载荷与取值（首页信息流，材质面最全：卡片 `REGULAR` + 搜索胶囊 `THIN` + 标题栏 `ULTRA_THIN` + HDS 悬浮胶囊底栏）**：`uitest uiInput drag 660 1700 660 400 220` 用**一次持续 drag** 覆盖整段采集窗口（不能用 `fling` 循环——手势之间的空档会把均值拉低）：
+      | 场景 | 帧率（逐轮） | 均值 | p50 帧间隔 | p90 | >33ms |
+      | --- | --- | --- | --- | --- | --- |
+      | 滚动 · 材质 `enable` | 61.7 / 60.2 / 60.0 | **60.6** | 16.00ms | 16.00ms | 0 / 1 / 3 |
+      | 滚动 · 材质 `disable`（同机同载荷对照） | 61.4 / 61.5 / 60.4 | **61.1** | 16.00ms | 16.00ms | 1 / 1 / 1 |
+      | 静止（无输入） | 0 帧 | — | — | — | — |
+      → **滚动场景两侧都顶在 60Hz vsync 上限，材质开关测不出帧率差**（均值差 0.5fps，小于轮间抖动 ±0.85fps）。
+    - **开销在哪：模糊路径绘制次数翻倍（但被模拟器余量吸收）**。同一滚动载荷、同一采集窗口下比对 RenderService 侧计数：
+      | | `RS_RENDER` | `RS_NODE_DRAW` | **`wouldDrawLargeAreaBlur`** | `RS_FILTER_CLEAR` |
+      | --- | --- | --- | --- | --- |
+      | 材质 `enable` | 618 / 276 / 228 | 927 / 414 / 342 | **1664 / 720 / 608** | — |
+      | 材质 `disable` | 390 / 258 / 324 | 585 / 387 / 486 | **528 / 336 / 432** | — |
+      → 同窗口同载荷下，模糊路径绘制次数 **材质开 = 1664 / 720 / 608**，**材质关 = 528 / 336 / 432**（按轮次对应），逐轮比值 **3.15× / 2.14× / 1.41×**。**即材质开销是真实存在的（模糊绘制次数显著增加，最低一轮也有 1.4×），只是模拟器在 60Hz 上限下还有余量把它吸收了**——这正是不该把「模拟器不掉帧」外推为「真机不掉帧」的原因。
+    - **进程 CPU 不可作判据**：`hidumper --cpuusage <pid>` 单次采样在两侧分别是 3.35% / 4.24%，轮间抖动大于差异，**本轮未取得可信的 CPU 功耗对比**（`SP_daemon -p` 在模拟器直接报 `RK does not support power acquisition`，电池是虚拟的 100%/充电中，**功耗在模拟器上根本不可测**）。
+    - **弹幕层逐帧重绘 + 材质叠加（播放页）**：`DanmakuLayer` 以 `setInterval(…, 16)` 逐帧驱动 Canvas 重绘，与视频画面同屏。实测播放页**恒停在片源帧率上，与弹幕无关**：
+      | 场景 | 帧率 | p50 帧间隔 |
+      | --- | --- | --- |
+      | 弹幕开（片源自带 45 条） | 31.1 / 31.3 / 31.4 | **32.00ms** |
+      | 弹幕关（同片源、同机对照） | 30.8 / 31.3 / 33.1 | **32.00ms** |
+      | 弹幕开（**灌入 1000 条满屏**，Redis 段缓存已清） | 29.6 / 30.3 / 32.3（另有一轮 56.6 为部分窗口，不计） | **32.00ms** |
+      → **p50 恰好 32.00ms = 1/30s，即 30fps 片源的帧间隔**；`ffprobe` 证实该 HLS 片源 `r_frame_rate=30/1`。**同屏弹幕 45 条与 1000 条、开与关，播放页帧率都锁在 30fps**，说明该窗口内**弹幕 Canvas 逐帧重绘不是瓶颈**（每帧先 `clearRect` 再按活动条数描边+填充，活动数受 `MAX_ACTIVE=240` 与轨道数封顶）。
+    - **测量方法上的两个坑（备查，避免重走）**：① **不能用 5 秒的短测试片做弹幕 A/B**——片源 5s 播完后页面不再出帧（`帧数=0`，会被误读成「卡死」），必须挑 `duration` 足够长的片源，或每轮重新进页面并在播放窗口内采集；② 抓到的 `frames.txt` **必须在每轮结束时立刻改名留存**，否则后一轮会覆盖前一轮证据（本轮早期即因此得到过两组完全相同的假数据，已作废不计）。
+    - **结论（模拟器可得 vs 须真机确认）**：
+      - **模拟器可得（已收口）**：① 帧率采集方法跑通且可复现（hitrace + `OnVsyncEvent`，附 RenderService 侧模糊路径计数）；② **材质叠加在 API 26 模拟器上不导致掉帧**——首页滚动顶满 60Hz、播放页锁在片源 30fps，材质开/关与弹幕 45/1000 条均无帧率差；③ 材质开销的**相对量**可测：同一滚动载荷下模糊路径绘制次数为关闭时的 **1.41×~3.15×**（逐轮 3.15 / 2.14 / 1.41）。
+      - **须真机确认（不得由模拟器外推）**：① 真机上材质模糊的**绝对开销与掉帧风险**——模拟器是 **x86_64 软件渲染**（`SP_daemon -deviceinfo` = `hmos.emulator` / `abilist x86_64`，走宿主 Intel Arc 转译，`GL_RENDERER` 报 `Mali-G77` 只是字符串），GPU 负载与真机完全不同；② **功耗/发热**——模拟器无功耗采集能力（`SP_daemon -p` 报不支持），电池为虚拟值，**功耗结论在模拟器上不可得，必测真机**；③ **spec §4 的「同屏弹幕满载 ≥ 55fps」**：本轮因片源 30fps 上限无法验证该阈值（要验须用 ≥60fps 片源 + 真机）；④ 长时播放（>5min）下的稳定性与内存增长，本轮仅在秒级窗口内采样。
 - [x] M4-HMY-02 工程骨架：DevEco 工程入库 `apps/harmony` + `pnpm-workspace.yaml` 排除该目录 + 分层目录 + 品牌色/圆角 ArkTS 常量 + HarmonyOS Symbol 图标接入 + 接口类型来源定案 + `compatibleSdkVersion` 取 26 + **应用壳层搭在 `Navigation` + `Tabs(BottomTabBarStyle)` 上**（当时认为底栏是沉浸光感的唯一合法作用面）+ `module.json5` 配 `ohos.arkui.UIMaterial.state`（2026-09-21 完成；**该壳层已于 2026-09-22 由 M4-HMY-11 改造为 `HdsTabs` 悬浮胶囊底栏，见 [plan §2/§6](/specs/harmony/plan)**）
   - 覆盖：—（工程）
   - 实现要点：`bundleName` `com.dlidli.app` / `vendor` `DliDli`；`targetSdkVersion` 与 `compatibleSdkVersion` 均 `26.0.0`（产物 `targetAPIVersion` = `minAPIVersion` = `260000026`）。壳层 `pages/Index.ets` = `Navigation`（标题栏材质 `ImmersiveStyle.ULTRA_THIN` + `interactive`）+ `Tabs(barPosition: BarPosition.End)`（`.barFloatingStyle()` 挂 `THIN` 材质 + `maskColor`/`maskHeight` 蒙层；**2026-09-22 起改 `HdsTabs` 悬浮胶囊**），首页标题栏内嵌搜索入口（对齐官方「一镜到底」搜索）；三页签 首页/搜索/我的（HMY-40/41/42）。材质统一经 `common/constants/MaterialTokens.ets` 工厂产出，内部以 `uiMaterial.isImmersiveMaterialSupported()` 判支持性，不支持时返回 `undefined` **自然降级**，`DliMaterial.off()` 暴露 `Material.empty` 语义（与传 `undefined` 的「恢复默认」区分）。品牌 token 落两处：`common/constants/Theme.ets`（字面量，供 Canvas 绘制消费）+ `resources/{base,dark}/element/color.json`（含深色变体，供声明式 UI 消费）；新增字符串资源与 `common/utils/Logger.ets`（hilog 封装）
@@ -60,7 +96,7 @@
     - Admin 登录页原先内联的手绘电视机 SVG（含非 token 蓝 `#23ade5`）一并替换为脚本产出的 `apps/admin/public/logo.png`；同页 `#23ade5` 装饰性光晕/标题渐变未动（属既有装饰，不在本次品牌资产范围）
   - 验证结论（图标）：`hvigorw assembleHap` BUILD SUCCESSFUL；**模拟器桌面实测图标正确渲染**——系统 squircle 遮罩下品牌粉圆角方 + 白色图形，与系统应用并排无异常（以上为首版 2026-09-21 结论）。**2026-09-28 改版验证（脚本产物逐项核对，未重跑模拟器桌面实测）**：`foreground.png` 透明底、白色图形、包围盒中心 (512,512)、较长边 67.0%（完整标记 67.2% / 简化标记 67.0%）；`background.png` 满幅不透明，**与上一版逐字节一致（md5 未变）**——此处原写「左上角像素 `#FFD9E4` 与渐变首色一致」，**该断言不成立**：实测左上角是 `#EED2DA`，底板渐变首色确实是 `#FFD9E4`，但成品边缘被 `dliVignette`（边缘 0.15 黑）与 `dliDepth` 压深，故**不能用角像素反推渐变首色**（口径已于 2026-09-28 二次定版时修正）；`AppScope` 与 `entry` 两份 **md5 逐字节相同**；`favicon.ico` 三帧 16/32/48 均 PNG 内嵌、IHDR 尺寸与目录声明一致、偏移与总长自洽（6 + 16×3 + Σ帧长 = 文件长）；Web 端起 `vite` 实测三个 favicon 资源均 200 且 MIME 正确（`image/svg+xml` / `image/x-icon` / `image/png`）；默认封面在 320px 宽、`aspect-ratio:16/9` 容器中以 `object-fit:cover` 实测 **cropPercent = 0**（首版封面 1600×1000 = 1.6:1，在同一容器内被上下各裁约 5.5%）；新封面 1600×900 恰为 16:9，与消费方容器一致
   - 验证结论（界面材质，2026-09-28）：起 `vite` 实测——Web 首页顶栏与登录页、Admin 登录页与侧栏均正确显示新标记；Admin 顶栏玻璃实测让列表内容滚到吸顶栏下方穿过（截图存档 `tmp_brand_preview/admin-users-scrolled.png`，临时目录不入库）；`vue-tsc` 两个应用均 0 error，`vite build` 均成功，产物 CSS 中断言 `backdrop-filter:blur(18px) saturate(1.6)` 与 `background:#ffffffb8` 已落地。**未覆盖**：需要真实后端数据的浮层（Web 视频页投币/收藏弹层、首页卡片下拉菜单）只有编译产物断言、无实渲截图，后端 `dlidli-api:8000` 未启动时无法复现
-  - 未覆盖：**沉浸光感是否真正生效仍未验**——壳层配色为浅色纯色底，材质模糊/蒙层无可比对参照，且 `isImmersiveMaterialSupported()`/`getGlobalMaterialLevel()` 取值未取；三项能力探测与观感/帧率开销归 M4-HMY-01。`viewmodel/`/`service/`/`model/`/`media/`/`danmaku/`/`store/` 目录待各自任务落地时创建，不做空目录占位
+  - 未覆盖：**沉浸光感是否真正生效仍未验**——壳层配色为浅色纯色底，材质模糊/蒙层无可比对参照，且 `isImmersiveMaterialSupported()`/`getGlobalMaterialLevel()` 取值未取；三项能力探测与观感/帧率开销归 M4-HMY-01。`viewmodel/`/`service/`/`model/`/`media/`/`danmaku/`/`store/` 目录待各自任务落地时创建，不做空目录占位（**该「未覆盖」已于 2026-09-22 由 M4-HMY-11 补齐能力探测与观感、2026-10-08 由 M4-HMY-01 补齐帧率开销，见本文件 M4-HMY-01/M4-HMY-11**）
   - OpenAPI 生成 ArkTS 类型：**实测判定不可行**（82 个响应 schema 全为无类型的统一包裹 `response.Body`，`data` 为空 schema），改为手写 + 契约核对，依据见 [plan §6](/specs/harmony/plan)
 - [x] M4-HMY-03 网络层：HTTP 封装（统一响应包裹/错误码文案/超时与重试/401 静默续期重放）（2026-09-21 完成）
   - 覆盖：HMY-03
