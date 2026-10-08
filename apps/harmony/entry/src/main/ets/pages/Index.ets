@@ -10,6 +10,7 @@ import { SearchPage } from './search/SearchPage';
 import { ProfilePage } from './profile/ProfilePage';
 import { LoginPage } from './auth/LoginPage';
 import { PlayPage } from './play/PlayPage';
+import { UploadPage } from './upload/UploadPage';
 
 const TAG: string = 'Index';
 
@@ -56,6 +57,8 @@ struct Index {
       LoginPage()
     } else if (name === RouteName.PLAY) {
       PlayPage({ bvid: (param as PlayRouteParam).bvid })
+    } else if (name === RouteName.UPLOAD) {
+      UploadPage()
     }
   }
 

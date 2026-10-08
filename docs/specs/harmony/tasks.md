@@ -289,7 +289,7 @@
   - 落地约束（已写入 plan §6.1，供 HMY-51 直接照做）：已验证可用的 `files[].uri` 是 `internal://cache/<相对 cacheDir 路径>`，**绝对 `file://` 形态报 `401 GetInternalPath failed`**；picker 返回的媒体库 URI 是否可直接投递**未测**（见 plan §6.1 待验项）；`config.index` 是 `files` 数组下标（单文件必须为 `0`），**不是分片序号**；分片必须**显式给 `begins`/`ends` 且用 `PUT`**；**切勿在循环里密集发起上传任务**（2026-10-07 实测 100 次齐发触发 `appfreeze THREAD_BLOCK_6S`），必须限并发（建议 ≤2）或严格串行——本轮全部链路串行、全程无冻结。
   - 未覆盖：真机锁屏/长时任务保活边界、真机吞吐与弱网重试——均待真机；模拟器仅为 API 26 x86 环境。
 
-- [ ] M4-HMY-51 投稿上传链路：选片、分片上传、断点续传、秒传、进度可见
+- [x] M4-HMY-51 投稿上传链路：选片、分片上传、断点续传、秒传、进度可见（2026-10-08）
   - 覆盖：HMY-50、HMY-54
   - 实现要点（HMY-50 已定论：走 A 路线 `request.uploadFile`，见上条）：
     - `@ohos.file.picker` 选片取 `uri`；分片用 `@ohos.request` 的 `request.uploadFile`（`method:'PUT'` + `begins`/`ends` 字节区间 + `files[].uri` 取 `internal://cache/…` 形态），**串行或限并发 ≤2**。**分片务必显式给区间**：不给区间时 PUT 发的是整个源文件而非单片，大文件会撑爆连接并卡住客户端（HMY-50 实测）
@@ -297,8 +297,20 @@
     - 进度用 `on('progress')` 或按分片计数上报；`POST /upload/{id}/complete` 收口
     - 新增 `service/UploadApi.ets` 与 `model/Upload.ets`（手写模型，字段以 OpenAPI 为准）
     - 上传前校验：扩展名白名单（mp4/mov/mkv/flv/avi）、单文件 ≤8GB、剩余空间与网络类型提示（HMY-54）
-  - 验证结论：待补
-  - 未覆盖：真机待验
+  - 落地物：`model/Upload.ets`、`service/UploadApi.ets`、`service/UploadController.ets`、`service/BackgroundTransfer.ets`、`common/utils/MediaLib.ets`、`store/AppContext.ets`、`pages/upload/UploadPage.ets`；模块侧加 `KEEP_BACKGROUND_RUNNING` 权限与 `backgroundModes:["dataTransfer"]`；「我的」页加投稿入口
+  - 实现中新增的三个实测坑（已写入 [plan §6.2](/specs/harmony/plan)）：
+    - **`TaskState.responseCode` 成功时为 `0` 而非 200**——首轮按 `!== 200` 判定，导致每个**成功**分片都被判失败、三轮重试后误报「还有 2 个分片未上传成功」
+    - **进度必须每次回调新建对象**——`@Local` 按引用比对，回传同一个 `view` 会使 UI 停在首个值（实测现象：进度条卡在 10%、阶段一直「正在校验文件」，而日志里上传早已完成）
+    - **字节进度不能按 `片数 × chunk_size` 估算**——末尾片不满时 7MB 文件会算出 **142%**；改逐片按真实区间累加
+  - 验证结论（模拟器 API 26 `Pura X View`，**判定不读端侧自述**）：
+    - **端到端硬判据 MATCH**：7MB / 11MB / 30MB 三份由**宿主机对合并成品重算 SHA-256**，与文件名（即端侧上报的 `file_hash`）逐字节比对，**全部 MATCH**；`complete` 均返回 `file_id`，DB `upload_file` 各登记一条
+    - **断点续传 PASS**：手工先传 part0（`responseCode=0`）后重新 init 得 `uploaded=[0]`/`resumed=true`，控制器**只传 2 片**（uploadedParts 1→3），**未重传已传分片**，收口通过
+    - **秒传 PASS**：同用户重复上传同内容 → `fast=true`、`file_id` 与首次相同、**上传分片数 0**
+    - **进度可见 PASS（HMY-50 ③）**：30MB/6 片的百分比档位为 `16,33,50,66,83,100`——连续推进而非 0/100 两段跳
+    - **选片交接定论**：picker URI（`file://docs/…`）**直投被拒**（`401 … user file can only for request.agent.`），**拷进 cache 后投递被接受**（`rc=0`）——故拷贝是必做步骤（plan §6.1 首条待验项就此收口）
+    - **投稿接口接受 `file_id`**：`POST /api/v1/videos` 通过，返回 `bvid DV2VivO0Xq7CC`（`status=2` 转码中，已下发签名流）
+    - **真 UI 走查**：「我的」→「投稿」→ 选片 → 开始上传，阶段依次出现「正在校验文件 → 正在上传 → 正在合并文件 → 上传完成」并显示 `file_id`
+  - 未覆盖：**真机待验**——长时任务的实际保活边界（锁屏 + 切后台 5 分钟）、真机吞吐与弱网重试、GB 级文件端侧哈希耗时与 cache 占用。模拟器为 API 26 x86 环境，保活结论不作数
 
 - [ ] M4-HMY-52 稿件信息与封面：标题/简介/分区/标签、封面选图或截帧 + 16:9 裁切
   - 覆盖：HMY-51
@@ -321,7 +333,7 @@
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
 | M4 观看端 | 11 | 9 |
-| M4 追加·创作端 | 5 | 1 |
-| **合计** | **16** | **10** |
+| M4 追加·创作端 | 5 | 3 |
+| **合计** | **16** | **11** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
