@@ -204,6 +204,11 @@ struct ProfileContent {
     AppRouter.push(RouteName.PLAY, param);
   }
 
+  /** 投稿入口（HMY-50）：上传链路是压栈页，与三档列表同层不冲突 */
+  private openUpload(): void {
+    AppRouter.push(RouteName.UPLOAD);
+  }
+
   private confirmLogout(): void {
     // AlertDialog.show 已废弃，走 UIContext 的对话框接口
     this.getUIContext().showAlertDialog({
@@ -285,6 +290,16 @@ struct ProfileContent {
       .layoutWeight(1)
 
       // 小控件用中性次级底色实填、不挂材质（材质在均匀浅底上出不了轮廓，控件会失去可点暗示）
+      Text($r('app.string.profile_action_upload'))
+        .fontSize(DliFont.CAPTION)
+        .fontColor($r('app.color.text_on_brand'))
+        .padding({ left: DliSpace.MD, right: DliSpace.MD, top: 6, bottom: 6 })
+        .borderRadius(DliRadius.FULL)
+        .backgroundColor($r('app.color.brand_primary'))
+        .onClick(() => {
+          this.openUpload();
+        })
+
       Text($r('app.string.profile_logout'))
         .fontSize(DliFont.CAPTION)
         .fontColor($r('app.color.text_secondary'))

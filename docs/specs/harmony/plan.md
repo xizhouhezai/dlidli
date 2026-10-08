@@ -63,8 +63,8 @@ apps/harmony/
 | --- | --- | --- | --- |
 | 上传通道 | **A 路线：`@ohos.request` 的 `uploadFile`（`UploadTask`）为主**，`HttpClient` 的二进制 PUT 作为降级路径。分片用 `PUT`（裸 body），**封面复用同一 API 的 `POST` 分支（multipart）** | 2026-10-07 初测 + **2026-10-08 复测定论**（方法与证据见 §6.1 首条）：`uploadFile` 支持 `method:'POST'\|'PUT'`，且**帧格式由 method 决定**——`PUT` 在「显式 `begins`/`ends` + 单文件」下把**该字节区间作为 HTTP body 裸发**（后端落盘长度与区间严格相等、合并成品 SHA-256 与端侧一致）；`POST` 则发 **multipart 信封**（后端 `c.FormFile("file")` 可解析）。故分片走 PUT、封面走 POST，**后端零改动**成立。另带系统级后台传输与 `on('progress')`。**注意**：不传 `begins`/`ends` 时 PUT 发的是**整个源文件**（不是单片），超大文件会撑爆连接并卡住客户端，**分片必须显式给区间**。B 路线同样实测跑通（`extraData` 传 `ArrayBuffer`），但需自管切片/重试与保活 | 仅 B 路线（否：失去系统级后台传输，锁屏保活要自建，见 §6.1 第二条）；`@ohos.net.rcp`（否：无专用上传任务与进度语义）；改后端新增 multipart 变体（否：实测无必要，保住零后端改动） |
 | 分片协议 | **复用后端既有分片接口，零后端改动** | 后端 `/upload/init`（秒传+断点恢复）、`PUT /upload/{id}/parts/{index}`（**裸二进制 body**，见 `packages/api-client` 的 `putRaw`）、`POST /upload/{id}/complete` 已完备（chunk 5MB / 上限 8GB / 白名单 mp4·mov·mkv·flv·avi）。**端侧发分片必须用 `method:'PUT'` + 显式 `begins`/`ends`**：实测 PUT 才发裸 body，POST 会发 multipart 信封而被 `io.Copy` 原样落盘（实测落盘 `ChunkSize+1=5242881` 字节即触发后端「分片大小不合法」） | 整文件直传（否：8GB 级文件必超时且不可续传）；新增端侧专用上传接口（否：契约分叉，无必要） |
-| 文件选取 | **`@ohos.file.picker` 的 `PhotoViewPicker` / `DocumentViewPicker`** | 系统选择器直接返回 `uri`，交给 `request.uploadFile` 的 `files: [{ filename, name, uri }]` 使用，**无需申请读媒体库权限**（选择器是授权入口） | 申请 `READ_MEDIA` 直读相册（否：权限面大、需用户额外授权，系统选择器已够用） |
-| 哈希与秒传 | **端侧算 SHA-256**（`@ohos.file.hash` 或 crypto framework 流式读取），命中秒传则跳过上传 | 后端 `InitReq.file_hash` 为必填且长度须为 64 位 hex；秒传可让重复投稿零上传 | 不算哈希传空（否：后端 binding `required,len=64` 直接拒）；仅按文件名/大小推断（否：不可靠且后端不支持） |
+| 文件选取 | **`@ohos.file.picker` 的 `PhotoViewPicker` / `DocumentViewPicker`**（相册优先，不可用/取消时回退文档选择器） | 系统选择器直接返回 `uri`，**无需申请读媒体库权限**（选择器是授权入口）。**2026-10-08 HMY-51 补**：picker URI **不能直接投递给 `request.uploadFile`**（实测报 401 `user file can only for request.agent.`），必须先 `fileIo.copy`/`copyFile` 到应用 cache 再以 `internal://cache/…` 投递——详见 §6.1 首条待验项的定论 | 申请 `READ_MEDIA` 直读相册（否：权限面大、需用户额外授权，系统选择器已够用）；只走相册（否：相册为空/无视频时用户完全无法选片，实测模拟器相册即为空） |
+| 哈希与秒传 | **端侧算 SHA-256**（`@ohos.file.hash` 的 `HashStream` **分块**读取，非整文件一次调用），命中秒传则跳过上传 | 后端 `InitReq.file_hash` 为必填且长度须为 64 位 hex；秒传可让重复投稿零上传。**2026-10-08 HMY-51 补两条实测口径**：① `hash.hash()` 返回的是**大写** hex，而后端 `Init` 里 `strings.ToLower` 后比对，故端侧**必须转小写**，否则秒传永不命中且 `complete` 会以「文件校验失败」(30004) 收场；② 分块（4MB/次）而非整文件一次，以避开 8GB 上限文件的单次调用约束 | 不算哈希传空（否：后端 binding `required,len=64` 直接拒）；仅按文件名/大小推断（否：不可靠且后端不支持） |
 | 上传态与草稿 | **`upload_file` 会话由后端持有，端侧只存「稿件草稿」**（标题/简介/分区/标签/file_id/本地封面路径）于 `preferences` | 后端已用 Redis 存上传会话（`up:sess:*`/`up:parts:*`，TTL 24h）并支持 `GET /upload/{id}` 查已传分片，**端侧无需自建分片账本**；草稿只解决"填了一半退出"的场景 | 端侧自建分片状态表（否：与后端 Redis 会话重复，且不一致时更难排查）；不做草稿（否：HMY-52 明确要求） |
 | 封面处理 | **`@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9**，再以 `multipart/form-data` 传 `POST /videos/cover`（字段名 `file`）；**multipart 由 `request.uploadFile` 的 `POST` 分支直接产出**，无需扩展 `HttpClient` | 后端封面接口是 `c.FormFile("file")` multipart（**与分片的裸 body 不同**），限 5MB / jpg·png·webp；端侧先裁切可避免上传后被裁掉主体。**2026-10-08 实测修正**：`uploadFile` 配 `method:'POST'` + `files:[{name:'file'}]` 即可产出 multipart 并被 `FormFile` 解析（封面落盘字节数与源文件相等，5 次皆 200），故 `UploadApi` 只需一个「同一 API、两种 method」的分支，不必为封面另造 multipart 编码器 | 直接传原图（否：相册图常见 4:3/竖图，后端按 16:9 消费会裁掉内容）；**用 PUT 传封面（否：实测 PUT 发裸 body → 后端拿不到 `file` 字段，且 `PUT /videos/cover` 路由不存在返回 404）** |
 | 期望类型 | `@ohos.request` / `@ohos.file.picker` / `@ohos.multimedia.image` 按 OpenAPI **手写端侧模型**（沿用既有口径） | 与全网一致：swag 产物无响应模型，手写 + 真实响应核对；本次新增 `model/Upload.ets`（`InitResp`/`CompleteResp`/`Draft`）与 `SubmitReq` | 生成器（否：不可行，见 §6） |
@@ -213,7 +213,13 @@ apps/harmony/
   - **落地约束（供 HMY-51）**：本轮已验证可用的 `files[].uri` 形态是 `internal://cache/<相对 cacheDir 路径>`，**`fileIo` 给出的绝对 `file://…` 形态会报 `401 … GetInternalPath failed`**（其余形态是否可用见下条待验项）；`config.index` 是 `files` 数组下标（单文件时必须为 `0`），**不是分片序号**。**（修正）**`data` 是否非空不决定帧格式：**`PUT` 即使 `data` 非空仍发裸 body**，发 multipart 的是 **`POST`**（见上条②）。
   - **并发教训（承 2026-10-07 初测记录，本轮未重复该项压测）**：切勿在循环里密集 `await request.uploadFile()`——初测 100 次齐发触发 `appfreeze THREAD_BLOCK_6S`（主线程阻塞 6s 被杀）。分片任务应**限并发（建议 ≤2）或严格串行**；本轮所有链路均为串行、全程无冻结。
   - **结论口径**：以上均为 **API 26 x86 模拟器（`Pura X View`）所得**；「协议适配 / PUT / 字节区间 / 裸 body」属协议层结论，可直接用于实现；**后台传输的保活边界属设备行为，须真机确认**。
-- [ ] **选片 URI 到 `request.uploadFile` 的交接（HMY-51 待验，未包含在本轮预研内）**：本轮实测用的是**应用沙箱 cache 文件**，可用形态确认为 `internal://cache/<相对 cacheDir 路径>`；而 `@ohos.file.picker` 返回的是**媒体库/文档 URI**（如 `file://media/Photo/…`），`request.uploadFile` 是否直接接受**未实测**（其 `File.uri` 文档只给了 `internal://cache/…` 一个示例，未枚举 picker 形态）。**建议 HMY-51 的稳妥做法**：选片后先 `fileIo.copy` 到应用 cache 目录再用 `internal://cache/…` 投递（本轮已验证该形态可用），代价是**多一次整文件拷贝**，大文件需评估耗时与磁盘占用；若实测 picker URI 可直接投递则省掉这次拷贝。**此项不阻塞 HMY-51 开工**（两条路都不改后端），但需在 HMY-51 内先定。
+- [x] **选片 URI 到 `request.uploadFile` 的交接（2026-10-08 于 HMY-51 实测定论）——结论：picker URI 直接投递被拒，拷进 cache 是必做步骤，不是可选优化**。
+  - **实测方法与结论**：模拟器（API 26，`Pura X View`）里由宿主投放测试视频后走**真实系统选择器**选片，取到文档 URI `file://docs/storage/Users/currentUser/brink_20_512.mp4`。两组对照：
+    - **① 直接投递该 picker URI → 被拒**：`request.uploadFile` 抛 `code=401 The parameters check fails, Parameter verification failed, user file can only for request.agent.`——即该 API **只认应用沙箱路径**，picker 给的媒体库/文档 URI 不在其可解析范围内（与 SDK 对 `File.uri` "Only `internal://cache/` is supported" 的声明一致）。
+    - **② 拷进应用 cache 后再投递 → 接受**：同一文件先落到 `cacheDir/upload_staging/…`，再以 `internal://cache/upload_staging/…` 投递，任务正常发出并返回 `responseCode=0`。
+    - **附带坑**：`fileIo.copy(pickerUri, destPath)` 的目标**必须是沙箱真实路径**——传 `internal://cache/…` 形态（`request.uploadFile` 认、但文件系统 API 不认）会报 `401 The input parameter is invalid`；且 `fileIo.copy` 本身在文档 URI 上也会失败，需退回 **`fileIo.copyFile(fd, dest)`**（先 `openSync(uri, READ_ONLY)` 拿 fd）。实测 372MB 文件走该退路拷贝成功。
+  - **代价与结论**：每次投稿多一次整文件拷贝（分片源就是这份副本，故 cache 剩余空间必须先校验），换来的是唯一被实测验证可用的投递形态。若日后要走 picker URI 直投，应改用 `request.agent`（错误信息指向它）而非 `request.uploadFile`。
+  - **口径**：以上为模拟器所得；属**协议/API 行为**结论（与设备型号无关），可直接用于实现。
 - [ ] **后台传输的保活边界**：即便走 `request.uploadFile`，系统对后台任务仍有约束（长时任务需声明 `backgroundModes`，且可能受省电策略影响）。HMY-50 的"锁屏继续上传"需在真机上以"锁屏 + 切后台 5 分钟"实测确认，**模拟器结论不作数**。2026-10-08 补：模拟器已实测「**上传途中**锁屏后分片继续推进并完成、成品 sha256 校验 MATCH」（30 MB / 6 片），但**同尺寸对照中仍出现过切后台即被回收进程**的情形，且模拟器 `moveAbilityToBackground()` 可能直接返回 `16000065`；故保活不能只依赖"系统任务解耦"的观察，**HMY-51 必须显式申请长时任务**。
 - [ ] **端侧算大文件 SHA-256 的耗时**：8GB 文件全量哈希在端侧可能达数十秒。需实测并决定策略（如对 > 500MB 的文件改用"抽样哈希 + 尺寸"做弱秒传，或直接跳过秒传改由后端在合并时校验）。**后端 `file_hash` 是必填 `len=64`**，跳过秒传仍须算完哈希，故此耗时无法回避，只能优化或后端放宽。
 - [ ] **`uploads/` 与数据库的一致性运维**（承本仓 [部署文档 §4.8](/project/deployment)）：投稿功能上线后，端侧产生的媒体文件同样落在 `server/uploads/`（**不在 Docker 卷内、被 gitignore**），**该目录与数据库必须同周期备份**，否则重演 2026-09-30 的"文件在、元数据丢"事故。此项为运维约束，非端侧代码问题，但投稿上线前应在 [deployment](/project/deployment) 的检查清单中确认。
@@ -221,8 +227,42 @@ apps/harmony/
 - [ ] **端侧投稿的定位复核**：spec §1 原定"投稿引导至 Web"，V1.3 放开为端侧承接。**Web 端 `UploadView` 已有的能力边界需逐项对齐**（多P 上限 10、标签 1~10、标题 ≤80、简介 ≤2000），端侧不得超出或遗漏（HMY-52/54）。
 
 
-## 7. 视觉设计资源与规范依据
+### 6.2 上传链路实现（M4-HMY-51，2026-10-08）
 
+按 §2.1 的 A 路线落地，**后端零改动**。端侧新增四个单元：
+
+| 单元 | 职责 | 关键约束（均来自实测，改动前必读） |
+| --- | --- | --- |
+| `service/UploadApi.ets` | `init` / `progress` / `complete` 三个 JSON 接口 | 分片接口**不在此处**——它的 body 是裸二进制，而 `HttpClient` 固定发 JSON。`file_hash` 在此统一 `.toLowerCase()` |
+| `service/UploadController.ets` | 链路编排：暂存 → 哈希 → init（秒传短路）→ **只补缺失分片** → complete；进度发布；前置校验 | ① 必须 `method:'PUT'`；② 必须显式 `begins`/`ends` 闭区间；③ **限并发 ≤2**；④ `TaskState.responseCode` 成功时为 **0**（不是 200）；⑤ 进度必须**每次新建对象**再回调 |
+| `service/BackgroundTransfer.ets` | `DATA_TRANSFER` 长时任务申请/释放 | `backgroundModes: ["dataTransfer"]` + `KEEP_BACKGROUND_RUNNING` 已声明；申请失败不阻断上传 |
+| `common/utils/MediaLib.ets` | 选片、cache 暂存、分块 SHA-256 | picker URI 必须先拷进 cache；`fileIo.copy` 的目标须为沙箱真实路径且文档 URI 上会失败，需退回 `copyFile(fd)` |
+
+**五个实测坑（易复发的实现细节）**：
+
+1. **`responseCode` 成功为 `0`**——SDK 明确「0 means that the task is successful」。按 HTTP 语义判 `!== 200` 会把**每一个成功分片都判成失败**（首轮实测即如此：三轮重试后报「还有 2 个分片未上传成功」而其实都传上去了）。判定写作 `0 || 200` 兼容。
+2. **进度必须回调新对象**——`@Local` 按引用比对，反复回传同一个 `this.view` 会使 UI 只渲染第一次的值（实测现象：进度条停在 10%、阶段一直显示「正在校验文件」，而日志里其实已上传完成）。`UploadController.publish()` 每次构造新对象。
+3. **字节进度不能按 `片数 × chunk_size` 估算**——末尾片通常不满，7MB 文件会算出「已传 10MB / 总 7MB」的 **142%**。`completedBytes()` 逐片按真实区间长度累加。
+4. **`fileIo.copy` 在 picker URI 上会失败**，且目标不能是 `internal://cache/…`；`copyFile(fd, dest)` 是可用退路（372MB 实测通过）。
+5. **不用 `Progress` 组件自带的百分比文案**——本 SDK 的 `Progress` 无 `showDefaultPercentage`，未设 `style` 时会在轨道上叠出内置的 `10.000000`。进度条改为自绘（外层轨道 + 内层定宽填充）。
+
+**端到端验证（模拟器 API 26，`Pura X View`；判定不读端侧自述）**：
+
+| 场景 | 判据 | 结果 |
+| --- | --- | --- |
+| ① 完整上传 7MB / ② 续传 11MB / ④ 进度斜坡 30MB | `complete` 返回 `file_id`；**宿主对合并成品重算 SHA-256 与文件名逐字节比对** | **MATCH**（7340032 / 11534336 / 31457280 三份） |
+| ② 断点续传 | 手工先传 part0 → 重新 init 得 `uploaded=[0]`、`resumed=true`，控制器**只传 2 片**（1→3） | PASS，**未重传已传分片** |
+| ③ 秒传 | 同用户重复上传同内容 → `fast=true`、`file_id` 与首次相同、**上传分片数 0** | PASS |
+| ④ 进度可见（HMY-50 ③） | 上传阶段出现过的百分比档位 | `16,33,50,66,83,100`（6 片 6 档）——连续推进，非 0/100 两段跳 |
+| ⑤ 选片交接 | picker URI 直投 vs 拷 cache 后投递 | 直投 **REJECTED(401)**／拷 cache 后 **ACCEPTED(rc=0)** |
+| ⑥ 投稿接口接受度 | 用上传得到的 `file_id` 调 `POST /api/v1/videos` | 通过，返回 `bvid DV2VivO0Xq7CC`（`status=2` 转码中，已下发签名流） |
+| ⑦ 真 UI 走查 | 「我的」→「投稿」→ 选片 → 开始上传 → 进度 → `file_id` | 阶段依次出现「正在校验文件 → 正在上传 → 正在合并文件 → 上传完成」 |
+
+**须真机确认（模拟器结论不作数）**：长时任务的实际保活边界（锁屏 + 切后台 5 分钟）、真机吞吐与弱网重试、大文件（GB 级）端侧哈希耗时与 cache 占用。模拟器为 x86_64 软件渲染，且 `moveAbilityToBackground()` 可能直接返回 `16000065`。
+
+**管理后台/RBAC**：本卡仅端侧改动，不涉及。
+
+## 7. 视觉设计资源与规范依据
 **事实来源**：华为开发者联盟[设计中心](https://developer.huawei.com/consumer/cn/design/)与[设计资源库](https://developer.huawei.com/consumer/cn/design/resource/)。下表为**面向本模块可直接取用**的资源与规范，非全量搬运。
 
 ### 7.1 可下载资源（设计交付用）
