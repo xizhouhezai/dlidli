@@ -242,22 +242,22 @@
   - 覆盖：—（工程；为 HMY-50~54 定实现方案）
   - 背景：后端分片是 **`PUT` + 裸二进制 body**（`packages/api-client` 的 `putRaw`），而 `request.uploadFile` 的 `UploadConfig` 走 **multipart 表单**（`files` + `data`），SDK 未见 `PUT` 示例。两条路线必须实测择一，详见 [plan §6.1](/specs/harmony/plan)
   - 判定项（用真实 ≥5MB 文件对本地后端跑通即可定论）：① `request.uploadFile` 能否发 `PUT`；② 后端是否接受 multipart（若不接受，B 路线或"加后端 multipart 变体"需二选一）；③ `begins`/`ends` 是否为**字节区间**语义（决定能否只传一段）；④ 切后台/锁屏时上传是否持续（`backgroundModes` 声明是否必需）
-  - **实测方法（2026-10-07）**：`apps/harmony` 临时加一次性探针页（跑完即删，树中不留痕），对本地真实后端（模拟器内 `http://10.0.2.2:8000`，MySQL/Redis 均 up）用**真实 11 MiB / 130 MiB 文件**跑完整链路（init → 逐片 PUT → complete）。判定**不读端侧自述**，直接读后端落盘产物 `server/uploads/chunks/<uploadId>/<index>.part` 的字节数与 `complete` 的服务端 SHA-256 校验结果。
-  - 验证结论：**A 路线可行且为主路线；B 路线亦可行，作降级。后端零改动成立。**
-    - **① PUT：能**。SDK 声明即写「value can be **POST** or **PUT**」（`@ohos.request.d.ts`，since 6），实测 3 片全部 `responseCode=0`。
-    - **② multipart：A 根本不走**。`files` 文档虽写 "multipart/form-data"，但**显式给 `begins`/`ends` 且 `files` 仅一项时，发出的是该字节区间的裸 body**——后端落盘长度与请求区间严格相等（`[3145851,8388600]` → `000000.part = 5242750` 字节），**无边界开销，无需后端 multipart 变体**。
-    - **③ `begins`/`ends`：真字节闭区间**。落盘恰为 `ends - begins + 1`；可按 5MB 整片切，后端无需改动。
-    - **④ 后台：行为已实测、边界未测**。切后台（`moveAbilityToBackground()`）后分片仍持续上传（26 片全部落盘，后台 JS 心跳持续至 174s）。但发现**两个坑**：切后台后**进程可能被回收**（同尺寸对照中切后台即被 WMS 销毁、后台零进展），且**系统有独立后台传输并发上限**（100 片齐发时后半段报 `401 … GetInternalPath failed, file is not valid`）。**锁屏 + 切后台 5 分钟的长时任务保活属真机项，模拟器不作数**（见 plan §6.1 第二条）。
-    - **B 路线**：`extraData` 传 `ArrayBuffer` + `HttpDataType.ARRAY_BUFFER` + `Content-Type: application/octet-stream`，三片 200、`complete` SHA-256 通过；代价是失去系统级后台传输、需自管切片/重试/进度。
+  - **实测方法（2026-10-07 初测 / 2026-10-08 复测，均为 `apps/harmony` 一次性探针页、跑完即删）**：对本地真实后端（模拟器内 `http://10.0.2.2:8000`，MySQL/Redis 均 up）跑完整链路（init → 逐片 PUT → complete）。判定**不读端侧自述**：① 读后端落盘 `server/uploads/chunks/<uploadId>/<index>.part` 的字节数；② 读 `complete` 结果；③ **宿主机对合并成品 `server/uploads/videos/source/<sha>.mp4` 重算 SHA-256 并与文件名（=端侧上报 `file_hash`）比对**。2026-10-08 复测用**端侧自生成的确定性填充文件**（1 KB / 5 MB / 9 MB / 11 MB / 20 MB / 25 MB / 30 MB；生成方式受限于 hdc 无法写入应用沙箱，故由端侧在 cacheDir 自建并做首/中/尾抽点校验），**11 MB / 9 MB / 25 MB 三份成品 size 与 sha256 全部 MATCH**。
+  - **验证结论**：**A 路线可行且为主路线；B 路线亦可行，作降级。后端零改动成立。**
+    - **① PUT：能**。SDK 声明即写「value can be **POST** or **PUT**」（`@ohos.request.d.ts`，since 6），实测多轮全部 `responseCode=0`。
+    - **② 帧格式由 `method` 决定（2026-10-08 复测修正）**：`method:'PUT'` → **裸 body**（显式区间时请求体恰为该闭区间，落盘无边界开销）；`method:'POST'` → **multipart/form-data 信封**。证据：`POST /videos/cover`（后端 `c.FormFile("file")`）**5 次全 200 且封面落盘 50000 字节**（=源文件长度），而 `PUT /videos/cover` 返回 **404**；反向以 `POST` 打分片接口 → 服务端 **404**、客户端挂起到超时。**故分片走 PUT、封面走 POST，同一 `request.uploadFile` 覆盖两条路径，无需后端 multipart 变体、也无需自造 multipart 编码器**。
+    - **③ `begins`/`ends`：真字节闭区间，且分片必须显式给**。落盘恰为 `ends - begins + 1`（`[1000,1999]`→1000 字节；整片 5 MB→5242880 字节）。**反例**：不传区间时 PUT 发的是**整个源文件**（11 MB 打单片 → 后端 `LimitReader` 读到 **5242881** 字节报「分片大小不合法」，客户端挂到超时）。
+    - **④ 后台：行为已实测（模拟器可得），保活边界未测**。切后台后分片持续推进；并做了**「上传途中」锁屏**（宿主 hdc `power-shell suspend`）实验：锁屏后 part 2–5 仍逐片完成、`complete` 成功、成品 sha256 MATCH（30 MB/6 片，锁屏于 t≈3.0 s，收口 t≈16.4 s）。**两个坑**：切后台后**进程可能被回收**（对照中出现切后台即被 WMS 销毁、后台零进展）；模拟器 `moveAbilityToBackground()` 可能直接返回 `16000065`（仅前台可调）。**锁屏 + 切后台 5 分钟的长时任务保活属真机项，模拟器不作数**（见 plan §6.1 第二条）。
+    - **B 路线**：`extraData` 传 `ArrayBuffer` + `Content-Type: application/octet-stream` 自切 5 MB 片 PUT（`expectDataType` 控制的是响应类型，取 `STRING` 以解析统一包裹）；9 MB 两片均 200、`complete` 返回 `file_id`、成品 sha256 宿主机复核 MATCH。代价是失去系统级后台传输、需自管切片/重试/进度。
     - **端到端硬判据**：A/B 两条路线的 `POST /upload/{id}/complete` 均返回 `file_id`，即**服务端把合并结果算出的 SHA-256 与端侧 `file_hash` 比对通过**。
-  - 落地约束（已写入 plan §6.1，供 HMY-51 直接照做）：已验证可用的 `files[].uri` 是 `internal://cache/<相对 cacheDir 路径>`，**绝对 `file://` 形态报 `401 GetInternalPath failed`**；picker 返回的媒体库 URI 是否可直接投递**未测**（见 plan §6.1 待验项）；`config.index` 是 `files` 数组下标（单文件必须为 `0`），**不是分片序号**；`data` 非空不会切成 multipart 信封；**切勿在循环里密集发起上传任务**（100 次齐发实测触发 `appfreeze THREAD_BLOCK_6S`），必须限并发（建议 ≤2）或严格串行。
-  - 未覆盖：锁屏/长时任务的保活边界、真机吞吐与弱网重试——均待真机；模拟器仅为 API 26 x86 环境。
+  - 落地约束（已写入 plan §6.1，供 HMY-51 直接照做）：已验证可用的 `files[].uri` 是 `internal://cache/<相对 cacheDir 路径>`，**绝对 `file://` 形态报 `401 GetInternalPath failed`**；picker 返回的媒体库 URI 是否可直接投递**未测**（见 plan §6.1 待验项）；`config.index` 是 `files` 数组下标（单文件必须为 `0`），**不是分片序号**；分片必须**显式给 `begins`/`ends` 且用 `PUT`**；**切勿在循环里密集发起上传任务**（2026-10-07 实测 100 次齐发触发 `appfreeze THREAD_BLOCK_6S`），必须限并发（建议 ≤2）或严格串行——本轮全部链路串行、全程无冻结。
+  - 未覆盖：真机锁屏/长时任务保活边界、真机吞吐与弱网重试——均待真机；模拟器仅为 API 26 x86 环境。
 
 - [ ] M4-HMY-51 投稿上传链路：选片、分片上传、断点续传、秒传、进度可见
   - 覆盖：HMY-50、HMY-54
   - 实现要点（HMY-50 已定论：走 A 路线 `request.uploadFile`，见上条）：
-    - `@ohos.file.picker` 选片取 `uri`；分片用 `@ohos.request` 的 `request.uploadFile`（`method:'PUT'` + `begins`/`ends` 字节区间 + `files[].uri` 取 `internal://cache/…` 形态），**串行或限并发 ≤2**
-    - 端侧算 SHA-256 → `POST /upload/init`；`fast=true` 直接拿 `file_id`；否则按 `chunk_size` 切片依 `uploaded` 数组**只传缺失分片**
+    - `@ohos.file.picker` 选片取 `uri`；分片用 `@ohos.request` 的 `request.uploadFile`（`method:'PUT'` + `begins`/`ends` 字节区间 + `files[].uri` 取 `internal://cache/…` 形态），**串行或限并发 ≤2**。**分片务必显式给区间**：不给区间时 PUT 发的是整个源文件而非单片，大文件会撑爆连接并卡住客户端（HMY-50 实测）
+    - 端侧算 SHA-256 → `POST /upload/init`；`fast=true` 直接拿 `file_id`；否则按 `chunk_size` 切片依 `uploaded` 数组**只传缺失分片**。注意后端 `Complete` 先校验**已传分片数 == `chunk_count`**，不满足直接返回 `ErrUploadIncomplete`（不会先合并再判），故客户端必须在补齐全部缺失分片后再收口
     - 进度用 `on('progress')` 或按分片计数上报；`POST /upload/{id}/complete` 收口
     - 新增 `service/UploadApi.ets` 与 `model/Upload.ets`（手写模型，字段以 OpenAPI 为准）
     - 上传前校验：扩展名白名单（mp4/mov/mkv/flv/avi）、单文件 ≤8GB、剩余空间与网络类型提示（HMY-54）
@@ -266,7 +266,7 @@
 
 - [ ] M4-HMY-52 稿件信息与封面：标题/简介/分区/标签、封面选图或截帧 + 16:9 裁切
   - 覆盖：HMY-51
-  - 实现要点：分区取 `GET /api/v1/categories`；封面走 `@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9，`multipart/form-data` 传 `POST /videos/cover`（字段 `file`，≤5MB，jpg/png/webp）；表单校验对齐 Web `UploadView`（标题 ≤80、简介 ≤2000、标签 1~10）
+  - 实现要点：分区取 `GET /api/v1/categories`；封面走 `@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9，`multipart/form-data` 传 `POST /videos/cover`（字段 `file`，≤5MB，jpg/png/webp）；**multipart 直接复用 `request.uploadFile` 的 `method:'POST'` 分支（`files:[{ name:'file', … }]`），无需扩展 `HttpClient`**（HMY-50 实测 5 次均 200 且封面落盘字节数=源文件长度）；表单校验对齐 Web `UploadView`（标题 ≤80、简介 ≤2000、标签 1~10）
   - 验证结论：待补
 
 - [ ] M4-HMY-53 多P 与草稿：多分P 管理、投稿中退出可恢复
@@ -285,7 +285,7 @@
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
 | M4 观看端 | 11 | 9 |
-| M4 追加·创作端 | 5 | 0 |
-| **合计** | **16** | **9** |
+| M4 追加·创作端 | 5 | 1 |
+| **合计** | **16** | **10** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
