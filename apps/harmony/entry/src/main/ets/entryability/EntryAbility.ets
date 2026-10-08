@@ -2,6 +2,7 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { emitter } from '@kit.BasicServicesKit';
 import { window } from '@kit.ArkUI';
+import { AppContext } from '../store/AppContext';
 import { PreferenceStore } from '../store/PreferenceStore';
 import { TokenStore } from '../store/TokenStore';
 import { AppEvent } from '../common/constants/AppEvents';
@@ -13,6 +14,8 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
     // 偏好存储（凭证/搜索历史）依赖 AbilityContext，需在建页面前注入；回填不阻塞首帧，未就绪时按未登录处理
     PreferenceStore.init(this.context);
+    // 上传任务（request.uploadFile）与剩余空间校验都要 Context，同样在建页面前注入
+    AppContext.init(this.context);
     TokenStore.restore().then(() => {
       hilog.info(DOMAIN, 'testTag', 'TokenStore restored, loggedIn=%{public}s', `${TokenStore.isLoggedIn()}`);
     });

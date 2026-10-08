@@ -567,6 +567,54 @@
     {
       "name": "act_link_copied",
       "value": "链接已复制，去粘贴分享吧"
+    },
+    {
+      "name": "title_upload",
+      "value": "投稿"
+    },
+    {
+      "name": "upload_pick_hint",
+      "value": "选择视频"
+    },
+    {
+      "name": "upload_pick_rule",
+      "value": "支持 mp4 / mov / mkv / flv / avi，单文件不超过 8GB"
+    },
+    {
+      "name": "upload_start",
+      "value": "开始上传"
+    },
+    {
+      "name": "upload_cancel",
+      "value": "取消上传"
+    },
+    {
+      "name": "upload_done",
+      "value": "上传完成"
+    },
+    {
+      "name": "upload_fast_done",
+      "value": "秒传命中，已跳过上传"
+    },
+    {
+      "name": "upload_resumed_tag",
+      "value": "断点续传"
+    },
+    {
+      "name": "upload_fast_tag",
+      "value": "秒传"
+    },
+    {
+      "name": "upload_cellular_title",
+      "value": "移动网络提示"
+    },
+    {
+      "name": "upload_cellular_confirm",
+      "value": "继续上传"
+    },
+    {
+      "name": "profile_action_upload",
+      "value": "投稿"
     }
   ]
 }

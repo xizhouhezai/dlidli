@@ -6,6 +6,7 @@ const TAG: string = 'AppRouter';
 export class RouteName {
   static readonly LOGIN: string = 'login';
   static readonly PLAY: string = 'play';
+  static readonly UPLOAD: string = 'upload';
 }
 
 /** 播放页路由参数：bvid 是播放页唯一的入参（Index.ets 的 destination 分支按此解包） */

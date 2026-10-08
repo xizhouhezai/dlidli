@@ -18,6 +18,10 @@
       {
         // 用于区分「无网络」与「服务不可达」，据此决定是否给可重试失败态
         "name": "ohos.permission.GET_NETWORK_INFO"
+      },
+      {
+        // 投稿上传的长时任务（HMY-50 ①：切后台/锁屏不中断传输）
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING"
       }
     ],
     "metadata": [
@@ -37,6 +41,10 @@
         "startWindowIcon": "$media:startIcon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
+        // 投稿上传期间为 DATA_TRANSFER 长时任务（HMY-50 ①）；须与 startBackgroundRunning 的 bgMode 一致
+        "backgroundModes": [
+          "dataTransfer"
+        ],
         "skills": [
           {
             "entities": [
