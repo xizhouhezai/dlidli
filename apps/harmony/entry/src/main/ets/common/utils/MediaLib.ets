@@ -79,6 +79,51 @@ export class MediaLib {
     return await MediaLib.describeUri(context, uris[0]);
   }
 
+  /**
+   * 从相册选一张图片（HMY-51 封面来源之一）。用户取消返回空串。
+   * 与选视频同策略：相册能力不可用（部分设备/场景抛 401）时回退文档选择器，
+   * 但**用户取消不回落**——否则取消一次会再弹一个选择器。
+   */
+  static async pickImage(context: common.Context): Promise<string> {
+    try {
+      const options: picker.PhotoSelectOptions = new picker.PhotoSelectOptions();
+      options.MIMEType = picker.PhotoViewMIMETypes.IMAGE_TYPE;
+      options.maxSelectNumber = 1;
+      const result: picker.PhotoSelectResult = await new picker.PhotoViewPicker(context).select(options);
+      if (result.photoUris.length === 0) {
+        return '';
+      }
+      return result.photoUris[0];
+    } catch (err) {
+      const be: BusinessError = err as BusinessError;
+      if (MediaLib.isUserCancel(be)) {
+        Logger.info(TAG, '用户取消相册选图');
+        return '';
+      }
+      Logger.warn(TAG, `相册选图不可用，回退文档选择器：code=${be.code} ${be.message}`);
+    }
+    return await MediaLib.tryPickImageFromDocument(context);
+  }
+
+  private static async tryPickImageFromDocument(context: common.Context): Promise<string> {
+    const options: picker.DocumentSelectOptions = new picker.DocumentSelectOptions();
+    // 与后端 coverExts 一致；文档选择器的过滤项只是「只能少选不能多选」的提示，不能当校验用
+    options.fileSuffixFilters = ['图片 (.jpg, .jpeg, .png, .webp)|.jpg,.jpeg,.png,.webp'];
+    options.maxSelectNumber = 1;
+    try {
+      const uris: string[] = await new picker.DocumentViewPicker(context).select(options);
+      return uris.length > 0 ? uris[0] : '';
+    } catch (err) {
+      const be: BusinessError = err as BusinessError;
+      if (MediaLib.isUserCancel(be)) {
+        Logger.info(TAG, '用户取消文档选图');
+        return '';
+      }
+      Logger.error(TAG, `选图失败：code=${be.code} ${be.message}`);
+      throw new Error(`选图失败（${be.code}）`);
+    }
+  }
+
   /** 文档选择器的过滤项：`描述|.mp4,.mov`，须与后端 allowedExts 一致 */
   private static suffixFilters(): string[] {
     return ['视频 (.mp4, .mov, .mkv, .flv, .avi)|.mp4,.mov,.mkv,.flv,.avi'];
@@ -165,9 +210,19 @@ export class MediaLib {
     }
   }
 
-  /** 暂存副本的沙箱路径（算哈希用）；与 stageToCache 的 destPath 同源 */
+  /** 暂存副本的沙箱路径（算哈希、截帧等需要真实路径的调用方用）；与 stageToCache 的 destPath 同源 */
   static stagedPath(context: common.Context, picked: PickedVideo): string {
     return `${context.cacheDir}/${STAGING_DIR}/${MediaLib.safeName(picked.fileName)}`;
+  }
+
+  /**
+   * 确保暂存副本在位，返回其**沙箱路径**。
+   * 截帧不能用 `internal://cache/…` 形态（那是 uploadFile 专用），必须给 `fileIo.openSync` 认的真实路径；
+   * 副本已被 `clearStaged` 清掉时（上传收口后截帧）会重新从媒体库拷一份。
+   */
+  static async ensureStagedPath(context: common.Context, picked: PickedVideo): Promise<string> {
+    await MediaLib.stageToCache(context, picked);
+    return MediaLib.stagedPath(context, picked);
   }
 
   private static isStaged(dir: string, picked: PickedVideo): boolean {

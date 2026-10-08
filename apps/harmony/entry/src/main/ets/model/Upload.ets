@@ -55,6 +55,112 @@ export interface SubmitPart {
   title: string;
 }
 
+// ---------- 稿件信息与封面（HMY-51） ----------
+
+/** 标题上限：对齐 Web `maxlength="80"` 与后端 `SubmitReq.title` 的 `max=80` */
+export const TITLE_MAX: number = 80;
+/** 简介上限：对齐后端 `SubmitReq.description` 的 `max=2000` */
+export const DESC_MAX: number = 2000;
+/** 标签数量上限：对齐 Web `addTag` 与后端 `SubmitReq.tags` 的 `min=1,max=10` */
+export const TAGS_MAX: number = 10;
+
+/** 稿件信息草稿：字段与 `SubmitReq` 一一对应，校验与提交共用同一份状态 */
+export interface SubmitDraft {
+  title: string;
+  description: string;
+  /** 0 表示未选（分区 ID 从 1 起，0 不会是合法分区） */
+  categoryId: number;
+  tags: string[];
+  /** 1 自制 2 转载 */
+  copyright: number;
+}
+
+export function emptyDraft(): SubmitDraft {
+  return { title: '', description: '', categoryId: 0, tags: [], copyright: 1 };
+}
+
+/**
+ * 稿件信息校验：返回空串表示通过，否则返回**可直接展示**的原因。
+ *
+ * 口径对齐 Web `useUploadForm.submit` 与后端 `SubmitReq` binding——端侧先拦、失败不发请求。
+ * 分区不仅要「选了」还要「在已加载的一级分区里」：`category_id` 后端只校验非零，
+ * 传一个不存在的 ID 会在服务端 500/入库脏数据，端侧按存在性拦下更准。
+ */
+export function validateDraft(draft: SubmitDraft, categoryIds: number[]): string {
+  const title: string = draft.title.trim();
+  if (title.length === 0) {
+    return '请填写标题';
+  }
+  if (title.length > TITLE_MAX) {
+    return `标题不能超过 ${TITLE_MAX} 个字（当前 ${title.length} 个）`;
+  }
+  if (draft.description.length > DESC_MAX) {
+    return `简介不能超过 ${DESC_MAX} 个字（当前 ${draft.description.length} 个）`;
+  }
+  if (draft.categoryId <= 0) {
+    return '请选择分区';
+  }
+  if (!categoryIds.includes(draft.categoryId)) {
+    return '所选分区不存在，请重新选择';
+  }
+  if (draft.tags.length === 0) {
+    return '请至少添加 1 个标签';
+  }
+  if (draft.tags.length > TAGS_MAX) {
+    return `最多 ${TAGS_MAX} 个标签（当前 ${draft.tags.length} 个）`;
+  }
+  if (draft.copyright !== 1 && draft.copyright !== 2) {
+    return '请选择稿件类型';
+  }
+  return '';
+}
+
+/** 标签规整：去首尾空白、丢空串、去重且保持输入顺序（添加与提交前都走这里） */
+export function normalizeTags(raw: string[]): string[] {
+  const out: string[] = [];
+  for (const tag of raw) {
+    const text: string = tag.trim();
+    if (text.length > 0 && !out.includes(text)) {
+      out.push(text);
+    }
+  }
+  return out;
+}
+
+/** 封面来源：视频截帧 / 相册选图 */
+export type CoverOrigin = 'frame' | 'photo';
+
+/**
+ * 本地封面草稿：**已按 16:9 裁切**并落盘 cache。
+ *
+ * 端侧先裁切再上传是 HMY-51 的端侧差异条款：相册原图常见 4:3 或竖图，
+ * 原样上传会被消费端按 16:9 的 `object-fit: cover` 裁掉主体，端侧按同一几何裁切后所见即所得。
+ */
+export interface CoverDraft {
+  origin: CoverOrigin;
+  /** `internal://cache/…`——`request.uploadFile` 唯一接受的 uri 形态 */
+  cacheUri: string;
+  /** 沙箱真实路径（清理用） */
+  sandboxPath: string;
+  /** 裁切后的实际像素（校验 16:9 与展示用） */
+  width: number;
+  height: number;
+  /** 上传成功后的封面 URL；未上传时为空串（提交时才上传，与 Web `resolveCover` 同时机） */
+  url: string;
+}
+
+/** `POST /api/v1/videos/cover` 响应体 */
+export interface CoverUploadResult {
+  cover: string;
+}
+
+/** `POST /api/v1/videos` 响应（本卡只消费 bvid/status；状态回看属 HMY-53） */
+export interface SubmitResult {
+  bvid: string;
+  /** 0 草稿 / 1 上传中 / 2 转码中 / 3 待审核 / 4 已发布 / 5 已驳回 */
+  status: number;
+}
+
 /** 选片结果：系统选择器给的媒体库 uri 与端侧补出的展示信息 */
 export interface PickedVideo {
   /** 选择器返回的原始 uri（媒体库，如 file://media/Photo/…）——不能直接投递给 request.uploadFile */

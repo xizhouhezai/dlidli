@@ -1,4 +1,5 @@
 import { HttpClient } from './HttpClient';
+import { SubmitReq, SubmitResult } from '../model/Upload';
 import {
   Category,
   HistoryResult,
@@ -28,6 +29,16 @@ export class VideoApi {
   /** 分区列表（含一级与二级，页面自行取 parent_id === 0 的一级分区） */
   static listCategories(): Promise<Category[]> {
     return HttpClient.get<Category[]>(PATH_CATEGORIES);
+  }
+
+  /**
+   * 投稿（HMY-51 提交动作，需求 ID 属 HMY-53）。需登录。
+   * 后端 `SubmitReq` 的硬性 binding：`file_id`/`title`/`category_id` 必填、`title ≤ 80`、
+   * `description ≤ 2000`、`tags 1~10`、`copyright ∈ {1,2}`——端侧已在提交前拦下（见 `validateDraft`），
+   * 此处只负责发请求。成功返回 `bvid` 与 `status`（2 转码中 / 3 待审核）。
+   */
+  static submit(req: SubmitReq): Promise<SubmitResult> {
+    return HttpClient.post<SubmitResult>(PATH_VIDEOS, req);
   }
 
   /**

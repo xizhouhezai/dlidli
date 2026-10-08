@@ -615,6 +615,138 @@
     {
       "name": "profile_action_upload",
       "value": "投稿"
+    },
+    {
+      "name": "upload_form_section",
+      "value": "稿件信息"
+    },
+    {
+      "name": "upload_form_title",
+      "value": "标题"
+    },
+    {
+      "name": "upload_form_title_hint",
+      "value": "给视频起个好标题"
+    },
+    {
+      "name": "upload_form_category",
+      "value": "分区"
+    },
+    {
+      "name": "upload_form_category_fail",
+      "value": "分区加载失败，点击重试"
+    },
+    {
+      "name": "upload_form_tags",
+      "value": "标签"
+    },
+    {
+      "name": "upload_form_tag_hint",
+      "value": "1-10 个，回车或点「添加」"
+    },
+    {
+      "name": "upload_form_tag_add",
+      "value": "添加"
+    },
+    {
+      "name": "upload_form_type",
+      "value": "类型"
+    },
+    {
+      "name": "upload_form_copyright_self",
+      "value": "自制"
+    },
+    {
+      "name": "upload_form_copyright_repost",
+      "value": "转载"
+    },
+    {
+      "name": "upload_form_desc",
+      "value": "简介"
+    },
+    {
+      "name": "upload_form_desc_hint",
+      "value": "介绍一下这个视频吧（选填）"
+    },
+    {
+      "name": "upload_form_cover",
+      "value": "封面"
+    },
+    {
+      "name": "upload_cover_tip",
+      "value": "选填：默认用视频第 1 秒的画面，可换成相册里的图；未设置时由服务端自动抽帧"
+    },
+    {
+      "name": "upload_cover_from_frame",
+      "value": "视频截帧"
+    },
+    {
+      "name": "upload_cover_from_photo",
+      "value": "相册选图"
+    },
+    {
+      "name": "upload_cover_cropped",
+      "value": "已按 16:9 裁切 · %d×%d"
+    },
+    {
+      "name": "upload_cover_origin_frame",
+      "value": "视频截帧"
+    },
+    {
+      "name": "upload_cover_origin_photo",
+      "value": "相册选图"
+    },
+    {
+      "name": "upload_cover_frame_fail",
+      "value": "该视频无法截帧，请改用相册选图"
+    },
+    {
+      "name": "upload_cover_photo_fail",
+      "value": "选图失败，请重试"
+    },
+    {
+      "name": "upload_submit",
+      "value": "立即投稿"
+    },
+    {
+      "name": "upload_submitting",
+      "value": "正在提交…"
+    },
+    {
+      "name": "upload_submit_need_file",
+      "value": "请先上传视频文件"
+    },
+    {
+      "name": "upload_submit_ok_title",
+      "value": "投稿成功"
+    },
+    {
+      "name": "upload_submit_ok_sub",
+      "value": "稿件号 %s · %s"
+    },
+    {
+      "name": "upload_status_transcoding",
+      "value": "转码中，完成后自动进入审核"
+    },
+    {
+      "name": "upload_status_review",
+      "value": "审核中，通过后自动发布"
+    },
+    {
+      "name": "upload_submit_again",
+      "value": "再投一稿"
+    },
+    {
+      "name": "upload_wait_upload",
+      "value": "等待视频上传完成"
+    },
+    {
+      "name": "upload_cover_empty",
+      "value": "未设置封面"
+    },
+    {
+      "name": "action_back",
+      "value": "返回"
     }
   ]
 }
