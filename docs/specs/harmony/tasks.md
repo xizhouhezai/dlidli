@@ -312,10 +312,17 @@
     - **真 UI 走查**：「我的」→「投稿」→ 选片 → 开始上传，阶段依次出现「正在校验文件 → 正在上传 → 正在合并文件 → 上传完成」并显示 `file_id`
   - 未覆盖：**真机待验**——长时任务的实际保活边界（锁屏 + 切后台 5 分钟）、真机吞吐与弱网重试、GB 级文件端侧哈希耗时与 cache 占用。模拟器为 API 26 x86 环境，保活结论不作数
 
-- [ ] M4-HMY-52 稿件信息与封面：标题/简介/分区/标签、封面选图或截帧 + 16:9 裁切
+- [x] M4-HMY-52 稿件信息与封面：标题/简介/分区/标签、封面选图或截帧 + 16:9 裁切
   - 覆盖：HMY-51
-  - 实现要点：分区取 `GET /api/v1/categories`；封面走 `@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9，`multipart/form-data` 传 `POST /videos/cover`（字段 `file`，≤5MB，jpg/png/webp）；**multipart 直接复用 `request.uploadFile` 的 `method:'POST'` 分支（`files:[{ name:'file', … }]`），无需扩展 `HttpClient`**（HMY-50 实测 5 次均 200 且封面落盘字节数=源文件长度）；表单校验对齐 Web `UploadView`（标题 ≤80、简介 ≤2000、标签 1~10）
-  - 验证结论：待补
+  - 实现要点：分区取 `GET /api/v1/categories`；封面走 `@ohos.multimedia.image` 解码 + `PixelMap` 裁切 16:9，`multipart/form-data` 传 `POST /videos/cover`（字段 `file`，≤5MB，jpg/png/webp）；**multipart 由 `HttpClient.postRaw` 自拼信封发送**（HMY-50 曾判「复用 `request.uploadFile` 的 `POST` 分支、无需扩展 `HttpClient`」——发得出去成立，但该 API **不回响应体**（`TaskState.message` 实测空串），拿不到 `data.cover`，故封面改走裸 body 通道，详见 [plan §6.3](/specs/harmony/plan) 坑②）；表单校验对齐 Web `UploadView`（标题 ≤80、简介 ≤2000、标签 1~10）
+  - 验证结论（2026-10-08 模拟器 API 26 实测，`feature/m4-hmy-52-cover-form`）：
+    - **端到端 PASS**：选片（`hmy52-4x3.mp4` 4:3 与 `hmy52-video.mp4` 16:9 各走一遍；秒传与真传各一次）→ 开始上传 → 表单（标题 `9/80`、分区 `动画`、标签 `1/10`、类型 自制）→ 封面自动截帧 → 立即投稿 → **`投稿成功 稿件号 DV2Vj4s7v69vE`**；后端 `video` 行 `status=3`（审核中）、`category_id=1`、`cover=http://localhost:8000/static/covers/2108055781461987328_1791443006894.jpg`，`curl` 该地址 **200 / image/jpeg / 60569B**
+    - **16:9 裁切 PASS（宿主解析落盘 JPEG 实际像素）**：4:3 源（352×288）→ 端侧显示 `已按 16:9 裁切 · 352×198`，服务端封面实测 **352×198**；16:9 源 → `640×360`，服务端封面实测 **640×360**——两组比值均 **1.7778**，即端侧裁的就是服务端收下的那张，没被二次裁掉主体
+    - **投稿可见 PASS**：重进「我的」→ 投稿档首位 `hmy52-video | 0 · dli_57983775 · 1分钟前`，**缩略图正是端侧截帧的那一帧**（无封面的旧稿件显示默认占位图）——截帧 → multipart 上传 → 提交 → 列表展示全链路闭合
+    - **校验分支 PASS（4/4，均端侧拦下）**：分区未选→`请选择分区`；标签为空→`请至少添加 1 个标签`；标签超 10→`最多 10 个标签（当前 10 个）`；标题超长→`标题不能超过 80 个字（当前 90 个）`。提示紧贴提交按钮上方（放页面顶部时用户在页尾看不见）；**4 次失败提交期间 `video` 行数保持 1，成功提交后才 1→2**（旁证「不发请求」，因无法读取运行中后端 stdout）
+    - **取消不脏状态 PASS**：相册选择器按 BACK → 封面保持「未设置封面」，无异常
+    - **实测修正（ArkUI 刷新）**：`@Builder` 的**值类型参数不参与刷新**——计数当参数传入带参 Builder 时，加满 10 个标签计数仍显示 `0/10`；动态文案改到无参 `@Builder` 内直读 `@Local` 后实时正确（详见 plan §6.3 坑①）
+  - 未覆盖：真机；**相册选图的「选中→裁切」段**——模拟器图库为空（`所有图片` 无内容、`拍照` 无相机应用），只验到「选择器可打开、取消不脏状态」；该路径与已验的截帧路径共用 `ImageCropper.fromUri`（同为 fd 解码），残余风险在 picker uri 的临时授权 `fileIO.openSync` 一段
 
 - [ ] M4-HMY-53 多P 与草稿：多分P 管理、投稿中退出可恢复
   - 覆盖：HMY-52

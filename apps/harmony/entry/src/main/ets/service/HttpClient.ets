@@ -21,6 +21,35 @@ export interface HttpOptions {
   replayed?: boolean;
 }
 
+/**
+ * 请求体：JSON 文本（默认 `application/json`）或**裸字节**（自带 Content-Type，如 `multipart/form-data; boundary=…`）。
+ * 裸字节通道是封面接口的必需品——见 `CoverService.upload` 的说明（`request.uploadFile` 拿不到响应体）。
+ */
+class HttpPayload {
+  private readonly text: string | null;
+  private readonly raw: ArrayBuffer | null;
+  readonly contentType: string;
+
+  private constructor(text: string | null, raw: ArrayBuffer | null, contentType: string) {
+    this.text = text;
+    this.raw = raw;
+    this.contentType = contentType;
+  }
+
+  static json(body: object): HttpPayload {
+    return new HttpPayload(JSON.stringify(body), null, 'application/json');
+  }
+
+  static bytes(bytes: ArrayBuffer, contentType: string): HttpPayload {
+    return new HttpPayload(null, bytes, contentType);
+  }
+
+  /** `http` 模块按 extraData 的运行时类型决定 body 形态：ArrayBuffer → 裸字节原样发出 */
+  extra(): string | ArrayBuffer {
+    return this.raw !== null ? this.raw : (this.text ?? '');
+  }
+}
+
 function queryString(query?: Map<string, string>): string {
   if (query === undefined || query.size === 0) {
     return '';
@@ -52,11 +81,24 @@ export class HttpClient {
   }
 
   static post<T>(path: string, body: object | null, options?: HttpOptions): Promise<T> {
-    return HttpClient.request<T>(http.RequestMethod.POST, path, body, options);
+    return HttpClient.request<T>(http.RequestMethod.POST, path, HttpClient.jsonPayload(body), options);
   }
 
   static del<T>(path: string, options?: HttpOptions): Promise<T> {
     return HttpClient.request<T>(http.RequestMethod.DELETE, path, null, options);
+  }
+
+  /**
+   * 裸字节 POST（multipart 等自带 Content-Type 的场景）。
+   * 凭证注入、401 静默续期重放、统一包裹解析与 JSON 请求完全一致——这正是它比 `request.uploadFile` 强的地方：
+   * 后者能发 multipart 但**只回任务状态、不回响应体**（实测 `TaskState.message` 为空串），拿不到 `data.cover`。
+   */
+  static postRaw<T>(path: string, bytes: ArrayBuffer, contentType: string, options?: HttpOptions): Promise<T> {
+    return HttpClient.request<T>(http.RequestMethod.POST, path, HttpPayload.bytes(bytes, contentType), options);
+  }
+
+  private static jsonPayload(body: object | null): HttpPayload | null {
+    return body === null ? null : HttpPayload.json(body);
   }
 
   /** 不注入凭证、不参与续期重放的请求（登录、续期、登出等自证接口用） */
@@ -65,7 +107,8 @@ export class HttpClient {
   }
 
   static postPublic<T>(path: string, body: object | null, options?: HttpOptions): Promise<T> {
-    return HttpClient.request<T>(http.RequestMethod.POST, path, body, HttpClient.publicOptions(options));
+    return HttpClient.request<T>(http.RequestMethod.POST, path, HttpClient.jsonPayload(body),
+      HttpClient.publicOptions(options));
   }
 
   private static publicOptions(options?: HttpOptions): HttpOptions {
@@ -78,12 +121,12 @@ export class HttpClient {
   private static async request<T>(
     method: http.RequestMethod,
     path: string,
-    body: object | null,
+    payload: HttpPayload | null,
     options?: HttpOptions
   ): Promise<T> {
     const opts: HttpOptions = options ?? {};
     try {
-      return await HttpClient.sendWithRetry<T>(method, path, body, opts);
+      return await HttpClient.sendWithRetry<T>(method, path, payload, opts);
     } catch (err) {
       const apiErr: ApiError = err as ApiError;
       // 401 且非自证接口：静默续期后重放一次原请求
@@ -96,21 +139,21 @@ export class HttpClient {
         throw new ApiError(ErrCode.UNAUTHORIZED, ErrorMessages.text(20005, ''), apiErr.traceId, false);
       }
       const replayed: HttpOptions = { query: opts.query, auth: opts.auth, replayed: true };
-      return await HttpClient.sendWithRetry<T>(method, path, body, replayed);
+      return await HttpClient.sendWithRetry<T>(method, path, payload, replayed);
     }
   }
 
   private static async sendWithRetry<T>(
     method: http.RequestMethod,
     path: string,
-    body: object | null,
+    payload: HttpPayload | null,
     options: HttpOptions
   ): Promise<T> {
     let attempt: number = 0;
     while (true) {
       attempt++;
       try {
-        return await HttpClient.send<T>(method, path, body, options);
+        return await HttpClient.send<T>(method, path, payload, options);
       } catch (err) {
         const apiErr: ApiError = err as ApiError;
         if (!apiErr.retryable || attempt >= ApiConfig.MAX_ATTEMPTS) {
@@ -126,11 +169,11 @@ export class HttpClient {
   private static async send<T>(
     method: http.RequestMethod,
     path: string,
-    body: object | null,
+    payload: HttpPayload | null,
     options: HttpOptions
   ): Promise<T> {
     const url: string = ApiConfig.BASE_URL + path + queryString(options.query);
-    const header: Record<string, string> = { 'Content-Type': 'application/json' };
+    const header: Record<string, string> = { 'Content-Type': payload === null ? 'application/json' : payload.contentType };
     if (options.auth !== false) {
       const token: string = TokenStore.getAccessToken();
       if (token.length > 0) {
@@ -144,8 +187,8 @@ export class HttpClient {
       readTimeout: ApiConfig.READ_TIMEOUT_MS,
       expectDataType: http.HttpDataType.STRING
     };
-    if (body !== null) {
-      reqOptions.extraData = JSON.stringify(body);
+    if (payload !== null) {
+      reqOptions.extraData = payload.extra();
     }
 
     const req: http.HttpRequest = http.createHttp();

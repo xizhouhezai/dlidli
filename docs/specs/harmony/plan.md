@@ -262,6 +262,37 @@ apps/harmony/
 
 **管理后台/RBAC**：本卡仅端侧改动，不涉及。
 
+### 6.3 稿件信息与封面实现（M4-HMY-52，2026-10-08）
+
+| 文件 | 职责 | 注意点 |
+| --- | --- | --- |
+| `common/utils/ImageCropper.ets` | 任意可打开 uri → 居中 16:9 裁切 → JPEG（q90，≤1280×720）落 `cacheDir/upload_cover/` | 裁切几何只此一处：`desiredRegion` + `cropAndScaleStrategy: CROP_FIRST`（**不指定策略时 JPEG 会先降采样再裁**，边界会带进主体外内容）。`fileIo.openSync(uri)` 取 fd 后 `createImageSource(fd)`，相册/文档/沙箱三种 uri 同一路径 |
+| `common/utils/VideoFrame.ets` | `media.createAVImageGenerator().fetchFrameByTime(1s)` 截帧落临时 JPEG，再交给 `ImageCropper` | 截帧不可用（部分封装格式）返回空串，由调用方提示「改从相册选图」并允许继续投稿 |
+| `service/CoverService.ets` | 两种来源收口 + multipart 上传 `POST /videos/cover` | **不用 `request.uploadFile`**，见坑② |
+| `service/HttpClient.ets` | 新增 `HttpPayload` + `postRaw(path, ArrayBuffer, contentType)`：裸 body 通道 | 与 JSON 请求共用凭证注入、401 静默续期重放、统一包裹解析、错误定级（`extraData` 传 `ArrayBuffer` 时 body 形态由运行时类型决定） |
+| `pages/upload/UploadPage.ets` | 表单（标题/简介/分区/标签/类型）+ 封面区 + 提交 | 提交前 `validateDraft()` 先于 `file_id` 判定，故校验分支无需等上传完成即可实测 |
+
+**六个实测坑（易复发的实现细节）**：
+
+1. **`@Builder` 的值类型参数不参与刷新**——把 `n/80`、`n/10`、已选分区、封面来源当参数传给带参 `@Builder`，**初始渲染正确、后续全不更新**（实测：加满 10 个标签，计数仍显示 `0/10`，而标签 chip 已渲染 10 个）。全部动态文案改到**无参 `@Builder`** 内直读 `@Local`（无参 Builder 随组件重渲染重跑）；无参 Builder 里再调带参 Builder 一样不刷新。
+2. **`request.uploadFile` 的 `POST` 分支发得出 multipart，却读不到响应体**——后端确实收下并落盘（`covers/<uid>_<ms>.jpg`），但 `TaskState.message` 实测为**空串**，拿不到 `data.cover`；`request.agent` 的 `HttpResponse` 也只有 `statusCode/reason/headers`。封面因此改走 **B 路线**：`HttpClient.postRaw` 自拼 multipart 信封（前言 + 文件字节 + 结束边界，字段名 `file`）。HMY-50「无需扩展 `HttpClient`」的结论只在**发得出去**这一维成立，**要读响应就得自己发**。分片仍是 `request.uploadFile` 的 `PUT` 裸 body，两条通道互不混用。
+3. **校验提示必须贴身**——提示若渲染在表单顶部，而用户点提交时正停在页尾，等于看不见（toast 2 秒即散，不足以替代）。错误文案固定放在**提交按钮正上方**；用户一动表单（改标题/简介/选分区/选类型/加删标签）即 `clearError()` 撤掉旧提示，避免「改完仍显示报错」的错觉。
+4. **标题不设 `maxLength`**——与 Web `UploadView` 一致：允许输入超长、提交时统一拦下并给出 `标题不能超过 80 个字（当前 N 个）`，让用户知道超了多少；`maxLength` 会在端侧静默截断，与 Web 行为分叉。
+5. **后端状态与封面 URL 的形态**——`video.status`：`0 待处理 / 2 转码中 / 3 审核中 / 4 已发布`（`model.go`），本次投稿落 `3`；封面地址由**服务端配置的 base**拼出（dev 下为 `http://localhost:8000/…`），**端侧不要拿它直接加载展示**（模拟器访问不到 `localhost`），本地预览一律用裁切产物文件路径。
+6. **模拟器操作面（测试脚本才会踩）**——`uitest uiInput keyEvent 2`(BACK) 在输入法已收起时会**直接退出页面**（不是关键盘）；软键盘弹出时其区域的滑动会被输入法吃掉并可能误输入字符（控件坐标也会整体上移）。滚动请用键盘上方的区间，且不要用 BACK 代替「收起键盘」。另：模拟器进「我的手机」（`Docs` 根）约 10 秒后 **`com.huawei.hmos.filemanager` 崩溃并关闭选择器**（返回 `errorcode -1`），须进目录后 4 秒内点中目标文件；相册选择器在图库为空时按 BACK 只取消、不再回退到文件选择器（HMY-51 观察到的回退只发生在视频选择器上）。
+
+**端到端验证（模拟器 API 26；判定不读端侧自述）**：
+
+| 场景 | 判据 | 结果 |
+| --- | --- | --- |
+| ① 完整投稿 | 选片 → 上传 → 表单 → 封面 → 提交 | **`投稿成功 稿件号 DV2Vj4s7v69vE`**；`video` 行 `status=3`（审核中）、`category_id=1`（动画）、`cover` 指向落盘封面 |
+| ② 封面 16:9 裁切（两组源） | **宿主解析服务端封面 JPEG 的实际像素** | 4:3 源（352×288）→ **352×198**；16:9 源 → **640×360**；比值均 **1.7778** |
+| ③ 封面可回看 | `curl` 封面地址 + 「我的投稿」缩略图 | HTTP **200 / image/jpeg / 60569B**；列表首位 `hmy52-video` 的缩略图正是端侧截帧的那一帧（无封面的旧稿件显示默认占位图） |
+| ④ 校验分支（4/4） | 提示文案 + **失败期间 `video` 行数不变**（提交成功后才 1→2） | 分区未选 `请选择分区`；标签为空 `请至少添加 1 个标签`；标签超 10 `最多 10 个标签（当前 10 个）`；标题超长 `标题不能超过 80 个字（当前 90 个）` |
+| ⑤ 取消保持原值 | 相册选择器按 BACK | 封面**保持原值**（原为「未设置封面」），无异常 |
+
+**未覆盖 / 须真机确认**：真机（模拟器为 API 26 x86 软件渲染）；**相册选图的「选中→裁切」段未验**——模拟器图库为空（`所有图片` 无内容，`拍照` 无相机应用），只能验到「选择器可打开、取消不脏状态」；该路径与已验的截帧路径共用 `ImageCropper.fromUri`（同为 fd 解码），残余风险集中在 picker uri 的临时授权 `fileIo.openSync` 一段。多P / 草稿恢复属 M4-HMY-53，状态回看与驳回原因属 M4-HMY-54。
+
 ## 7. 视觉设计资源与规范依据
 **事实来源**：华为开发者联盟[设计中心](https://developer.huawei.com/consumer/cn/design/)与[设计资源库](https://developer.huawei.com/consumer/cn/design/resource/)。下表为**面向本模块可直接取用**的资源与规范，非全量搬运。
 
