@@ -351,10 +351,36 @@
     - **实测修正（ArkUI 刷新）**：`@Builder` 的**值类型参数不参与刷新**——计数当参数传入带参 Builder 时，加满 10 个标签计数仍显示 `0/10`；动态文案改到无参 `@Builder` 内直读 `@Local` 后实时正确（详见 plan §6.3 坑①）
   - 未覆盖：真机；**相册选图的「选中→裁切」段**——模拟器图库为空（`所有图片` 无内容、`拍照` 无相机应用），只验到「选择器可打开、取消不脏状态」；该路径与已验的截帧路径共用 `ImageCropper.fromUri`（同为 fd 解码），残余风险在 picker uri 的临时授权 `fileIO.openSync` 一段
 
-- [ ] M4-HMY-53 多P 与草稿：多分P 管理、投稿中退出可恢复
+- [x] M4-HMY-53 多P 与草稿：多分P 管理、投稿中退出可恢复（2026-10-09）
   - 覆盖：HMY-52
-  - 实现要点：多P 上限 10（对齐 Web 与 `SubmitReq.parts`）；草稿存 `preferences`（标题/简介/分区/标签/各P 的 file_id/封面路径）；**重进时先 `GET /upload/{id}` 校验会话有效性**（Redis TTL 24h），失效则提示重选文件
-  - 验证结论：待补
+  - 实现要点：多分P 管理（各自 `file_id` + 标题，可增删）；草稿存 `preferences`（标题/简介/分区/标签/各P 的 `file_id` 与上传会话 ID/封面路径）；**重进时先 `GET /upload/{id}` 校验会话有效性**（Redis TTL 24h），失效则提示重选文件
+  - **上限口径修正（原文档与实现不符，以实测为准）**：原写「多P 上限 10（**对齐 Web 与 `SubmitReq.parts`**）」，**后半句不成立**。实测：
+    - **`SubmitReq.parts` 无任何数量 binding**——`model.go:136` 的 `PartSubmit` 只有 `file_id`(required) 与 `title`(max=80)，`Parts` 字段上无 `min`/`max`/`dive`。对本地后端实测 **11 / 12 / 13 / 15 / 20 / 30 / 50 / 100** 个分P **全部 `code=0` 成功**，`GET /videos/{bvid}/parts` 读回 `video_part` **逐条落库**（100 个就是 100 条）。
+    - **真正的硬边界在存储层**：`video_part.part_index` 是 `TINYINT`、Go 侧 `int8`，`Service.Submit` 按 `int8(i+1)` 写入 → 第 **128** 个分P 起下标溢出（`int8(128)=-128`）；**130 个时前 3 条实测为 `-128,-127,-126`**（数据静默写坏，接口仍返回成功）；`int8(256)=0` 与「单P 默认值」撞车；第 **257** 个起 `int8(257)=1` 撞 `UNIQUE KEY uk_video_part` → **HTTP 500**。
+    - **端侧取 10**（`PART_MAX`）：与 Web `useUploadParts.ts:23` 的硬编码 `>= 10` 同一口径——该值是**产品自律**而非后端约束。不取 127 是因为后端在 128~256 区间**静默写坏数据**、只在 257 报错，任何 >127 的端侧上限都会把用户引向损坏数据。
+    - 顺带实测：`PartSubmit.Title` 的 `max=80` **不在 binding 阶段生效**——传 81 字返回 **HTTP 500**（而非 `10002 参数不合法`），传空串则**落空标题**。故分P 标题长度**必须**端侧提交前自校验。
+  - **一处关键契约（实测得出，决定了端侧数据模型）**：后端 `Submit` 只要 `len(req.Parts) > 0` 就走多P分支，而该分支**只按 `parts` 建 `video_part` 与视频流，`file_id` 仅用于归属校验、其流不入库**——即「有 parts 时主视频被整体丢弃」。故端侧模型是 **主视频独立占 `fileId`，`parts` 只装额外分P**，提交时由 `resolveSubmitParts()` 合成：单P（无额外分P）**必须回空数组**走单P分支，有额外分P 才把主视频并进 `parts[0]` 作分P1。
+  - 落地物：`model/Upload.ets`（新增 `PartDraft`/`PART_MAX`/`PART_TITLE_MAX`，`SubmitDraft` 扩为含 `parts`/`fileId`/`uploadId`/封面五字段；新增 `emptyPart`/`partTitleOf`/`extraPartLabel`/`completedParts`/`resolveSubmitParts`/`resolveSubmitFileId`/`draftHasContent`，`validateDraft` 增分P 校验）、`store/UploadDraftStore.ets`（新建，草稿持久化 + `checkSessions`）、`service/UploadController.ets`（新增 `UploadSessionListener`，`init` 返回即上报会话 ID）、`common/utils/MediaLib.ets`（新增 `exists`）、`pages/upload/UploadPage.ets`（分P 管理区 + 草稿恢复/丢弃 + 会话校验提示 + 提交改算 parts）、`resources/base/element/string.json`（13 条新文案）
+  - **会话校验的三条口径**（缺一条都会误伤用户，全部写进 `UploadDraftStore.checkSessions` 的注释）：
+    1. **只校验「有 `uploadId` 但没有 `fileId`」的条目**——上传一收口，后端 `Complete` 末尾即 `Del(sessKey/partsKey/byHashKey)`（`upload/service.go:232`），拿收口后的 `uploadId` 去查**必然** 30001，那不是「失效」而是「已完成」；秒传（fast）同样无会话。
+    2. **只有 `code === 30001`（上传任务不存在或已过期）判失效**，其余错误码不判失效。
+    3. **网络类失败终止整轮校验并提示「暂时无法校验、联网后可继续」**——断网不等于会话过期，不能据此要求用户重选全部文件。
+  - **验证结论（2026-10-09，判定不读端侧自述：全部取自后端接口响应 + `video_part` 读回 + Redis 键状态；证据 `.dev-logs/hmy53/EVIDENCE.md`）**：
+    - **① 多P 提交成功 + 后端 `video_part` 有对应记录 PASS**：三份**内容互不相同**的文件（2048/3072/4096 B 不同填充 → 不同 SHA-256，无秒传干扰）各自 `init→PUT→complete` 拿到独立 `file_id`；`parts=[A,B,C]` 提交返回 `code=0 bvid=DV2VkaNSKZrBQ status=2`；`GET /videos/DV2VkaNSKZrBQ/parts`（该接口直读 `video_part` 表）读回 **3 条**，`P1 "第一集"/P2 "第二集"/P3 "第三集"` 标题与请求逐字一致、每 P 各 1 条原画流。**回归**：`parts=[]` 的单P 投稿 `code=0` 且 `video_part` 条数 **0**（仍走单P分支）。
+    - **③ 会话失效分支 PASS（可行路径：直接删 Redis 键，不空等 24h）**：6 MB 文件 init 得 `upload_id=2108420170266447872 / chunk_count=2`，传 part0 后 `GET /upload/{id}` → `code=0 uploaded=[0]/2`；**`TTL up:sess:<id> = 86400s`**（端到端印证 24h 常量）；`DEL up:sess:<id>` 后再查 → **`code=30001 "上传任务不存在或已过期"`**。选此路径的依据：`Service.session()` 只看 `len(sess)==0`，**不区分「过期」与「被删」**，故与 24h 自然到期是同一条代码路径，且可即时复现（无效会话键同时使 `up:parts` 索引失效，与生产一致）。
+    - **② 端侧纯逻辑验证 PASS**：用仓库内 `typescript@5.8.3` 在 Node 内直接编译并**执行** `model/Upload.ets`——`strict` + `noUnusedLocals/noUnusedParameters` **0 error**；`resolveSubmitParts(单P)=[]`、`(多P)=[{MAIN1,主稿件标题},{EXT1,分P2},{EXT2,第二集}]`（未命名分P 回落「分P2」、有文件名回落文件名）、`validate(11P)="最多 10 个分P（当前 11 个）"`、`validate(10P)=""`、未传完分P 被拦（`"分P2 还没有上传完成的文件，请先上传或删除该分P"`）、主视频缺失时 `resolveSubmitFileId` 回落分P1、`draftHasContent(空)=false`；**资源键机器核对**：页面引用的 58 个 `app.string.*` 全部有定义（缺失 0），新增资源无一「定义却没人用」。
+    - **代码复查中修掉两处真实缺陷（静态发现，本环境无法构建故未在设备上观察到现象）**：① **分P `ForEach` 的 key 不含 `title`**——`TextInput.text` 只在组件首次构造时取值，恢复一个「有标题、未上传」的分P 时 `fileId`/`fileName` 均为空、key 不变 ⇒ ArkUI 复用旧组件 ⇒ 标题空白；已把 key 改为含 `part.title`（**同类缺陷本项目已踩两次**：HMY-54 投稿卡需含 `status`、HMY-08 评论需含 `like_cnt`）。② **`$r()` 被 `as string` 强转**——`partStatus()` 原签名是 `string`，内部写了 `$r(…) as string` 以返回字符串资源；`Resource` 强转成 `string` 得到的是对象，`Text()` 会渲染 `[object Object]`（**本项目在收藏夹弹层已踩过一次完全相同的坑**）；已把签名改为 `ResourceStr` 并去掉强转，同时理清 `fail(string)`（进 `errorText`）与 `failWith/showToast(ResourceStr)` 的边界，**不再有任何 `$r()` 进字符串变量**。
+    - **草稿持久化的读取路径**：`preferences` 单一入口 `PreferenceStore.open()`（与令牌/弹幕设置/搜索历史共用 `dlidli_prefs`），key `upload.draft`；读盘内容经 `sanitize()` 逐字段补默认值（旧版本草稿、手改文件都不会让页面崩）；封面文件已被系统清 cache 时**不假装封面还在**（`MediaLib.exists` 判存，按「未设置封面」处理并让用户重选）。
+  - **未覆盖 / 未修项**：
+    - **模拟器端 UI 走查已由 Lead 在宿主（非受限）会话补齐（2026-10-09）——原「未做」条目已消解**：`apps/harmony` 在宿主侧 `hvigorw assembleHap` **BUILD SUCCESSFUL**，HAP 1,665,853 B 装入 `Pura X View` 实测。实测覆盖：① **分P 增删可视交互 PASS**——`分P 管理 1/10` 点「+ 添加分P」后计数变 **`2/10`** 且新增 `分P2` 行（含标题输入框、删除按钮）；② **草稿恢复弹窗 PASS**——退出投稿页重进弹出「发现未完成的投稿草稿 / 上次投稿未提交，是否恢复？」+「丢弃 / 恢复草稿」，点恢复后出现「已恢复上次未提交的投稿草稿」横幅且 **`2/10` 与 `分P1/分P2` 全量还原**。证据：`.dev-logs/hmy53/FINAL-draft-restored.jpeg`、`u2-selected.jpeg`、`s2-upload.jpeg`。**仍受限于模拟器**：相册为空（照片选择器走空列表，改由文档选择器选中 `hmy53a.mp4` 验证）——与本项目既有结论一致。
+    - **端侧 ArkTS 编译已在宿主侧跑通（2026-10-09，原「未跑通」条目已消解）**：`hvigorw --mode module -p product=default assembleHap` → **BUILD SUCCESSFUL in 12s734ms**。子会话在受限沙箱内无法运行该闸门（`spawn EPERM`），其改用「与 `HEAD` 对照解析报错种类」的替代自检判断正确——新增代码无编译错误。**同时证实子会话自查发现并修掉的两处类型缺陷是必要且正确的**：`failWith`/`fail` 形参原为 `string` 而调用处传 `$r(...)`（`Resource`），以及 `$r(...) as string`（会渲染 `[object Object]`）——宿主侧首次构建即在这 4 处报 `ArkTS Compiler Error`，子会话在最终修订中已自行修好。
+    - **构建闸门（受限沙箱内）未通过属环境能力边界，非代码缺陷**：低完整性沙箱下 DSH 文件工具可写 `apps/harmony`，但其派生的子进程只能写 `%TEMP%` 与**工作区根目录**；`hvigor` 需创建指向 DevEco 安装目录的符号链接（`EPERM`），预置真实目录后推进到 21 个 task，最终阻塞在 **`CompileResource.invokeRestool → spawn EPERM`**（子进程管道 stdio 的沙箱边界，`restool` 无替代）。同因 `pnpm docs:build` 在受限会话内被阻塞（esbuild `spawn EPERM`）。**子会话如实标注、未改代码绕行、未申请沙箱升级；两项闸门均已由 Lead 在宿主侧通过**（build 见上；`pnpm docs:build` → `build complete`）。
+    - **多P 的转码链路未验**：转码 Worker 已为每个分P 建 `transcode_job`（`CreateWithParts` 按 `part.PartIndex × quality` 建任务），但本轮只验到「原画流（quality=0）落库」，**各分P 的转码产物与播放页分P 切换**属播放侧、未在端侧走查。**宿主侧补充实测**：`GET /videos/DV2VkaNSKZrBQ/parts` 读回 3 条分P（`index=1/2/3`，标题「第一集/第二集/第三集」逐字正确），DB `video_part` 直读一致。
+    - **封面只有一张**：后端 `SubmitReq` 只有一个 `cover` 字段，分P 无独立封面——端侧如实按「额外分P 沿用主视频封面」呈现，**不假装每P 可配封面**。这是接口的现实，已写进界面提示。
+    - **草稿只存端侧**：未做云端草稿（全仓无该接口），与 plan §3「草稿只解决『填了一半退出』」口径一致。
+    - **上传会话 24h 真实到期的长时验证未做**：以删键等价替代（依据见上），**未真等 24h**。
+    - 真机（API 26 x86 模拟器均未跑，更未上真机）。
+  - 残留测试数据：`probe-parts.ps1` 造 8 条多P 测试稿（11~100 个分P）、`probe-title.ps1`/`probe-int8.ps1`/`probe-wrap.ps1` 造若干边界稿、端到端验收 2 条（`DV2VkaNSKZrBQ` 3 分P、单P 回归 1 条），均落在当日新建的临时账号名下。
 
 - [x] M4-HMY-54 提交与状态回看：提交投稿、我的投稿状态与驳回原因（2026-10-09 完成）
   - 覆盖：HMY-53
@@ -385,7 +411,7 @@
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
 | M4 观看端 | 11 | 11 |
-| M4 追加·创作端 | 5 | 4 |
-| **合计** | **16** | **15** |
+| M4 追加·创作端 | 5 | 5 |
+| **合计** | **16** | **16** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

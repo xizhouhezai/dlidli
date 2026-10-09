@@ -578,7 +578,7 @@
     },
     {
       "name": "upload_pick_rule",
-      "value": "支持 mp4 / mov / mkv / flv / avi，单文件不超过 8GB"
+      "value": "支持 mp4 / mov / mkv / flv / avi，单文件不超过 8GB；可继续添加分P（最多 10 P）"
     },
     {
       "name": "upload_start",
@@ -779,6 +779,70 @@
     {
       "name": "upload_cover_empty",
       "value": "未设置封面"
+    },
+    {
+      "name": "upload_parts_section",
+      "value": "分P 管理"
+    },
+    {
+      "name": "upload_parts_tip",
+      "value": "可选：添加多个视频组成合集式稿件（最多 10 P）。主视频即分P1，标题取稿件标题；额外分P 的封面沿用主视频封面"
+    },
+    {
+      "name": "upload_parts_label_main",
+      "value": "分P1（主视频）"
+    },
+    {
+      "name": "upload_parts_add",
+      "value": "+ 添加分P"
+    },
+    {
+      "name": "upload_parts_remove",
+      "value": "删除"
+    },
+    {
+      "name": "upload_parts_title_hint",
+      "value": "分P 标题（默认取文件名）"
+    },
+    {
+      "name": "upload_parts_choose",
+      "value": "选择视频"
+    },
+    {
+      "name": "upload_parts_no_file",
+      "value": "未选择文件"
+    },
+    {
+      "name": "upload_parts_expired_tag",
+      "value": "已失效，请重选文件"
+    },
+    {
+      "name": "upload_draft_title",
+      "value": "发现未完成的投稿草稿"
+    },
+    {
+      "name": "upload_draft_body",
+      "value": "上次投稿未提交，是否恢复？"
+    },
+    {
+      "name": "upload_draft_restore",
+      "value": "恢复草稿"
+    },
+    {
+      "name": "upload_draft_discard",
+      "value": "丢弃"
+    },
+    {
+      "name": "upload_draft_expired",
+      "value": "以下分P 的上传会话已过期（上传会话保留 24 小时），请重新选择对应文件：%s"
+    },
+    {
+      "name": "upload_draft_resumable",
+      "value": "已恢复草稿，可继续未完成的上传：%s"
+    },
+    {
+      "name": "upload_draft_network",
+      "value": "暂时无法校验上传会话（网络不可用），草稿已恢复，联网后可继续上传"
     },
     {
       "name": "action_back",
