@@ -758,13 +758,28 @@ func (s *Service) PublicDetail(ctx context.Context, bv string) (*Detail, error) 
 }
 
 // Mine 我的稿件列表。
+//
+// 驳回原因只对该稿件的作者可见，故不放进共用的 card()（它有 8 处调用点，含 PublicList/Search
+// 等公开出口），而是在这里按下标回填——cards 与 list 顺序一致（cards() 按 list 顺序 append，无重排）。
+//
+// 必须同时判定 status == StatusRejected：审核通过时只写 status/published_at，**不会清空**
+// video.reject_reason 列，故该列在重新通过后仍留有历史值；只看 RejectReason != nil 会把
+// 已发布稿件的陈旧驳回原因一并带出。
 func (s *Service) Mine(ctx context.Context, uid int64, page, size int) ([]Card, int64, error) {
 	list, total, err := s.repo.ListMine(uid, page, size)
 	if err != nil {
 		return nil, 0, err
 	}
 	cards, err := s.cards(ctx, list)
-	return cards, total, err
+	if err != nil {
+		return nil, 0, err
+	}
+	for i := range cards {
+		if i < len(list) && list[i].Status == StatusRejected && list[i].RejectReason != nil {
+			cards[i].RejectReason = *list[i].RejectReason
+		}
+	}
+	return cards, total, nil
 }
 
 // PublicList 首页/分区/个人空间公开列表（uid>0 时仅某 UP 主的投稿）。
@@ -871,7 +886,9 @@ func (s *Service) detail(ctx context.Context, v *Video, withStreams bool) (*Deta
 		Tags:        tags,
 		Copyright:   v.Copyright,
 	}
-	if v.RejectReason != nil {
+	// 仅在已驳回态输出：审核通过只写 status/published_at，不清空 video.reject_reason 列，
+	// 故重新通过后该列仍留历史值；只看 != nil 会让公开详情页带出陈旧驳回原因（观众可见）。
+	if v.Status == StatusRejected && v.RejectReason != nil {
 		d.RejectReason = *v.RejectReason
 	}
 
