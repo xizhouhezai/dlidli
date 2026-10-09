@@ -178,6 +178,9 @@ type Card struct {
 	CreatedAt   time.Time  `json:"created_at"`
 	Owner       OwnerBrief `json:"owner"`
 	Stat        StatBrief  `json:"stat"`
+	// RejectReason 仅由「我的投稿」回填（见 Service.Mine）：驳回原因只对该稿件的作者可见，
+	// 公开列表/搜索等复用 Card 的出口一律不填充，故恒为空。
+	RejectReason string `json:"reject_reason,omitempty"`
 }
 
 // StreamItem 播放流。

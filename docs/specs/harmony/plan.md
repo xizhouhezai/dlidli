@@ -110,7 +110,7 @@ apps/harmony/
 | POST | `/api/v1/upload/{id}/complete` | 合并分片 | 返回 `file_id` 供投稿使用 |
 | POST | `/api/v1/videos/cover` | 上传封面 | **multipart**（字段名 `file`）；≤5MB；jpg/png/webp |
 | POST | `/api/v1/videos` | 提交稿件 | `SubmitReq`：`file_id`/`title`≤80/`description`≤2000/`category_id`/`tags`(1~10)/`copyright`(1自制·2转载)/`cover`/`parts`(多P) |
-| GET | `/api/v1/videos/mine` | 我的投稿 | 返回 `{list,total}`，含 `status` 与 `reject_reason`，驱动 HMY-53 |
+| GET | `/api/v1/videos/mine` | 我的投稿 | 返回 `{list,total}`，含 `status`；**`reject_reason` 仅在该稿件 `status == 5 已驳回` 时出现**（`omitempty`：其余状态整个键不返回，非 `null` 非 `""`），驱动 HMY-53。注：该字段于 2026-10-09（M4-HMY-54）才补入 `Card`——此前本表声称其「已含 `reject_reason`」与实现不符，且公开详情页 `GET /videos/{bvid}` 曾因同源判断缺陷对已重新通过的稿件泄露陈旧驳回原因（已一并修复） |
 | GET | `/api/v1/categories` | 分区列表 | **注意不在 `/videos` 下**；与首页分区共用 |
 
 ## 5. 关键流程

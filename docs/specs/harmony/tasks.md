@@ -356,18 +356,36 @@
   - 实现要点：多P 上限 10（对齐 Web 与 `SubmitReq.parts`）；草稿存 `preferences`（标题/简介/分区/标签/各P 的 file_id/封面路径）；**重进时先 `GET /upload/{id}` 校验会话有效性**（Redis TTL 24h），失效则提示重选文件
   - 验证结论：待补
 
-- [ ] M4-HMY-54 提交与状态回看：提交投稿、我的投稿状态与驳回原因
+- [x] M4-HMY-54 提交与状态回看：提交投稿、我的投稿状态与驳回原因（2026-10-09 完成）
   - 覆盖：HMY-53
   - 实现要点：`POST /videos` 提交；「我的投稿」（M4-HMY-09 的 `ProfileContent` 投稿档）展示 `status`（0 草稿/1 上传中/2 转码中/3 待审核/4 已发布/5 已驳回）并对已驳回展示 `reject_reason`；下拉刷新取最新状态
   - 实现提示：`GET /videos/mine` 已返回 `{list,total}`，`MineResult` 已在 M4-HMY-09 落地，本任务多数为展示层改造
-  - 验证结论：待补
+  - **前置纠正（本任务开工时发现，属文档与实现不一致）**：原 `plan.md` 接口表声称 `/videos/mine` 返回「含 `status` 与 `reject_reason`」，**实测为假**——`Card` DTO（`model.go`）无该字段，唯一带 `reject_reason` 的 `Detail` 只对已发布稿件开放（`PublicDetail` 要求 `StatusPublished`，已驳回稿件返回 `404 10005`），DB 里 `video.reject_reason` **有值但任何端侧可达接口都取不到**。故本任务**含一处后端改动**（原计划的「纯展示层改造」不成立）。
+  - **后端改动（`server/internal/module/video`，随本任务一并交付）**：
+    - `Card` 增 `RejectReason string json:"reject_reason,omitempty"`；
+    - **只在 `Service.Mine` 内按下标回填**，不放进共用的 `card()`——`cards()` 有 8 处调用点（含 `PublicList`（首页/分区/个人空间）、`Search`），放进去会让**公开列表一并带出驳回原因**；
+    - 回填与 `detail()` 均加 **`status == StatusRejected`** 判定。这是必需的：审核通过只写 `status`/`published_at`，**不清空 `video.reject_reason` 列**，故重新通过后该列仍留历史值。
+  - **顺带修复一处既有缺陷（非本任务引入）**：`detail()` 原先只看 `RejectReason != nil`，导致**公开详情页 `GET /videos/{bvid}` 对已重新通过的稿件向所有观众泄露陈旧驳回原因**。已同源修正。修复前后实测：修复前 `status=4` 时详情页仍返回该字段，修复后不返回。
+  - **端侧实现（`apps/harmony`）**：
+    - 新增 `components/MineVideoCardItem.ets`：状态胶囊（6 态文案 + 语义配色；2 转码中另给「完成后自动进入审核」说明）+ 驳回原因区块（浅红底 + 「驳回原因」标签，非裸文本）；**按「字段可能不存在」防御性渲染**（区块以 `status === 5` 为门槛，字段缺失时回落通用文案，绝不渲染空白块）；
+    - `ProfilePage.ets`：投稿档改用该卡片；非已发布态（`status !== 4`）**入口拦截不可点进播放页**（公开详情对非发布态返回 404，与 Web 端 `MineVideosView` 同口径）。
+  - **修复 `LazyForEach` 键导致的刷新不更新（本任务实测发现）**：`feed()` 的 key 原为 `item.bvid`，稿件状态变化时 key 不变 → ArkUI 复用缓存组件、界面停在旧状态（下拉刷新已重新拉取成功但 UI 不动）。改为 `` `${item.bvid}:${item.status}` ``。**同类问题在本项目已有先例**（互动栏点赞数：key 需含 `like_cnt`）。
+  - **验证结论（2026-10-09 实测，API 26 模拟器 `Pura X View` + 宿主后端 `:8000`）**：
+    - **三态同屏取证**（`.dev-logs/hmy54/final-three-states.jpeg`）：转码中(2) / 已驳回(5) / 已发布(4) 三种胶囊与说明各按其语义渲染；驳回态正文为真实中文「封面含违规内容，请更换后重新投稿」。
+    - **状态守卫有判别用例**：该截图中第三张稿件 DB 列为 `status=4` **但 `reject_reason` 有 16 字符历史值**，界面**未**渲染原因区块 → 证明守卫是「状态驱动」而非「列非空」。
+    - **接口层证据**：`/videos/mine` 三个测试稿中**仅 `status=5` 的那条**返回 `reject_reason`；原始响应 1411 字节内 `reject_reason` 字面出现 **0 次**（全部非驳回态下键被 `omitempty` 整体省略，非 `null` 非 `""`）。
+    - **无泄露回归**：首页公开列表与搜索接口 0 条带该字段；已发布态公开详情页不返回该字段。
+    - **下拉刷新**：改库后下拉，卡片从「已驳回 + 原因区块」正确变为「已发布」且原因区块消失（`.dev-logs/hmy54/v9-refresh.jpeg`）。**注意**：`uitest uiInput drag` 需作用于 `Refresh` 区域（约 y=655–2148）内；起点落在区域外时手势不触发刷新（子会话曾因此误判为「刷新失效」）。
+  - **方法学备注（踩坑）**：用 `docker exec mysql -e "update…中文…"` 注入测试数据会把中文**双重编码成 mojibake**（HEX 呈 `C3A5…` 而非 `E5B0…`），界面如实显示乱码——**这是注入侧编码问题、不是端侧缺陷**。正确做法：经 stdin 传 SQL 并带 `--default-character-set=utf8mb4`。测试库中的 mojibake 值已用正确 UTF-8 覆写。
+  - 未覆盖：**真机待验**（API 26 x86 模拟器结论）；`status=0 草稿 / 1 上传中 / 6 已锁定` 三态未逐一截图（0/1 在本期链路中不可自然产生，6 不在本任务范围，走通用兜底文案）；驳回原因的**多行长文本截断**（`maxLines(4)`）观感未逐长度核对。
+  - 残留测试数据：测试稿 3 条（`DV2VkUdFnDaKG` / `DV2VkUdF8cwj2` / `DV2VkS2hKfT1s`，均为 `dli_05071407` 名下）；模拟器内的视频样本与 `hdc file send` 残留。
 
 ## 进度
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
 | M4 观看端 | 11 | 11 |
-| M4 追加·创作端 | 5 | 3 |
-| **合计** | **16** | **14** |
+| M4 追加·创作端 | 5 | 4 |
+| **合计** | **16** | **15** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
