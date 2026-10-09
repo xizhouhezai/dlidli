@@ -41,6 +41,11 @@ export interface VideoCard {
   created_at: string;
   owner: OwnerBrief;
   stat: StatBrief;
+  /**
+   * 驳回原因。服务端 `Card` 上是 `omitempty`，**只有 `/videos/mine` 且该稿 status=5 已驳回时**
+   * 才会出现（见 plan §3 接口表）；公开列表/搜索等出口恒不带该字段，故消费方必须按可空处理。
+   */
+  reject_reason?: string;
 }
 
 /** /videos、/recommend/videos 的响应包裹：**不返回 total**，满页即视为还有下一页 */

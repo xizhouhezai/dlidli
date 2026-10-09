@@ -4,6 +4,7 @@ import { FavoritesResult } from '../../model/Interaction';
 import { VideoApi } from '../../service/VideoApi';
 import { InteractionApi } from '../../service/InteractionApi';
 import { VideoCardItem } from '../../components/VideoCardItem';
+import { MineVideoCardItem } from '../../components/MineVideoCardItem';
 import { LoadMoreHint } from '../../components/LoadMoreHint';
 import { ErrorStateView } from '../../components/ErrorStateView';
 import { LazyDataSource } from '../../common/utils/LazyDataSource';
@@ -20,6 +21,8 @@ const PAGE_SIZE: number = 20;
 const TAB_MINE: string = 'mine';
 const TAB_HISTORY: string = 'history';
 const TAB_FAVORITES: string = 'favorites';
+/** 只有已发布（status=4）的稿件才有公开详情页可进（见 openVideo 注释） */
+const STATUS_PUBLISHED: number = 4;
 
 /**
  * 一页列表结果：total 为 -1 表示该接口不返回总数（观看历史），此时按「满页即还有下一页」推断。
@@ -199,7 +202,15 @@ struct ProfileContent {
     this.loadFirstPage();
   }
 
-  private openVideo(bvid: string): void {
+  /**
+   * 打开稿件：仅已发布（status=4）可进播放页。
+   * 非公开态的稿件走 `GET /videos/{bvid}` 会 404（服务端 PublicDetail 只放已发布），
+   * 点进去只会得到错误页，故在入口处就拦掉（与 Web 端 MineVideosView 的 open() 同口径）。
+   */
+  private openVideo(bvid: string, status: number): void {
+    if (this.tab === TAB_MINE && status !== STATUS_PUBLISHED) {
+      return;
+    }
     const param: PlayRouteParam = { 'bvid': bvid };
     AppRouter.push(RouteName.PLAY, param);
   }
@@ -350,15 +361,28 @@ struct ProfileContent {
       Grid(this.scroller) {
         LazyForEach(this.dataSource, (item: VideoCard) => {
           GridItem() {
-            VideoCardItem({
-              video: item,
-              showDate: true,
-              onTap: (bvid: string) => {
-                this.openVideo(bvid);
-              }
-            })
+            // 投稿档走专用卡片（HMY-53：状态文案 + 驳回原因）；历史/收藏仍是信息流卡片
+            if (this.tab === TAB_MINE) {
+              MineVideoCardItem({
+                video: item,
+                onTap: (bvid: string) => {
+                  this.openVideo(bvid, item.status);
+                }
+              })
+            } else {
+              VideoCardItem({
+                video: item,
+                showDate: true,
+                onTap: (bvid: string) => {
+                  this.openVideo(bvid, item.status);
+                }
+              })
+            }
           }
-        }, (item: VideoCard) => item.bvid)
+          // key 必须含 status：投稿档的内容随稿件状态变化（状态胶囊、驳回原因区块），
+          // 只用 bvid 时下拉刷新拿到新 status 后 key 不变，ArkUI 会复用缓存组件而不重建，
+          // 界面停留在旧状态（同类问题见互动栏点赞数：key 需含 like_cnt）。
+        }, (item: VideoCard) => `${item.bvid}:${item.status}`)
 
         GridItem() {
           LoadMoreHint({

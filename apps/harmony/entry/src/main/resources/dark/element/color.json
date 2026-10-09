@@ -37,6 +37,26 @@
       "value": "#FF7875"
     },
     {
+      "name": "state_danger_light",
+      "value": "#3A2224"
+    },
+    {
+      "name": "state_warning",
+      "value": "#F0B457"
+    },
+    {
+      "name": "state_warning_light",
+      "value": "#3A3020"
+    },
+    {
+      "name": "state_success",
+      "value": "#8FD46B"
+    },
+    {
+      "name": "state_success_light",
+      "value": "#22301C"
+    },
+    {
       "name": "ambient_top",
       "value": "#241419"
     },

@@ -617,6 +617,42 @@
       "value": "投稿"
     },
     {
+      "name": "video_status_draft",
+      "value": "草稿"
+    },
+    {
+      "name": "video_status_uploading",
+      "value": "上传中"
+    },
+    {
+      "name": "video_status_transcoding",
+      "value": "转码中"
+    },
+    {
+      "name": "video_status_reviewing",
+      "value": "待审核"
+    },
+    {
+      "name": "video_status_published",
+      "value": "已发布"
+    },
+    {
+      "name": "video_status_rejected",
+      "value": "已驳回"
+    },
+    {
+      "name": "video_status_unknown",
+      "value": "未知状态"
+    },
+    {
+      "name": "mine_reject_reason_label",
+      "value": "驳回原因"
+    },
+    {
+      "name": "mine_reject_reason_fallback",
+      "value": "稿件被驳回，请修改后重新投稿"
+    },
+    {
       "name": "upload_form_section",
       "value": "稿件信息"
     },
