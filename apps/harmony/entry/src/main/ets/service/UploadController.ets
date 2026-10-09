@@ -28,6 +28,15 @@ const PART_TIMEOUT_MS: number = 120000;
 /** 分片整轮重试次数（网络抖动自愈，不打扰用户） */
 const MAX_ROUNDS: number = 3;
 
+/**
+ * 上传会话建立回调（HMY-52 草稿恢复用）。
+ *
+ * 会话 ID 只在 `init` 之后的**上传中途**有意义：一收口后端就 `Del` 掉它（见 `UploadApi.progress` 的说明）。
+ * 上传失败/用户中途退出时 `start()` 会抛错，没有返回值可带出该 ID，故必须在 `init` 返回的那一刻
+ * 就把它交给调用方——否则「退出后重进能否续传」这条链路在端侧根本没有可持久化的凭据。
+ */
+export type UploadSessionListener = (uploadId: string) => void;
+
 /** 一次上传的运行态（端侧不持有跨会话账本，仅在本次上传内维护） */
 interface UploadContext {
   picked: PickedVideo;
@@ -57,13 +66,15 @@ interface UploadContext {
  */
 export class UploadController {
   private onProgress: UploadProgressListener;
+  private onSession: UploadSessionListener;
   private view: UploadProgressView = idleProgress();
   private cancelled: boolean = false;
   /** 在飞的分片任务，取消时统一回收 */
   private inFlight: request.UploadTask[] = [];
 
-  constructor(onProgress?: UploadProgressListener) {
+  constructor(onProgress?: UploadProgressListener, onSession?: UploadSessionListener) {
     this.onProgress = onProgress ?? ((_: UploadProgressView) => {});
+    this.onSession = onSession ?? ((_: string) => {});
   }
 
   // ---------- 前置校验（HMY-54） ----------
@@ -167,6 +178,8 @@ export class UploadController {
     if (uploadId.length === 0 || chunkSize <= 0 || chunkCount <= 0) {
       throw new ApiError(ErrCode.BAD_RESPONSE, '上传会话信息不完整，请重试', '', true);
     }
+    // 会话一经建立就上报：此时失败/退出才在端侧留有可续传的凭据（HMY-52 草稿恢复）
+    this.onSession(uploadId);
 
     const done: Set<number> = new Set<number>();
     for (const index of init.uploaded ?? []) {

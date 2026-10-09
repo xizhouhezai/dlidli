@@ -254,6 +254,18 @@ export class MediaLib {
     return fileName.replace(/[\\/:*?"<>|]/g, '_');
   }
 
+  /** 沙箱路径是否存在（草稿恢复时确认封面裁切产物还在，避免提交时上传一个已消失的文件） */
+  static exists(sandboxPath: string): boolean {
+    if (sandboxPath.length === 0) {
+      return false;
+    }
+    try {
+      return fileIo.accessSync(sandboxPath);
+    } catch (err) {
+      return false;
+    }
+  }
+
   /**
    * 端侧 SHA-256，**返回小写 hex**。
    * 后端 `file_hash` 是 `required,len=64` 且按小写比对（Init 里 `strings.ToLower`），
