@@ -4,7 +4,7 @@ layout: home
 hero:
   name: DliDli
   text: 视频社区项目文档中心
-  tagline: 类哔哩哔哩的视频网站 · Go 后端 · Web / H5 / 小程序多端前端
+  tagline: 类哔哩哔哩的视频社区 · Go 后端 · Web / H5 / 小程序 / HarmonyOS NEXT 四端
   actions:
     - theme: brand
       text: 功能规格（SDD）
@@ -25,7 +25,7 @@ hero:
 features:
   - icon: 📺
     title: 功能规格（SDD）
-    details: 11 大模块的 spec（EARS 验收标准）/ plan（技术方案）/ tasks（任务进度）三件套，规格驱动的单一事实来源。
+    details: 13 大模块的 spec（EARS 验收标准）/ plan（技术方案）/ tasks（任务进度）三件套，规格驱动的单一事实来源。
     link: /specs/
   - icon: 🧭
     title: 产品文档
@@ -33,7 +33,7 @@ features:
     link: /product/overview
   - icon: 🏗️
     title: 技术架构
-    details: Go 单体到微服务的演进架构、视频转码流水线、数据模型、多端前端方案。
+    details: Go 单体到微服务的演进架构、视频转码流水线、数据模型、四端前端方案（含 HarmonyOS NEXT 原生 App）。
     link: /architecture/overview
   - icon: 📋
     title: 项目管理
