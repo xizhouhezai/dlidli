@@ -9,6 +9,9 @@ import {
 import { api } from '@/api'
 import { readToken } from '@/utils/token'
 
+/** WS 礼物帧数据（type=gift 的 data 载荷） */
+export type LiveGiftFrame = LiveWsFrame['data']
+
 /**
  * 直播间实时弹幕连接（M4-LIV-06）：WS 进房 + 应用层心跳 ≤15s（spec live §5B）+
  * 弹幕上行/下行 + 进场消息。与 danmaku/im 的 WS 封装同构，上行错误提示走本地预判
@@ -27,9 +30,17 @@ export function useLiveDanmaku(roomId: string) {
   /** 进场/系统提示行（非弹幕） */
   const notices = ref<string[]>([])
 
+  /** 礼物特效事件流（M4-LIV-04，type=gift 帧；GiftEffects 组件消费） */
+  const giftEvents = ref<LiveGiftFrame[]>([])
+
   function pushNotice(text: string) {
     notices.value.push(text)
     if (notices.value.length > 30) notices.value.shift()
+  }
+
+  function pushGift(data: LiveWsFrame['data']) {
+    giftEvents.value.push(data)
+    if (giftEvents.value.length > 20) giftEvents.value.shift()
   }
 
   function pushDanmaku(item: LiveDanmakuItem) {
@@ -64,6 +75,8 @@ export function useLiveDanmaku(roomId: string) {
           avatar: m.data.avatar,
           content: m.data.content || '',
         })
+      } else if (m.type === 'gift' && m.data.log_id) {
+        pushGift(m.data)
       }
       // pong：心跳应答，无 UI
     }
@@ -120,7 +133,7 @@ export function useLiveDanmaku(roomId: string) {
     }
   }
 
-  return { messages, notices, connected, sending, connect, close, send, leave }
+  return { messages, notices, giftEvents, connected, sending, connect, close, send, leave }
 }
 
 /** 房间详情 + 进房（进房计数 +1；重复进房不重复计数） */

@@ -8,6 +8,9 @@ import { formatCount } from '@dlidli/shared'
 import type { LiveRoomInfo } from '@dlidli/api-client'
 import { api } from '@/api'
 import defaultCover from '@/assets/default-cover.png'
+// 与全站一致的头像兜底（VideoSidebar/CommentSection 同源）：public 根路径下并无 default-avatar.png，
+// 直接写 '/default-avatar.png' 会在空头像时渲染破图
+import defaultAvatar from '@/assets/default-avatar.png'
 
 const rooms = ref<LiveRoomInfo[]>([])
 const loading = ref(true)
@@ -86,7 +89,7 @@ onBeforeUnmount(() => {
         <p class="live-card__meta">
           <img
             class="live-card__avatar"
-            :src="anchorProfiles[room.anchor_id]?.avatar || '/default-avatar.png'"
+            :src="anchorProfiles[room.anchor_id]?.avatar || defaultAvatar"
             alt=""
           />
           <span class="truncate">{{ anchorName(room.anchor_id) }}</span>

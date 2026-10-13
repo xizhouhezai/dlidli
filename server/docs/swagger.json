@@ -806,6 +806,42 @@
                 }
             }
         },
+        "/admin/dev/recharge": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "开发期临时通道（spec LIV-13 替换点）：真实支付接入 PAY-01 后本接口下线，\n支付回调复用 RechargeTx 的 biz_no 幂等设计。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-开发工具"
+                ],
+                "summary": "开发直充金瓜子（M4-LIV-04 临时通道，挂 admin 权限）",
+                "parameters": [
+                    {
+                        "description": "user_id；delta 金瓜子数量（正数）",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_module_live.devRechargeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91023 金额不合法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/dicts": {
             "get": {
                 "security": [
@@ -3090,6 +3126,76 @@
                 }
             }
         },
+        "/live/gifts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播礼物"
+                ],
+                "summary": "礼物列表（上架）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_module_live.GiftInfo"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/live/melon/balance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播礼物"
+                ],
+                "summary": "金瓜子余额",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_module_live.MelonBalance"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/live/room": {
             "put": {
                 "security": [
@@ -3300,6 +3406,39 @@
                 }
             }
         },
+        "/live/rooms/{id}/admins": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "房管列表（登录即可看）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/live/rooms/{id}/admins/{uid}": {
             "post": {
                 "security": [
@@ -3444,6 +3583,54 @@
                 }
             }
         },
+        "/live/rooms/{id}/gifts/{giftId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播礼物"
+                ],
+                "summary": "赠送礼物（LIV-13 强一致：余额不足 91021 且不产生任何流水）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "礼物ID",
+                        "name": "giftId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "count 连击数量，默认 1（1-999）",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_module_live.sendGiftReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91007 房间不存在 / 91019 礼物不存在 / 91020 房间未开播 / 91021 余额不足 / 91022 数量不合法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/live/rooms/{id}/heartbeat": {
             "post": {
                 "security": [
@@ -3517,6 +3704,39 @@
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}/mutes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "禁言列表（登录即可看；muted=false 为已过期记录）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -6073,6 +6293,34 @@
                 }
             }
         },
+        "internal_module_live.AdminBrief": {
+            "type": "object",
+            "properties": {
+                "appointed_at": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_module_live.AdminListResult": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_module_live.AdminBrief"
+                    }
+                }
+            }
+        },
         "internal_module_live.ApplyResult": {
             "type": "object",
             "properties": {
@@ -6110,6 +6358,65 @@
                 }
             }
         },
+        "internal_module_live.GiftFrame": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "effect": {
+                    "description": "1 弹幕区连击 2 全屏特效",
+                    "type": "integer"
+                },
+                "gift_id": {
+                    "type": "integer"
+                },
+                "gift_name": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "level": {
+                    "description": "1 普通 2 高级",
+                    "type": "integer"
+                },
+                "log_id": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "description": "字符串避免 JS 精度丢失",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_module_live.GiftInfo": {
+            "type": "object",
+            "properties": {
+                "effect": {
+                    "type": "integer"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_module_live.HistoryResult": {
             "type": "object",
             "properties": {
@@ -6123,6 +6430,63 @@
                     "type": "integer"
                 },
                 "room_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_module_live.MelonBalance": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_module_live.MuteBrief": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "muted": {
+                    "description": "muted_until 是否仍未到期",
+                    "type": "boolean"
+                },
+                "muted_until": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_module_live.MuteListResult": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_module_live.MuteBrief"
+                    }
+                }
+            }
+        },
+        "internal_module_live.RechargeResult": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "delta": {
+                    "type": "integer"
+                },
+                "user_id": {
                     "type": "integer"
                 }
             }
@@ -6174,6 +6538,32 @@
                 }
             }
         },
+        "internal_module_live.SendGiftResult": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "gift_log": {
+                    "$ref": "#/definitions/internal_module_live.GiftFrame"
+                }
+            }
+        },
+        "internal_module_live.devRechargeReq": {
+            "type": "object",
+            "required": [
+                "delta",
+                "user_id"
+            ],
+            "properties": {
+                "delta": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_module_live.muteReq": {
             "type": "object",
             "required": [
@@ -6186,6 +6576,14 @@
                 },
                 "reason": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_module_live.sendGiftReq": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
                 }
             }
         },

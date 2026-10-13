@@ -259,6 +259,15 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		liveSvc.SetHub(liveHub)
 		liveSvc.SetLiveDeps(&live.LiveDeps{Account: accountSvc, RDB: res.Redis})
 		live.NewHandler(liveSvc).WithHub(liveHub).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
+
+		// 礼物系统（M4-LIV-04）：金瓜子资产强一致（事务+行锁）、赠送与分成、WS 特效帧；
+		// dev 直充挂 admin 中间件（开发期临时通道，PAY-01 接入后下线，spec LIV-13 替换点）
+		giftSvc := live.NewGiftService(live.NewGiftRepo(res.DB), liveHub)
+		giftSvc.SetLiveDeps(&live.LiveDeps{Account: accountSvc, RDB: res.Redis})
+		giftHandler := live.NewGiftHandler(giftSvc)
+		giftHandler.RegisterGiftRoutes(v1.Group("/live", optionalAuthMW))
+		permGift := func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) }
+		giftHandler.RegisterDevRoutes(v1.Group("/admin", middleware.AdminAuth(cfg.JWT.Secret), permGift("config:edit")))
 	} else {
 		log.Warn("MySQL/Redis 未就绪，业务模块路由未注册")
 	}
