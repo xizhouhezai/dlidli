@@ -93,7 +93,7 @@ func (h *Handler) sendSmsCode(c *gin.Context) {
 // @Tags     账号-认证
 // @Accept   json
 // @Produce  json
-// @Param    body body object true \"email; password\"
+// @Param    body body object true "注册体：email + password"
 // @Success  200 {object} response.Body
 // @Router   /auth/register/email [post]
 func (h *Handler) registerByEmail(c *gin.Context) {
@@ -123,7 +123,7 @@ func (h *Handler) registerByEmail(c *gin.Context) {
 // @Tags     账号-认证
 // @Accept   json
 // @Produce  json
-// @Param    body body object true \"token\"
+// @Param    body body object true "激活体：token"
 // @Success  200 {object} response.Body
 // @Router   /auth/activate [post]
 func (h *Handler) activateEmail(c *gin.Context) {

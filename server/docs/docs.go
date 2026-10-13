@@ -33,7 +33,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -61,7 +61,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveAdminReq"
+                            "$ref": "#/definitions/admin.SaveAdminReq"
                         }
                     }
                 ],
@@ -69,7 +69,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -106,7 +106,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveAdminReq"
+                            "$ref": "#/definitions/admin.SaveAdminReq"
                         }
                     }
                 ],
@@ -114,7 +114,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -145,7 +145,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -182,7 +182,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.ResetPwdReq"
+                            "$ref": "#/definitions/admin.ResetPwdReq"
                         }
                     }
                 ],
@@ -190,7 +190,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -235,7 +235,267 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/audit-logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-审计"
+                ],
+                "summary": "审计日志分页查询（按操作者/动作/对象/时间筛选）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "操作者ID",
+                        "name": "admin_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "动作",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "对象类型",
+                        "name": "obj_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "起始日期 YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "截止日期 YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/audit-logs/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "管理后台-审计"
+                ],
+                "summary": "审计日志导出 CSV（按当前筛选条件）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "操作者ID",
+                        "name": "admin_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "动作",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "对象类型",
+                        "name": "obj_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "起始日期 YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "截止日期 YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV 文件",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/banners": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-运营"
+                ],
+                "summary": "Banner 列表（admin）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-运营"
+                ],
+                "summary": "新建 Banner",
+                "parameters": [
+                    {
+                        "description": "Banner 信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/banner.SaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/banners/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-运营"
+                ],
+                "summary": "编辑 Banner",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Banner ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Banner 信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/banner.SaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-运营"
+                ],
+                "summary": "删除 Banner",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Banner ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -259,7 +519,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -287,7 +547,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_module_video.SaveCategoryReq"
+                            "$ref": "#/definitions/video.SaveCategoryReq"
                         }
                     }
                 ],
@@ -295,7 +555,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -332,7 +592,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_module_video.SaveCategoryReq"
+                            "$ref": "#/definitions/video.SaveCategoryReq"
                         }
                     }
                 ],
@@ -340,7 +600,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -371,7 +631,495 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/configs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-系统"
+                ],
+                "summary": "系统配置列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-系统"
+                ],
+                "summary": "新建系统配置",
+                "parameters": [
+                    {
+                        "description": "配置项",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.SaveConfigReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/configs/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-系统"
+                ],
+                "summary": "编辑系统配置（热更新）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "配置项",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.SaveConfigReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-系统"
+                ],
+                "summary": "删除系统配置",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "配置ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/dashboard/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json",
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-概览",
+                    "管理后台-运营"
+                ],
+                "summary": "生成内测邀请码",
+                "parameters": [
+                    {
+                        "description": "count; expire_days(0=永久)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/dicts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-系统"
+                ],
+                "summary": "数据字典分组列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-系统"
+                ],
+                "summary": "新建字典项",
+                "parameters": [
+                    {
+                        "description": "字典项",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.SaveDictReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/dicts/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-系统"
+                ],
+                "summary": "编辑字典项",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "字典项ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "字典项",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.SaveDictReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-系统"
+                ],
+                "summary": "删除字典项",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "字典项ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/experiments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-运营"
+                ],
+                "summary": "实验列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-运营"
+                ],
+                "summary": "新建实验",
+                "parameters": [
+                    {
+                        "description": "实验信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/abtest.SaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/experiments/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-运营"
+                ],
+                "summary": "编辑实验",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "实验 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "实验信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/abtest.SaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-运营"
+                ],
+                "summary": "删除实验",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "实验 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/invite-codes": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json",
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-概览",
+                    "管理后台-运营"
+                ],
+                "summary": "生成内测邀请码",
+                "parameters": [
+                    {
+                        "description": "count; expire_days(0=永久)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -396,7 +1144,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.LoginReq"
+                            "$ref": "#/definitions/admin.LoginReq"
                         }
                     }
                 ],
@@ -404,7 +1152,7 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {token, username, role}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -428,7 +1176,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -452,7 +1200,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -480,7 +1228,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SavePermissionReq"
+                            "$ref": "#/definitions/admin.SavePermissionReq"
                         }
                     }
                 ],
@@ -488,7 +1236,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -525,7 +1273,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SavePermissionReq"
+                            "$ref": "#/definitions/admin.SavePermissionReq"
                         }
                     }
                 ],
@@ -533,7 +1281,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -564,7 +1312,128 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reports": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-举报"
+                ],
+                "summary": "举报队列（状态筛选）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "0待处理 1已处理 2已忽略 -1全部（默认0）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认20）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reports/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "管理后台-举报"
+                ],
+                "summary": "举报列表导出 CSV（当前状态筛选，SYS-06）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "-1全部 0待处理 1已处理",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV 文件",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reports/{id}/handle": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-举报"
+                ],
+                "summary": "处理举报（忽略/删除内容/删除并处罚）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "举报ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "处理动作",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/report.HandleReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -588,7 +1457,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -616,7 +1485,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveRoleReq"
+                            "$ref": "#/definitions/admin.SaveRoleReq"
                         }
                     }
                 ],
@@ -624,7 +1493,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -661,7 +1530,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveRoleReq"
+                            "$ref": "#/definitions/admin.SaveRoleReq"
                         }
                     }
                 ],
@@ -669,7 +1538,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -700,7 +1569,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -724,7 +1593,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -752,7 +1621,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.AddWordReq"
+                            "$ref": "#/definitions/admin.AddWordReq"
                         }
                     }
                 ],
@@ -760,7 +1629,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -793,7 +1662,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -831,7 +1700,45 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "管理后台-用户"
+                ],
+                "summary": "用户列表导出 CSV（当前筛选，SYS-06）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "昵称/手机号模糊",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "0正常 1禁言 2封禁",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV 文件",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -868,7 +1775,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.PunishReq"
+                            "$ref": "#/definitions/admin.PunishReq"
                         }
                     }
                 ],
@@ -876,7 +1783,107 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/videos": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-稿件"
+                ],
+                "summary": "稿件管理列表（全状态 + 筛选）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "状态（0全部 4已发布 6已锁定等）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "分区",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "标题关键词",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认10）",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/videos/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "管理后台-稿件"
+                ],
+                "summary": "稿件列表导出 CSV（当前筛选，SYS-06）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "分区ID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "标题/UP主模糊",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV 文件",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -900,7 +1907,40 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/videos/{bvid}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-稿件"
+                ],
+                "summary": "删除稿件（软删除）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "稿件 bvid",
+                        "name": "bvid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -937,7 +1977,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.ReviewReq"
+                            "$ref": "#/definitions/admin.ReviewReq"
                         }
                     }
                 ],
@@ -945,7 +1985,85 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/videos/{bvid}/status": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台-稿件"
+                ],
+                "summary": "稿件下架/恢复（已发布 ↔ 已锁定）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "稿件 bvid",
+                        "name": "bvid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{status: 4 恢复 / 6 下架}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/activate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "账号-认证"
+                ],
+                "summary": "激活邮箱账号",
+                "parameters": [
+                    {
+                        "description": "激活体：token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -964,7 +2082,7 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {captcha_id, image_base64}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -997,7 +2115,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1030,7 +2148,40 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {access_token, refresh_token, user}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login/wechat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "账号-认证"
+                ],
+                "summary": "微信小程序登录",
+                "parameters": [
+                    {
+                        "description": "code: wx.login 返回的临时凭证; invite_code: 内测邀请码(可选)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data: {access_token, refresh_token, user}",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1063,7 +2214,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1096,7 +2247,40 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/email": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "账号-认证"
+                ],
+                "summary": "邮箱注册",
+                "parameters": [
+                    {
+                        "description": "注册体：email + password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1129,7 +2313,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1162,7 +2346,64 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/banners": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运营"
+                ],
+                "summary": "首页轮播 Banner（启用项）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/behaviors": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "推荐"
+                ],
+                "summary": "行为上报（曝光/点击/播放/互动，批量）",
+                "parameters": [
+                    {
+                        "description": "items: [{video_id, action}]",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1181,7 +2422,212 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/collections": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "合集"
+                ],
+                "summary": "某 UP 主的合集列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "UP 主 uid",
+                        "name": "uid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "合集"
+                ],
+                "summary": "创建合集",
+                "parameters": [
+                    {
+                        "description": "合集信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/collection.CreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/collections/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "合集"
+                ],
+                "summary": "合集详情（含稿件列表）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "合集 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "合集"
+                ],
+                "summary": "删除合集",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "合集 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/collections/{id}/videos": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "合集"
+                ],
+                "summary": "合集添加稿件",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "合集 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{bvid: 稿件}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/collections/{id}/videos/{bvid}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "合集"
+                ],
+                "summary": "合集移除稿件",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "合集 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "稿件 bvid",
+                        "name": "bvid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1214,7 +2660,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1247,7 +2693,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1275,7 +2721,183 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/creator/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "创作者中心"
+                ],
+                "summary": "创作者总览（播放/互动/粉丝/收益/近7日播放）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/creator/settlements": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "创作者中心"
+                ],
+                "summary": "收益明细分页",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认10）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/creator/trend": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "创作者中心"
+                ],
+                "summary": "近 N 天数据趋势（指标可切换：play/interact/click/expose）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "天数（默认7，最大30）",
+                        "name": "days",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "指标：play 播放 / interact 互动 / click 点击 / expose 曝光（默认 play）",
+                        "name": "metric",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/creator/videos": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "创作者中心"
+                ],
+                "summary": "稿件数据列表（含有效播放与收益）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认10）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/dislikes": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "推荐"
+                ],
+                "summary": "负反馈（不感兴趣：1内容 2UP主 3分区）",
+                "parameters": [
+                    {
+                        "description": "target_type, target_id",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1313,7 +2935,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1351,7 +2973,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1383,7 +3005,731 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/growth/exp-logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "成长"
+                ],
+                "summary": "经验流水分页",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认20）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/growth/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "成长"
+                ],
+                "summary": "成长总览（等级/经验进度/今日任务）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/apply": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "申请开播（LIV-01/LIV-02）",
+                "responses": {
+                    "200": {
+                        "description": "91001 未入白名单 / 91002 未实名 / 91003 粉丝不足 / 91004 已有房间",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/room": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "修改房间信息（标题/封面/分区）",
+                "parameters": [
+                    {
+                        "description": "房间信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/live.updateRoomReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91012 分区不存在 / 91014 标题非法 / 91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/room/mine": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "我的房间（含推流地址；密钥不回传）",
+                "responses": {
+                    "200": {
+                        "description": "91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/room/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "开播",
+                "responses": {
+                    "200": {
+                        "description": "91005 房间已开播 / 91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/room/stop": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "下播",
+                "responses": {
+                    "200": {
+                        "description": "91006 房间未在直播 / 91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/room/stream-key/reset": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "重置推流密钥（旧密钥立即失效；明文仅此一次返回）",
+                "responses": {
+                    "200": {
+                        "description": "91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "直播中房间列表（公开）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "分区过滤",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页，默认 20，上限 50",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/live.RoomListResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "房间详情（未开播房间仅主播本人可见）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}/admins/{uid}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "任命房管（仅主播）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "目标用户ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91008 非主播 / 91010 不能对自己 / 10005 用户不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "撤销房管（仅主播）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "房管用户ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91008 非主播 / 91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}/enter": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "进房（在线计数 +1；重复进房不重复计数）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91006 未开播 / 91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}/heartbeat": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "心跳（≤15s 一次；30s 无心跳判离线）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}/leave": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "离房（在线计数 −1，幂等）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/live.RoomInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}/mutes/{uid}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "禁言用户（主播/房管；时长 1min-720h）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "目标用户ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "禁言参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/live.muteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91009 非主播/房管 / 91013 时长非法 / 91010 不能禁言主播",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "解除禁言（主播/房管）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "目标用户ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91009 非主播/房管",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/messages": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "私信"
+                ],
+                "summary": "发送私信（机审 + 未互关每日限制）",
+                "parameters": [
+                    {
+                        "description": "消息内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/im.SendReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/messages/conversations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "私信"
+                ],
+                "summary": "会话列表（按最新消息排序，含未读数）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/messages/unread-count": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "私信"
+                ],
+                "summary": "私信总未读数",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/messages/ws": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "私信"
+                ],
+                "summary": "私信实时连接（WebSocket，query token）",
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/messages/{peer}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "私信"
+                ],
+                "summary": "与某用户的消息记录（分页，读取即已读）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "对方 uid",
+                        "name": "peer",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认20）",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1407,7 +3753,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1431,7 +3777,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1455,7 +3801,99 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/ws": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "通知"
+                ],
+                "summary": "通知实时连接（WebSocket，query token）",
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/recommend/videos": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "推荐"
+                ],
+                "summary": "首页推荐信息流（混合召回：热度+兴趣分区+新稿池，过滤已看/负反馈后打散）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认20，最大50）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "举报"
+                ],
+                "summary": "提交举报（视频/评论/弹幕/动态/用户）",
+                "parameters": [
+                    {
+                        "description": "举报信息（视频 target_id 传 bvid，其余传对象 ID）",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/report.SubmitReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1495,7 +3933,73 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/space/{id}/block": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "关系"
+                ],
+                "summary": "拉黑/取消拉黑（MSG-12）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "目标用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/space/{id}/block-status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "关系"
+                ],
+                "summary": "双向拉黑状态（私信会话页用）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "目标用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1528,7 +4032,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1556,7 +4060,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1584,7 +4088,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1612,7 +4116,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1640,7 +4144,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1667,7 +4171,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1700,7 +4204,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1733,7 +4237,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1776,7 +4280,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1800,7 +4304,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1828,7 +4332,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_account.UpdateProfileReq"
+                            "$ref": "#/definitions/account.UpdateProfileReq"
                         }
                     }
                 ],
@@ -1836,7 +4340,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1872,7 +4376,45 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {avatar}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/coin-logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "账号-资产"
+                ],
+                "summary": "硬币流水分页",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认20）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1896,7 +4438,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1921,7 +4463,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1957,7 +4499,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1988,7 +4530,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2012,7 +4554,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2050,7 +4592,127 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/recommend-settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "推荐"
+                ],
+                "summary": "个性化推荐开关状态",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "推荐"
+                ],
+                "summary": "开关个性化推荐（关闭后退化为热度榜，合规）",
+                "parameters": [
+                    {
+                        "description": "enabled: 是否开启",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/youth-mode": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "账号-设置"
+                ],
+                "summary": "青少年模式状态",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "账号-设置"
+                ],
+                "summary": "开关青少年模式",
+                "parameters": [
+                    {
+                        "description": "enabled: 是否开启",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2095,7 +4757,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2123,7 +4785,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_video.SubmitReq"
+                            "$ref": "#/definitions/video.SubmitReq"
                         }
                     }
                 ],
@@ -2131,7 +4793,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2167,7 +4829,70 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/videos/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "视频"
+                ],
+                "summary": "观看历史",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/videos/hot": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "推荐"
+                ],
+                "summary": "全站/分区热度榜（加权分）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "分区ID（0=全站）",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2191,7 +4916,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2219,7 +4944,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2250,7 +4975,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2283,7 +5008,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2311,7 +5036,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2346,7 +5071,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_interaction.AddCommentReq"
+                            "$ref": "#/definitions/interaction.AddCommentReq"
                         }
                     }
                 ],
@@ -2354,7 +5079,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2368,7 +5093,7 @@ const docTemplate = `{
                 "tags": [
                     "弹幕"
                 ],
-                "summary": "弹幕列表",
+                "summary": "弹幕分段列表（登录用户过滤屏蔽项）",
                 "parameters": [
                     {
                         "type": "string",
@@ -2376,13 +5101,19 @@ const docTemplate = `{
                         "name": "bvid",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "分段号（默认0）",
+                        "name": "segment",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2425,7 +5156,140 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/videos/{bvid}/danmaku/blocks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "弹幕-屏蔽"
+                ],
+                "summary": "弹幕屏蔽列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "弹幕-屏蔽"
+                ],
+                "summary": "新增屏蔽（关键词或用户）",
+                "parameters": [
+                    {
+                        "description": "block_type: 1关键词 2用户; keyword / target_uid",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/videos/{bvid}/danmaku/blocks/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "弹幕-屏蔽"
+                ],
+                "summary": "删除屏蔽项",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "屏蔽项ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/videos/{bvid}/danmaku/list": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "弹幕"
+                ],
+                "summary": "弹幕全量列表（列表面板，分页）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "视频 BV 号",
+                        "name": "bvid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码（默认1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数（默认50）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2458,7 +5322,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2486,7 +5350,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2514,7 +5378,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2545,7 +5409,35 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/videos/{bvid}/parts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "视频"
+                ],
+                "summary": "稿件分P列表（含各 P 播放流）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "视频 BV 号",
+                        "name": "bvid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2578,7 +5470,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2612,7 +5504,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2645,7 +5537,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2673,7 +5565,35 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/wechat/jssdk-sign": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "微信"
+                ],
+                "summary": "微信 JSSDK 签名",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "当前页面 URL（含参数，不含 #hash）",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2681,21 +5601,27 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_dlidli_server_internal_module_video.SaveCategoryReq": {
+        "abtest.SaveReq": {
             "type": "object",
             "required": [
-                "name"
+                "name",
+                "target",
+                "variant_a",
+                "variant_b"
             ],
             "properties": {
                 "name": {
                     "type": "string",
-                    "maxLength": 32
+                    "maxLength": 64
                 },
-                "parent_id": {
-                    "type": "integer"
+                "ratio": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 0
                 },
-                "sort": {
-                    "type": "integer"
+                "remark": {
+                    "type": "string",
+                    "maxLength": 200
                 },
                 "status": {
                     "type": "integer",
@@ -2703,25 +5629,22 @@ const docTemplate = `{
                         0,
                         1
                     ]
+                },
+                "target": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "variant_a": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "variant_b": {
+                    "type": "string",
+                    "maxLength": 64
                 }
             }
         },
-        "github_com_dlidli_server_internal_pkg_response.Body": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {},
-                "message": {
-                    "type": "string"
-                },
-                "trace_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_module_account.UpdateProfileReq": {
+        "account.UpdateProfileReq": {
             "type": "object",
             "properties": {
                 "gender": {
@@ -2735,7 +5658,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_admin.AddWordReq": {
+        "admin.AddWordReq": {
             "type": "object",
             "required": [
                 "word"
@@ -2747,7 +5670,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_admin.LoginReq": {
+        "admin.LoginReq": {
             "type": "object",
             "required": [
                 "password",
@@ -2762,7 +5685,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_admin.PunishReq": {
+        "admin.PunishReq": {
             "type": "object",
             "required": [
                 "action"
@@ -2791,7 +5714,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_admin.ResetPwdReq": {
+        "admin.ResetPwdReq": {
             "type": "object",
             "required": [
                 "password"
@@ -2804,7 +5727,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_admin.ReviewReq": {
+        "admin.ReviewReq": {
             "type": "object",
             "properties": {
                 "approve": {
@@ -2815,7 +5738,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_admin.SaveAdminReq": {
+        "admin.SaveAdminReq": {
             "type": "object",
             "required": [
                 "username"
@@ -2842,7 +5765,60 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_admin.SavePermissionReq": {
+        "admin.SaveConfigReq": {
+            "type": "object",
+            "required": [
+                "config_key"
+            ],
+            "properties": {
+                "config_key": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "value": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
+        "admin.SaveDictReq": {
+            "type": "object",
+            "required": [
+                "dict_type",
+                "label",
+                "value"
+            ],
+            "properties": {
+                "dict_type": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "label": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string",
+                    "maxLength": 64
+                }
+            }
+        },
+        "admin.SavePermissionReq": {
             "type": "object",
             "required": [
                 "name"
@@ -2880,7 +5856,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_admin.SaveRoleReq": {
+        "admin.SaveRoleReq": {
             "type": "object",
             "required": [
                 "name"
@@ -2906,7 +5882,77 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_interaction.AddCommentReq": {
+        "banner.SaveReq": {
+            "type": "object",
+            "properties": {
+                "bvid": {
+                    "type": "string",
+                    "maxLength": 16
+                },
+                "image": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 64
+                }
+            }
+        },
+        "collection.CreateReq": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "cover": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 64
+                }
+            }
+        },
+        "im.SendReq": {
+            "type": "object",
+            "required": [
+                "content",
+                "to_uid"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "description": "1文字 2图片",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2
+                    ]
+                },
+                "to_uid": {
+                    "type": "string"
+                }
+            }
+        },
+        "interaction.AddCommentReq": {
             "type": "object",
             "required": [
                 "content"
@@ -2924,7 +5970,230 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_module_video.SubmitReq": {
+        "live.ApplyResult": {
+            "type": "object",
+            "properties": {
+                "push_url": {
+                    "type": "string"
+                },
+                "room": {
+                    "$ref": "#/definitions/live.RoomInfo"
+                },
+                "stream_key": {
+                    "description": "明文密钥仅申请/重置时返回",
+                    "type": "string"
+                }
+            }
+        },
+        "live.RoomInfo": {
+            "type": "object",
+            "properties": {
+                "anchor_id": {
+                    "description": "字符串避免 JS 精度丢失",
+                    "type": "string"
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "cover": {
+                    "type": "string"
+                },
+                "ended_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "online": {
+                    "type": "integer"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "live.RoomListResult": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/live.RoomInfo"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "live.muteReq": {
+            "type": "object",
+            "required": [
+                "minutes"
+            ],
+            "properties": {
+                "minutes": {
+                    "description": "禁言分钟数，1 ~ 43200",
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "live.updateRoomReq": {
+            "type": "object",
+            "required": [
+                "category_id",
+                "title"
+            ],
+            "properties": {
+                "category_id": {
+                    "type": "integer"
+                },
+                "cover": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "report.HandleReq": {
+            "type": "object",
+            "required": [
+                "action"
+            ],
+            "properties": {
+                "action": {
+                    "description": "忽略/删除内容/删除并处罚",
+                    "type": "string",
+                    "enum": [
+                        "ignore",
+                        "delete",
+                        "punish"
+                    ]
+                },
+                "days": {
+                    "description": "处罚天数（ban 传 0 = 永久）",
+                    "type": "integer"
+                },
+                "note": {
+                    "description": "处理备注",
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "punish": {
+                    "description": "punish 时的处罚类型",
+                    "type": "string",
+                    "enum": [
+                        "mute",
+                        "ban"
+                    ]
+                }
+            }
+        },
+        "report.SubmitReq": {
+            "type": "object",
+            "required": [
+                "reason_type",
+                "target_id",
+                "target_type"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "reason_type": {
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6
+                    ]
+                },
+                "target_id": {
+                    "description": "视频传 bvid，其余传对象 ID（字符串）",
+                    "type": "string"
+                },
+                "target_type": {
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ]
+                }
+            }
+        },
+        "response.Body": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "video.PartSubmit": {
+            "type": "object",
+            "required": [
+                "file_id"
+            ],
+            "properties": {
+                "file_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 80
+                }
+            }
+        },
+        "video.SaveCategoryReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "parent_id": {
+                    "type": "integer"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                }
+            }
+        },
+        "video.SubmitReq": {
             "type": "object",
             "required": [
                 "category_id",
@@ -2955,6 +6224,13 @@ const docTemplate = `{
                 },
                 "file_id": {
                     "type": "string"
+                },
+                "parts": {
+                    "description": "多P投稿（PRD VID-05）：每项对应一个分P（file_id + 分P标题）；空则单P兼容现状",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/video.PartSubmit"
+                    }
                 },
                 "tags": {
                     "type": "array",
