@@ -1,5 +1,13 @@
 import type { HttpClient } from '../http'
 
+/** 拉流地址（M4-LIV-01 D4：由后端 live.playDomain 拼装，不含推流密钥） */
+export interface LivePlayUrls {
+  /** HLS：http://<playDomain>/live/room_<id>.m3u8 */
+  hls: string
+  /** HTTP-FLV：http://<playDomain>/live/room_<id>.flv（浏览器端不消费，见 D5） */
+  flv: string
+}
+
 /** 房间信息（密钥哈希永不出参） */
 export interface LiveRoomInfo {
   id: number
@@ -11,6 +19,8 @@ export interface LiveRoomInfo {
   started_at?: string
   ended_at?: string
   online: number
+  /** 拉流地址（M4-LIV-01 起下发；旧后端/未开播时缺省为空） */
+  play_urls?: LivePlayUrls
 }
 
 /** 申请/重置密钥返回：房间 + 推流地址 + 明文密钥（仅此一次） */

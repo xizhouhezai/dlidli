@@ -109,4 +109,8 @@ var (
 	ErrLiveMelonNotEnough  = New(91021, "金瓜子余额不足")
 	ErrLiveGiftCount       = New(91022, "赠送数量不合法（1-999）")
 	ErrLiveRechargeInvalid = New(91023, "直充金额不合法")
+	// 推流回调（M4-LIV-01）：SRS http_hooks 鉴权失败一律以 HTTP 403 返回（非 2xx 即拒推）
+	ErrLiveCallbackTokenInvalid = New(91024, "直播回调鉴权失败")
+	ErrLiveStreamKeyInvalid     = New(91025, "推流密钥错误")
+	ErrLiveStreamFormatInvalid  = New(91026, "推流流名不合法")
 )

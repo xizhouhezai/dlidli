@@ -1,11 +1,13 @@
 <script setup lang="ts">
 // 直播间页（M4-LIV-06，LIV-11/12）：拉流播放器 + 实时弹幕区 + 在线人数。
-// 流源：LIV-01 前用演示流（config/live.ts，替换点见该文件注释）；WS 与 LIV-03 hub 同构。
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+// 流源（M4-LIV-01 D4/D5）：房间详情下发的 play_urls.hls → PlayerCore(format:'hls') 挂流；
+// 缺失时按 config/live.ts 的 demoFallback 落本地 mp4。WS 与 LIV-03 hub 同构。
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { PlayerCore } from '@dlidli/player'
 import { formatCount } from '@dlidli/shared'
+import type { PlayerSource } from '@dlidli/player'
 import type { LiveRoomInfo } from '@dlidli/api-client'
 import { api } from '@/api'
 import { readToken } from '@/utils/token'
@@ -90,9 +92,16 @@ async function refreshOnline() {
       offline.value = true
       stopOnlineTimer()
       player?.destroy()
+      player = null
       return
     }
     online.value = detail.online
+    // 开播后 play_urls 才下发：轮询到真实地址且与当前不同则热切换（保持进度）
+    const next = detail.play_urls?.hls?.trim() || ''
+    if (next && next !== activeSource.value?.url) {
+      room.value = { ...room.value, ...detail }
+      setupPlayer()
+    }
   } catch {
     /* silent */
   }
@@ -109,19 +118,58 @@ async function loadAnchor() {
 }
 
 /**
- * 挂流：demo 走公共 HLS；不可达或非 demo 时落 mp4 循环兜底。
- * LIV-01 后改 config/live.ts 即接真实流（页面不动）。
+ * 取流地址（M4-LIV-01 D4/D5）：
+ * 1) 房间详情 play_urls.hls 非空 → 真实 HLS；
+ * 2) 否则（未开播 / 旧后端无该字段）→ demoFallback 开则落本地 mp4，关则不挂流。
+ * 交付给 PlayerCore 的源即 computeSource() 的返回值。
  */
+function computeSource(): { source: PlayerSource | null; isDemo: boolean } {
+  const hlsUrl = room.value?.play_urls?.hls?.trim() || ''
+  if (hlsUrl) {
+    return { source: { quality: 0, format: 'hls', url: hlsUrl }, isDemo: false }
+  }
+  if (LIVE_STREAM_CONFIG.demoFallback) {
+    return {
+      source: { quality: 0, format: 'mp4', url: LIVE_STREAM_CONFIG.mp4Fallback },
+      isDemo: true,
+    }
+  }
+  return { source: null, isDemo: false }
+}
+
+/** 是否正在播演示兜底流（模板标记用） */
+const playingDemo = ref(false)
+/** 实际交给 PlayerCore 的地址（供自检/排障显示） */
+const activeSource = ref<PlayerSource | null>(null)
+/** 首挂时机保护：load() 在 onMounted 内 await 后可能早于模板 ref 绑定 */
+let attachScheduled = false
+
+/** 挂流：真实 HLS 优先，缺流时按 demoFallback 落本地 mp4。 */
 function setupPlayer() {
   const video = videoRef.value
-  if (!video) return
-  player = new PlayerCore(video, {})
-  if (LIVE_STREAM_CONFIG.demo) {
-    player.attach({ quality: 0, format: 'hls', url: LIVE_STREAM_CONFIG.hlsUrl })
-  } else {
-    player.attach({ quality: 0, format: 'mp4', url: LIVE_STREAM_CONFIG.mp4Fallback })
+  if (!video) {
+    // 模板 ref 尚未绑定（进房 await 早于渲染 flush）：下一 tick 重试一次
+    if (!attachScheduled) {
+      attachScheduled = true
+      void nextTick(() => {
+        attachScheduled = false
+        setupPlayer()
+      })
+    }
+    return
   }
-  video.loop = true
+  player ??= new PlayerCore(video, {
+    onSourceChange: (s) => {
+      activeSource.value = s
+    },
+  })
+  const { source, isDemo } = computeSource()
+  playingDemo.value = isDemo
+  if (!source) {
+    return
+  }
+  player.attach(source)
+  video.loop = isDemo
   video.muted = true // 自动播放策略：先静音起播，用户手势后解除
   void video.play().catch(() => {
     /* 浏览器拒绝自动播：显示控制条手动起播 */
@@ -200,9 +248,9 @@ onBeforeUnmount(() => {
             </span>
           </div>
           <button
-            v-if="LIVE_STREAM_CONFIG.demo"
+            v-if="playingDemo"
             class="live-room__demo-tag"
-            title="LIV-01 接入真实流后自动切换"
+            title="房间未下发 play_urls.hls，正在播本地兜底源"
             @click="unmute"
           >
             演示流 · 点击开启声音

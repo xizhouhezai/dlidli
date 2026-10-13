@@ -5,8 +5,14 @@
 
 ## M4（W49+）
 
-- [ ] M4-LIV-01 RTMP 接入 + 直播转码 + HLS/FLV 分发
-  - 覆盖：LIV-02（推流侧）
+- [x] M4-LIV-01 RTMP 接入 + 直播转码 + HLS/FLV 分发 —— 2026-10-13 完成
+  - 覆盖：LIV-02（推流侧）、LIV-11（拉流侧）
+  - 实现要点（2026-10-13）：**SRS 5 单容器**（`server/deploy/srs/`，独立 compose project `dlidli-live`，1935 RTMP / 8180 HTTP / 1985 API）承担收流与 HLS/HTTP-FLV 转封装；后端 `live` 模块新增 `stream.go`（推流寻址与回调）+ `/live/stream/auth`（on_publish 鉴权：共享 token 常量时间比较 + 房间存在 + bcrypt `param.key` + 房间须直播中，四项任一不满足即 403 拒绝推流）+ `/live/stream/stop`（on_unpublish → 房间置已下播）；房间详情下发 `play_urls{hls,flv}`；前端（Web/H5）从演示流改为按 `play_urls.hls` 真实拉流
+  - **寻址契约**（plan §2C D1/D4）：推流 `rtmp://<pushDomain>/<app>/room_<id>?key=<streamKey>`（**流名公开不含密钥**，密钥走查询串，避免播放地址外泄密钥被抢推流位）；拉流 `http://<playDomain>/<app>/room_<id>.m3u8|.flv`
+  - **本轮实测修复 4 处配置缺陷（本卡的真实产出）**——这些缺陷此前全部被「配置从未被真正加载」掩盖：① compose 只挂载 `srs.conf` 未覆盖 `command`，SRS 镜像默认 CMD 读内置 `conf/docker.conf`（HTTP 8080 而非 8180）→ 配置挂了却从未生效；② `app live { }` 是 SRS 3/4 旧语法，5.x 解析器直接失败（流 app 由推流 URL 路径段决定，无需声明）；③ `http_hooks` URL 里的 `${SRS_CALLBACK_TOKEN}` 花括号被当作块开括号导致解析中断，且 SRS 对 http_hooks **不做环境变量展开**（须写字面 token）；④ `hls_path` 必须落在 `http_server.dir` 之内，写在 `/data/streams` 时切片存在但 8180 一律 404。另删去 5.x 不存在的 `hls_https`/`hls_fragment_naming` 指令、移除不受支持的 `env` 指令
+  - **端到端实测（真实 SRS 5.0.225 + FFmpeg 8.1.2 推流，证据 `.dev-logs/liv01/lead-e2e/`）**：开播取密钥 → 推流被 on_publish **接受**（SRS `publish.active=True`，回调入参 `param=?key=…` 在案）→ **HLS 拉流 HTTP 200** 返回标准 master playlist（`#EXTM3U`/`#EXT-X-STREAM-INF`）→ **HTTP-FLV HTTP 200**（`Content-Type: video/x-flv`）；**鉴别器**：错误密钥推流被拒（后端 `91025 推流密钥错误` → SRS 403 → FFmpeg `I/O error`），与正确密钥形成对照；停流触发 on_unpublish（后端响应 `{"stopped":true}`）→ 房间移出直播列表。**配置合法性**用 SRS 自带校验器回归：`./objs/srs -t -c conf/srs.conf` → `syntax is ok / test is successful`
+  - **闸门**：`go vet` ✅ · `go test ./...`（25 包全绿）✅ · 后端重编重启实测 ✅ · `pnpm docs:build` → `build complete` ✅ · `pnpm web:build` ✅
+  - 未覆盖：**OBS 人工联调**（无 GUI，用 FFmpeg 命令行推流替代，推流协议同一）；**多码率转码集群**（plan 已列演进路径：第一期用 SRS 直出，转码集群为后续项）；**CDN 分发**；**端到端播放延迟的浏览器侧测量**（headless 浏览器在本机沙箱不可用，延迟口径见 plan §2C D6：`hls_fragment 2` + `hls_window 8` 给出 6–15s 目标的理论下界）；**浏览器 FLV 播放**（未引入 flv.js，FLV 腿以后端验证，浏览器侧走 HLS）
 - [x] M4-LIV-02 直播间服务（房间/在线人数/权限）——2026-10-13 完成
   - 覆盖：LIV-02、LIV-01（资格校验逻辑）、LIV-04（房管/禁言数据与接口）
   - 实现要点（2026-10-13 细化）：迁移 0034（`live_room`/`live_whitelist`/`live_room_admin`/`live_room_mute`）；`live` 模块（handler/service/repo + router 注册）；房间状态机（空闲/直播中/已下播，spec §5A.1）；资格校验三闸（白名单→实名→粉丝≥100，91001-91014 可区分错误码）；推流密钥 crypto/rand 32 位生成、bcrypt 落库、明文一次性返回、重置即失效；在线人数 Redis 双键（online 计数 + hb:{uid} TTL 30s 心跳懒剔除）；房管任命/撤销与禁言/解禁接口（禁言执行归 LIV-03，本卡出 `IsMuted` 判定）
@@ -30,7 +36,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 6 | 4 |
-| **合计** | **6** | **4** |
+| M4 | 6 | 5 |
+| **合计** | **6** | **5** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

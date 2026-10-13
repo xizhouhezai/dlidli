@@ -3866,6 +3866,116 @@
                 }
             }
         },
+        "/live/stream/auth": {
+            "post": {
+                "description": "流名 room_\u003cid\u003e（公开、不含密钥），密钥在推流 URL 查询串 → SRS 放入 body.param；\n非 2xx 即 SRS 拒绝推流。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "SRS on_publish 回调（推流鉴权）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "回调共享 token（亦可用 X-Live-Callback-Token 头）",
+                        "name": "token",
+                        "in": "query"
+                    },
+                    {
+                        "description": "SRS 回调体（action/app/stream/param 等）",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_module_live.PublishAuthReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0 放行推流",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "91024 token 无效 / 91025 密钥错误 / 91006 未开播 / 91007 房间不存在 / 91026 流名不合法",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/stream/stop": {
+            "post": {
+                "description": "房间处于直播中(1) 时复用主播下播路径（status=2 + ended_at + 在线清零 + 清弹幕历史）；\n重复回调或未知流返回 200 且不改变状态。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "SRS on_unpublish 回调（下播联动，幂等）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "回调共享 token（亦可用 X-Live-Callback-Token 头）",
+                        "name": "token",
+                        "in": "query"
+                    },
+                    {
+                        "description": "SRS 回调体（action/app/stream/param 等）",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_module_live.PublishAuthReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "stopped=true 本场已置下播；false 无动作（重复回调/未知流）",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "91024 token 无效",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/messages": {
             "post": {
                 "security": [
@@ -6477,6 +6587,42 @@
                 }
             }
         },
+        "internal_module_live.PlayURLs": {
+            "type": "object",
+            "properties": {
+                "flv": {
+                    "type": "string"
+                },
+                "hls": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_module_live.PublishAuthReq": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "app": {
+                    "type": "string"
+                },
+                "client_id": {},
+                "ip": {
+                    "type": "string"
+                },
+                "param": {
+                    "description": "推流 URL 的查询串，SRS 原样放入（形如 \"?key=xxx\"）",
+                    "type": "string"
+                },
+                "stream": {
+                    "type": "string"
+                },
+                "vhost": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_module_live.RechargeResult": {
             "type": "object",
             "properties": {
@@ -6512,6 +6658,14 @@
                 },
                 "online": {
                     "type": "integer"
+                },
+                "play_urls": {
+                    "description": "拉流地址（公开、不含密钥，M4-LIV-01 D4）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_module_live.PlayURLs"
+                        }
+                    ]
                 },
                 "started_at": {
                     "type": "string"

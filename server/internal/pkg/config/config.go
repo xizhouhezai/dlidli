@@ -24,10 +24,18 @@ type Config struct {
 	Live      Live
 }
 
-// Live 直播域配置（M4-LIV-02）：PushDomain 为 RTMP 推流域名占位，
-// 本卡只用于拼装推流地址返回给主播（不发流、不校验连通性，LIV-01 接 SRS）。
+// Live 直播域配置（M4-LIV-01/02）：推拉流寻址与 SRS 回调鉴权。
+//
+// 寻址契约（plan liv01 D1/D4）：RTMP 地址 rtmp://<pushDomain>/<app>/room_<id>?key=<streamKey>，
+// 拉流地址 http://<playDomain>/<app>/room_<id>.m3u8|.flv；流名公开不含密钥，密钥只走查询串
+// （SRS 把它放进 on_publish 回调体的 param 字段）。
 type Live struct {
-	PushDomain string // 如 push.example.com；为空时推流地址返回占位域
+	PushDomain string // RTMP 推流域名，如 127.0.0.1:1935；为空时推流地址返回占位域
+	PlayDomain string // HLS/FLV 拉流域名，如 127.0.0.1:8080；为空时拉流地址返回占位域
+	StreamApp  string // RTMP 应用名（流路径 /<app>/<stream>），缺省 live
+	// CallbackToken SRS http_hooks 共享 token（?token= 或 X-Live-Callback-Token）。
+	// 为空时回调一律拒绝（fail-closed）：宁可推不了流，也不能让伪造回调改房间状态。
+	CallbackToken string
 }
 
 type App struct {
@@ -149,6 +157,9 @@ func Load(path string) (*Config, error) {
 	if cfg.Search.BatchSize <= 0 {
 		cfg.Search.BatchSize = 100
 	}
+	if cfg.Live.StreamApp == "" {
+		cfg.Live.StreamApp = "live" // 与 SRS conf 的 app 名对齐（部署侧可用 DLIDLI_LIVE_STREAMAPP 覆盖）
+	}
 	if err := validateProd(&cfg); err != nil {
 		return nil, err
 	}
@@ -193,6 +204,9 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("tracing.endpoint", "")
 	v.SetDefault("tracing.servicename", "dlidli-api")
 	v.SetDefault("live.pushdomain", "")
+	v.SetDefault("live.playdomain", "")
+	v.SetDefault("live.streamapp", "live")
+	v.SetDefault("live.callbacktoken", "")
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。
