@@ -27,11 +27,19 @@ type Service struct {
 	online *Online
 	cfg    *config.Config
 	log    *zap.Logger
+	deps   *LiveDeps // 弹幕通道跨域依赖（M4-LIV-03，SetLiveDeps 注入）
+	hub    *Hub      // 弹幕广播中心（SetHub 注入，避免 Service→Hub→Service 构造环）
 }
 
 func NewService(repo *Repo, online *Online, cfg *config.Config, log *zap.Logger) *Service {
 	return &Service{repo: repo, online: online, cfg: cfg, log: log}
 }
+
+// SetLiveDeps 注入弹幕通道跨域依赖（router 装配）。
+func (s *Service) SetLiveDeps(deps *LiveDeps) { s.deps = deps }
+
+// SetHub 注入弹幕广播 Hub（router 装配）。
+func (s *Service) SetHub(hub *Hub) { s.hub = hub }
 
 // ---- DTO ----
 
@@ -178,6 +186,9 @@ func (s *Service) Stop(ctx context.Context, uid int64) (*RoomInfo, error) {
 		return nil, err
 	}
 	if err := s.online.Reset(ctx, room.ID); err != nil {
+		return nil, err
+	}
+	if err := s.repo.ClearRoomMsg(room.ID); err != nil {
 		return nil, err
 	}
 	room.Status, room.EndedAt = RoomStatusEnded, &now

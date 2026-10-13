@@ -1,6 +1,7 @@
 package live
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/dlidli/server/internal/middleware"
@@ -11,10 +12,17 @@ import (
 
 type Handler struct {
 	svc *Service
+	hub *Hub
 }
 
 func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
+}
+
+// WithHub 注入直播弹幕 Hub（M4-LIV-03；router 装配时调用）。
+func (h *Handler) WithHub(hub *Hub) *Handler {
+	h.hub = hub
+	return h
 }
 
 // RegisterRoutes 注册直播域路由（M4-LIV-02）。
@@ -39,6 +47,11 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 		g.DELETE("/rooms/:id/admins/:uid", auth, h.removeAdmin)
 		g.POST("/rooms/:id/mutes/:uid", auth, h.mute)
 		g.DELETE("/rooms/:id/mutes/:uid", auth, h.unmute)
+
+		// 直播弹幕通道（M4-LIV-03）：WS 建连即进房（token 经 query 携带），
+		// 历史拉取与弹幕发送不再走 HTTP（上行在 WS 内，见 hub readLoop）。
+		g.GET("/rooms/:id/ws", auth, h.ws)
+		g.GET("/rooms/:id/danmaku/history", auth, h.history)
 	}
 }
 
@@ -383,6 +396,54 @@ func pathID(c *gin.Context) (int64, bool) {
 		return 0, false
 	}
 	return id, true
+}
+
+// @Summary  直播弹幕实时连接（WebSocket，M4-LIV-03）
+// @Tags     直播
+// @Security BearerAuth
+// @Param    id path int true "房间ID"
+// @Success  101 {string} string "Switching Protocols"
+// @Failure  200 {object} response.Body "91006 未开播 / 91007 房间不存在"
+// @Router   /live/rooms/{id}/ws [get]
+// @Description 客户端上行帧（JSON）: {"type":"heartbeat"} 心跳（≤15s 一次，40s 无上行断开）；
+// @Description {"type":"danmaku","content":"文本"} 发弹幕（服务端频控/禁言/机审，失败经 admin 侧日志，
+// @Description 拒绝不下发帧）。服务端下行帧: {"type":"enter",...} 进场 / {"type":"danmaku",...} 弹幕 / {"type":"pong",...} 心跳应答。
+func (h *Handler) ws(c *gin.Context) {
+	uid := c.GetInt64(middleware.CtxUserID)
+	id, ok := pathID(c)
+	if !ok {
+		return
+	}
+	room, nickname, avatar, info, err := h.svc.Join(c.Request.Context(), uid, id)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	// WS 建连即进房（连接生命周期即在线状态）：计数 + 进场消息广播，随后升级连接
+	counted := h.svc.online.EnterForce(context.Background(), room.ID, uid)
+	h.hub.BroadcastEnter(room.ID, info)
+	h.hub.ServeCounted(c, room.ID, uid, nickname, avatar, counted)
+}
+
+// @Summary  直播弹幕历史（进房回放最近 50 条）
+// @Tags     直播
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path int true "房间ID"
+// @Success  200 {object} response.Body{data=live.HistoryResult}
+// @Failure  200 {object} response.Body "91006 未开播 / 91007 房间不存在"
+// @Router   /live/rooms/{id}/danmaku/history [get]
+func (h *Handler) history(c *gin.Context) {
+	id, ok := pathID(c)
+	if !ok {
+		return
+	}
+	res, err := h.svc.History(c.Request.Context(), id)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, res)
 }
 
 // pathUID 解析路径用户 ID。

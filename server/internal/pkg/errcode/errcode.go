@@ -98,4 +98,9 @@ var (
 	ErrLiveCategoryInvalid = New(91012, "直播分区不存在或已停用")
 	ErrLiveMuteRange       = New(91013, "禁言时长需在 1 分钟到 720 小时之间")
 	ErrLiveTitleRequired   = New(91014, "房间标题不能为空（1-80 字）")
+	// 直播弹幕通道（M4-LIV-03）
+	ErrLiveDanmakuMuted      = New(91015, "您已被房管禁言，暂无法发言")
+	ErrLiveDanmakuTooFast    = New(91016, "发言太频繁，请稍后再试")
+	ErrLiveDanmakuNotIn      = New(91017, "请先进入直播间")
+	ErrLiveDanmakuDuplicate  = New(91018, "请勿重复发送相同内容")
 )
