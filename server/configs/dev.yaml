@@ -67,3 +67,8 @@ wechat:
 #   pollSeconds: 3
 #   batchSize: 100
 
+# 直播域（M4-LIV-02）：RTMP 推流域名占位，本卡仅用于拼装推流地址（LIV-01 接 SRS 后生效）。
+# 可用环境变量 DLIDLI_LIVE_PUSHDOMAIN 覆盖。
+# live:
+#   pushDomain: push.example.com
+

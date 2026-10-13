@@ -21,6 +21,13 @@ type Config struct {
 	WeChat    WeChat
 	Search    Search
 	Tracing   Tracing
+	Live      Live
+}
+
+// Live 直播域配置（M4-LIV-02）：PushDomain 为 RTMP 推流域名占位，
+// 本卡只用于拼装推流地址返回给主播（不发流、不校验连通性，LIV-01 接 SRS）。
+type Live struct {
+	PushDomain string // 如 push.example.com；为空时推流地址返回占位域
 }
 
 type App struct {
@@ -185,6 +192,7 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("wechat.mpappsecret", "")
 	v.SetDefault("tracing.endpoint", "")
 	v.SetDefault("tracing.servicename", "dlidli-api")
+	v.SetDefault("live.pushdomain", "")
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。

@@ -1,6 +1,6 @@
 // Package errcode 定义统一业务错误码。
 // 分段规则：1xxxx 通用；2xxxx 账号；3xxxx 视频；4xxxx 弹幕；5xxxx 互动；
-// 6xxxx 社区；7xxxx 消息；8xxxx 审核后台；9xxxx 商业化。
+// 6xxxx 社区；7xxxx 消息；8xxxx 审核后台；9xxxx 商业化（直播 91000+，M4-LIV）。
 package errcode
 
 import "fmt"
@@ -80,4 +80,22 @@ var (
 // 关系链错误码（6xxxx）
 var (
 	ErrFollowSelf = New(60001, "不能关注自己")
+)
+
+// 直播错误码（91000+，商业化段，M4-LIV）
+var (
+	ErrLiveNotWhitelisted  = New(91001, "暂未获得开播资格（白名单）")
+	ErrLiveNotRealnamed    = New(91002, "开播需先完成实名认证")
+	ErrLiveFansNotEnough   = New(91003, "粉丝数未达 100，暂不能开播")
+	ErrLiveRoomExists      = New(91004, "您已创建直播间")
+	ErrLiveAlreadyLive     = New(91005, "房间已开播，请勿重复开播")
+	ErrLiveNotLive         = New(91006, "房间未在直播中")
+	ErrLiveRoomNotFound    = New(91007, "直播间不存在")
+	ErrLiveNotAnchor       = New(91008, "只有主播才能执行该操作")
+	ErrLiveNotAdmin        = New(91009, "只有主播或房管才能执行该操作")
+	ErrLiveAdminSelf       = New(91010, "不能对自己执行该操作")
+	ErrLiveAdminIsAnchor   = New(91011, "主播无需任命为房管")
+	ErrLiveCategoryInvalid = New(91012, "直播分区不存在或已停用")
+	ErrLiveMuteRange       = New(91013, "禁言时长需在 1 分钟到 720 小时之间")
+	ErrLiveTitleRequired   = New(91014, "房间标题不能为空（1-80 字）")
 )

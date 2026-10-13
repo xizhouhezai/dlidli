@@ -20,6 +20,7 @@ import (
 	"github.com/dlidli/server/internal/module/growth"
 	"github.com/dlidli/server/internal/module/im"
 	"github.com/dlidli/server/internal/module/interaction"
+	"github.com/dlidli/server/internal/module/live"
 	"github.com/dlidli/server/internal/module/notify"
 	"github.com/dlidli/server/internal/module/recommend"
 	"github.com/dlidli/server/internal/module/relation"
@@ -238,6 +239,10 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		searchHandler := search.NewHandler(videoSvc, accountSvc)
 		searchHandler.SetIndex(searchIdx)
 		searchHandler.RegisterRoutes(v1)
+
+		// 直播间服务（M4-LIV-02）：房间生命周期 + 开播资格 + 在线人数 + 房管/禁言
+		liveSvc := live.NewService(live.NewRepo(res.DB), live.NewOnline(res.Redis, live.NewRepo(res.DB), log), cfg, log)
+		live.NewHandler(liveSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 	} else {
 		log.Warn("MySQL/Redis 未就绪，业务模块路由未注册")
 	}
