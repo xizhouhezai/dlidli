@@ -11,6 +11,8 @@ import { api } from '@/api'
 import { readToken } from '@/utils/token'
 import { LIVE_STREAM_CONFIG } from '@/config/live'
 import { enterRoom, useLiveDanmaku } from '@/composables/live/useLiveDanmaku'
+import GiftPanel from '@/components/live/GiftPanel.vue'
+import GiftEffects, { type GiftEffect } from '@/components/live/GiftEffects.vue'
 import defaultAvatar from '@/assets/default-avatar.png'
 
 const route = useRoute()
@@ -28,9 +30,23 @@ const videoRef = ref<HTMLVideoElement | null>(null)
 let player: PlayerCore | null = null
 let onlineTimer: number | null = null
 
-const { messages, notices, connected, connect, close, send, leave } = useLiveDanmaku(roomId.value)
+const { messages, notices, giftEvents, connected, connect, close, send, leave } = useLiveDanmaku(
+  roomId.value,
+)
 const draft = ref('')
 const danmakuListRef = ref<HTMLElement | null>(null)
+const giftPanelRef = ref<InstanceType<typeof GiftPanel> | null>(null)
+
+/** WS 礼物帧 → 特效层事件（组件 watch 末位增量的契约） */
+const giftFx = computed<GiftEffect[]>(() =>
+  giftEvents.value.map((g) => ({
+    id: g.log_id || `${Date.now()}`,
+    name: g.gift_name || '礼物',
+    sender: g.nickname || g.user_id || '观众',
+    count: g.count || 1,
+    level: (g.level === 2 ? 2 : 1) as 1 | 2,
+  })),
+)
 
 const isSelfAnchor = computed(() => !!room.value && room.value.anchor_id === String(useSelfUid()))
 function useSelfUid() {
@@ -141,6 +157,11 @@ watch(messages, () => {
   }
 })
 
+// 自己送礼成功后刷新余额（GiftPanel 内已回写，这里兜底 WS 帧同步他人礼物）
+watch(giftFx, () => {
+  giftPanelRef.value?.refreshBalance()
+})
+
 function stopOnlineTimer() {
   if (onlineTimer) {
     window.clearInterval(onlineTimer)
@@ -186,6 +207,8 @@ onBeforeUnmount(() => {
           >
             演示流 · 点击开启声音
           </button>
+          <!-- 礼物特效层（M4-LIV-04）：普通=连击浮层，高级=全屏 CSS 动画 -->
+          <GiftEffects :events="giftFx" />
         </div>
 
         <div class="live-room__info">
@@ -236,6 +259,9 @@ onBeforeUnmount(() => {
             发送
           </el-button>
         </div>
+
+        <!-- 礼物面板（M4-LIV-04，LIV-13）：送礼 → WS 广播 → 特效层渲染 -->
+        <GiftPanel v-if="room" ref="giftPanelRef" :room-id="roomId" />
       </div>
     </div>
   </div>
@@ -379,13 +405,13 @@ onBeforeUnmount(() => {
 .live-room__chat {
   display: flex;
   flex-direction: column;
-  height: 560px;
+  height: 700px;
   border: 1px solid v.$border;
   border-radius: 8px;
   overflow: hidden;
 
   @media (max-width: 960px) {
-    height: 400px;
+    height: 540px;
   }
 }
 

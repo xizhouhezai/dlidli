@@ -42,6 +42,9 @@ export type {
   LiveAdminItem,
   LiveMuteItem,
   LiveWsFrame,
+  LiveGiftItem,
+  LiveMelonBalance,
+  LiveSendGiftResult,
 } from './apis/live'
 export type {
   CommentItem,

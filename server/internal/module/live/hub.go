@@ -32,7 +32,7 @@ const (
 
 // WSMsg 服务端下发的实时帧（直播域消息类型多类，区别于视频弹幕 hub 的单一 type）。
 type WSMsg struct {
-	Type string      `json:"type"` // enter | danmaku | pong
+	Type string      `json:"type"` // enter | danmaku | gift | pong
 	Data interface{} `json:"data"`
 }
 
@@ -210,6 +210,12 @@ func (h *Hub) BroadcastEnter(roomID int64, info EnterInfo) {
 // BroadcastDanmaku 弹幕广播（房间全员；发送者不排除——直播场景发送者同屏确认）。
 func (h *Hub) BroadcastDanmaku(roomID int64, item DanmakuInfo) {
 	h.broadcast(roomID, WSMsg{Type: "danmaku", Data: item})
+}
+
+// BroadcastGift 礼物特效广播（M4-LIV-04，type=gift）：普通礼物前端走弹幕区连击样式，
+// 高级礼物全屏特效（按 effect/level 分级渲染，见 GiftFrame）。
+func (h *Hub) BroadcastGift(roomID int64, frame GiftFrame) {
+	h.broadcast(roomID, WSMsg{Type: "gift", Data: frame})
 }
 
 // OnlineCount 当前 WS 在线连接数（实测比对用；对外在线人数仍以 Redis 计数为准）。

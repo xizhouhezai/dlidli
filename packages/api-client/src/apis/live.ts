@@ -67,9 +67,9 @@ export interface LiveMuteItem {
   muted: boolean
 }
 
-/** WS 下行帧（enter | danmaku | pong） */
+/** WS 下行帧（enter | danmaku | gift | pong） */
 export interface LiveWsFrame {
-  type: 'enter' | 'danmaku' | 'pong'
+  type: 'enter' | 'danmaku' | 'gift' | 'pong'
   data: {
     uid?: string
     nickname?: string
@@ -78,6 +78,44 @@ export interface LiveWsFrame {
     id?: string
     user_id?: string
     content?: string
+    log_id?: string
+    gift_id?: number
+    gift_name?: string
+    icon?: string
+    count?: number
+    effect?: number
+    level?: number
+  }
+}
+
+/** 礼物配置项（M4-LIV-04） */
+export interface LiveGiftItem {
+  id: number
+  name: string
+  icon: string
+  price: number
+  effect: 1 | 2 // 1 弹幕区连击 2 全屏特效
+  level: 1 | 2 // 1 普通 2 高级
+}
+
+/** 金瓜子余额 */
+export interface LiveMelonBalance {
+  balance: number
+}
+
+/** 赠送礼物结果 */
+export interface LiveSendGiftResult {
+  balance: number
+  gift_log: {
+    log_id: string
+    sender_id: string
+    nickname: string
+    gift_id: number
+    gift_name: string
+    icon?: string
+    count: number
+    effect: 1 | 2
+    level: 1 | 2
   }
 }
 
@@ -151,5 +189,15 @@ export function createLiveApi(http: HttpClient) {
 
     /** 直播弹幕 WS 地址（token 走 query；http → ws 协议换算由调用方处理） */
     wsUrl: (id: number | string) => `/api/v1/live/rooms/${id}/ws`,
+
+    /** 礼物列表（上架，M4-LIV-04） */
+    gifts: () => http.get<LiveGiftItem[]>('/api/v1/live/gifts'),
+
+    /** 金瓜子余额 */
+    melonBalance: () => http.get<LiveMelonBalance>('/api/v1/live/melon/balance'),
+
+    /** 赠送礼物（余额不足 91021） */
+    sendGift: (roomId: number | string, giftId: number, count = 1) =>
+      http.post<LiveSendGiftResult>(`/api/v1/live/rooms/${roomId}/gifts/${giftId}`, { count }),
   }
 }

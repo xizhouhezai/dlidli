@@ -287,6 +287,24 @@ definitions:
     required:
     - content
     type: object
+  internal_module_live.AdminBrief:
+    properties:
+      appointed_at:
+        type: string
+      avatar:
+        type: string
+      nickname:
+        type: string
+      user_id:
+        type: string
+    type: object
+  internal_module_live.AdminListResult:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/internal_module_live.AdminBrief'
+        type: array
+    type: object
   internal_module_live.ApplyResult:
     properties:
       push_url:
@@ -312,6 +330,46 @@ definitions:
         description: 已是十进制字符串（itoa），不再二次转字符串
         type: string
     type: object
+  internal_module_live.GiftFrame:
+    properties:
+      count:
+        type: integer
+      effect:
+        description: 1 弹幕区连击 2 全屏特效
+        type: integer
+      gift_id:
+        type: integer
+      gift_name:
+        type: string
+      icon:
+        type: string
+      level:
+        description: 1 普通 2 高级
+        type: integer
+      log_id:
+        example: "0"
+        type: string
+      nickname:
+        type: string
+      sender_id:
+        description: 字符串避免 JS 精度丢失
+        type: string
+    type: object
+  internal_module_live.GiftInfo:
+    properties:
+      effect:
+        type: integer
+      icon:
+        type: string
+      id:
+        type: integer
+      level:
+        type: integer
+      name:
+        type: string
+      price:
+        type: integer
+    type: object
   internal_module_live.HistoryResult:
     properties:
       list:
@@ -321,6 +379,43 @@ definitions:
       online:
         type: integer
       room_id:
+        type: integer
+    type: object
+  internal_module_live.MelonBalance:
+    properties:
+      balance:
+        type: integer
+    type: object
+  internal_module_live.MuteBrief:
+    properties:
+      avatar:
+        type: string
+      muted:
+        description: muted_until 是否仍未到期
+        type: boolean
+      muted_until:
+        type: string
+      nickname:
+        type: string
+      reason:
+        type: string
+      user_id:
+        type: string
+    type: object
+  internal_module_live.MuteListResult:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/internal_module_live.MuteBrief'
+        type: array
+    type: object
+  internal_module_live.RechargeResult:
+    properties:
+      balance:
+        type: integer
+      delta:
+        type: integer
+      user_id:
         type: integer
     type: object
   internal_module_live.RoomInfo:
@@ -354,6 +449,23 @@ definitions:
       total:
         type: integer
     type: object
+  internal_module_live.SendGiftResult:
+    properties:
+      balance:
+        type: integer
+      gift_log:
+        $ref: '#/definitions/internal_module_live.GiftFrame'
+    type: object
+  internal_module_live.devRechargeReq:
+    properties:
+      delta:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - delta
+    - user_id
+    type: object
   internal_module_live.muteReq:
     properties:
       minutes:
@@ -363,6 +475,11 @@ definitions:
         type: string
     required:
     - minutes
+    type: object
+  internal_module_live.sendGiftReq:
+    properties:
+      count:
+        type: integer
     type: object
   internal_module_live.updateRoomReq:
     properties:
@@ -978,6 +1095,30 @@ paths:
       tags:
       - 管理后台-概览
       - 管理后台-运营
+  /admin/dev/recharge:
+    post:
+      description: |-
+        开发期临时通道（spec LIV-13 替换点）：真实支付接入 PAY-01 后本接口下线，
+        支付回调复用 RechargeTx 的 biz_no 幂等设计。
+      parameters:
+      - description: user_id；delta 金瓜子数量（正数）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_module_live.devRechargeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 91023 金额不合法
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 开发直充金瓜子（M4-LIV-04 临时通道，挂 admin 权限）
+      tags:
+      - 管理后台-开发工具
   /admin/dicts:
     get:
       produces:
@@ -2382,6 +2523,44 @@ paths:
       summary: 申请开播（LIV-01/LIV-02）
       tags:
       - 直播
+  /live/gifts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/internal_module_live.GiftInfo'
+                  type: array
+              type: object
+      summary: 礼物列表（上架）
+      tags:
+      - 直播礼物
+  /live/melon/balance:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_module_live.MelonBalance'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 金瓜子余额
+      tags:
+      - 直播礼物
   /live/room:
     put:
       parameters:
@@ -2507,6 +2686,26 @@ paths:
       summary: 房间详情（未开播房间仅主播本人可见）
       tags:
       - 直播
+  /live/rooms/{id}/admins:
+    get:
+      parameters:
+      - description: 房间ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 91007 房间不存在
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 房管列表（登录即可看）
+      tags:
+      - 直播
   /live/rooms/{id}/admins/{uid}:
     delete:
       parameters:
@@ -2596,6 +2795,37 @@ paths:
       summary: 进房（在线计数 +1；重复进房不重复计数）
       tags:
       - 直播
+  /live/rooms/{id}/gifts/{giftId}:
+    post:
+      parameters:
+      - description: 房间ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 礼物ID
+        in: path
+        name: giftId
+        required: true
+        type: integer
+      - description: count 连击数量，默认 1（1-999）
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_module_live.sendGiftReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 91007 房间不存在 / 91019 礼物不存在 / 91020 房间未开播 / 91021 余额不足 / 91022
+            数量不合法
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 赠送礼物（LIV-13 强一致：余额不足 91021 且不产生任何流水）
+      tags:
+      - 直播礼物
   /live/rooms/{id}/heartbeat:
     post:
       parameters:
@@ -2639,6 +2869,26 @@ paths:
       security:
       - BearerAuth: []
       summary: 离房（在线计数 −1，幂等）
+      tags:
+      - 直播
+  /live/rooms/{id}/mutes:
+    get:
+      parameters:
+      - description: 房间ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 91007 房间不存在
+          schema:
+            $ref: '#/definitions/github_com_dlidli_server_internal_pkg_response.Body'
+      security:
+      - BearerAuth: []
+      summary: 禁言列表（登录即可看；muted=false 为已过期记录）
       tags:
       - 直播
   /live/rooms/{id}/mutes/{uid}:
