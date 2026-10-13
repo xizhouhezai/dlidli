@@ -6,12 +6,10 @@ import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { computed, nextTick, ref } from 'vue'
 import { api } from '@/api'
 import { LIVE_STREAM_CONFIG } from '@/config/live'
-import type { LiveDanmakuItem, LiveWsFrame } from '@dlidli/api-client'
-
-const HLS_TEST = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+import type { LiveDanmakuItem, LiveRoomInfo, LiveWsFrame } from '@dlidli/api-client'
 
 const roomId = ref('')
-const room = ref<{ title: string; online: number; cover: string } | null>(null)
+const room = ref<LiveRoomInfo | null>(null)
 const offline = ref(false)
 const loading = ref(true)
 
@@ -29,9 +27,16 @@ let ws: WebSocket | null = null
 let hbTimer: ReturnType<typeof setInterval> | null = null
 let lastSendAt = 0
 
-const playUrl = computed(() =>
-  LIVE_STREAM_CONFIG.demo ? HLS_TEST : LIVE_STREAM_CONFIG.mp4Fallback,
-)
+/**
+ * 取流地址（M4-LIV-01 D4/D5）：房间详情的 play_urls.hls 优先；
+ * 缺失（未开播 / 旧后端无该字段）时按 demoFallback 落本地 mp4，关则不挂源。
+ * 浏览器 FLV 需新增依赖，本卡不做（API 仍下发 flv 字段）。
+ */
+const playUrl = computed(() => {
+  const hls = room.value?.play_urls?.hls?.trim() || ''
+  if (hls) return hls
+  return LIVE_STREAM_CONFIG.demoFallback ? LIVE_STREAM_CONFIG.mp4Fallback : ''
+})
 
 onLoad((query) => {
   roomId.value = String((query as { id?: string }).id ?? '')
@@ -61,7 +66,7 @@ async function load() {
       offline.value = true
       return
     }
-    room.value = { title: info.title, online: info.online, cover: info.cover }
+    room.value = info
     uni.setNavigationBarTitle({ title: info.title || '直播间' })
     connect()
     try {

@@ -16,11 +16,15 @@ server/uploads_prod/
 *.out
 *.bin
 
-# 临时/测试产物（脚本生成的临时媒体与下载件）
+# temp/测试产物（脚本生成的临时媒体与下载件）
 tmp_*
 server/tmp_*
 # Go 构建缓存（沙箱会话 GOCACHE 指入工作区时产生）
 .gocache/
+# npm 缓存（沙箱会话把 npm cache 指入工作区时产生）
+.npm-cache/
+# 沙箱会话的运行时工作目录（推流/切片/证据等，脚本自建）
+.liv01-run/
 
 # 会话归档解包与本地环境探测产物（含安装包，不入库）
 .session-extract/

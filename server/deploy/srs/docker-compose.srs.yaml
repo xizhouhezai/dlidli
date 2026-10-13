@@ -1,0 +1,41 @@
+# =============================================================================
+# DliDli 直播服务器（SRS 5）—— M4-LIV-01 / WP-C
+#
+# 独立 compose 文件：与既有 server/deploy/docker-compose.yaml（project: dlidli-dev）
+# 互不干扰，可单起单停。用法见同目录 README.md / docs/project/deployment.md §5.5。
+#
+#   docker compose -f server/deploy/srs/docker-compose.srs.yaml up -d
+#   docker compose -f server/deploy/srs/docker-compose.srs.yaml logs -f
+#   docker compose -f server/deploy/srs/docker-compose.srs.yaml down
+# =============================================================================
+name: dlidli-live          # 独立 project，不抢占 dlidli-dev 的资源
+
+services:
+  srs:
+    image: ossrs/srs:5
+    container_name: dlidli-srs
+    restart: unless-stopped
+    ports:
+      - "1935:1935"        # RTMP 收流（OBS / FFmpeg 推流）
+      - "8180:8180"        # HTTP：HLS 切片 + HTTP-FLV 挂载点（避开 8080）
+      - "1985:1985"        # SRS HTTP API（查流/踢流），仅供内网运维
+    volumes:
+      # 配置只读挂载；SRS 镜像默认工作目录为 /usr/local/srs
+      - ./srs.conf:/usr/local/srs/conf/srs.conf:ro
+      # HLS 切片与 FLV 缓存落命名卷（容器 /data/streams）
+      - srs-data:/data
+    # 必须显式指定配置：SRS 镜像默认 CMD 是 `./objs/srs -c conf/docker.conf`，只挂载 srs.conf 而不覆盖
+    # command 时 SRS 仍读镜像内置 docker.conf（HTTP 端口 8080 而非 8180）→「配置挂载了却没生效」，
+    # 表现为宿主 8180 无服务、拉流失败（2026-10-13 实测踩到）
+    command: ["./objs/srs", "-c", "conf/srs.conf"]
+    environment:
+      # 回调 token，必须与后端 live.callbackToken 一致（见 README「token 对齐」）
+      # 覆盖 srs.conf 里 `env SRS_CALLBACK_TOKEN=...;` 的默认值
+      - SRS_CALLBACK_TOKEN=${SRS_CALLBACK_TOKEN:-dev-live-cb-token}
+    extra_hosts:
+      # 回调地址用 host.docker.internal 指向宿主机上的后端 API（:8000）
+      - "host.docker.internal:host-gateway"
+    stop_grace_period: 30s   # 给 SRS 时间优雅收流并触发 on_unpublish
+
+volumes:
+  srs-data:

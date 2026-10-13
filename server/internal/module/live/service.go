@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -67,6 +68,13 @@ type RoomInfo struct {
 	StartedAt  *time.Time `json:"started_at,omitempty"`
 	EndedAt    *time.Time `json:"ended_at,omitempty"`
 	Online     int64      `json:"online"`
+	PlayURLs   PlayURLs   `json:"play_urls"` // 拉流地址（公开、不含密钥，M4-LIV-01 D4）
+}
+
+// PlayURLs 拉流地址（plan liv01 D4）：由 live.playDomain + stream 名拼装，不含推流密钥。
+type PlayURLs struct {
+	HLS string `json:"hls"`
+	FLV string `json:"flv"`
 }
 
 func (s *Service) roomInfo(ctx context.Context, r *LiveRoom) (*RoomInfo, error) {
@@ -84,6 +92,7 @@ func (s *Service) roomInfo(ctx context.Context, r *LiveRoom) (*RoomInfo, error) 
 		StartedAt:  r.StartedAt,
 		EndedAt:    r.EndedAt,
 		Online:     n,
+		PlayURLs:   s.playURLs(r.ID),
 	}, nil
 }
 
@@ -145,7 +154,7 @@ func (s *Service) Apply(ctx context.Context, uid int64) (*ApplyResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ApplyResult{Room: info, PushURL: s.pushURL(room.ID), StreamKey: key}, nil
+	return &ApplyResult{Room: info, PushURL: s.pushURL(room.ID, key), StreamKey: key}, nil
 }
 
 // Start 开播：status 0/2 → 1，写 started_at、清 ended_at、在线计数清零。
@@ -179,6 +188,12 @@ func (s *Service) Stop(ctx context.Context, uid int64) (*RoomInfo, error) {
 	if room.Status != RoomStatusLive {
 		return nil, errcode.ErrLiveNotLive
 	}
+	return s.stopRoom(ctx, room)
+}
+
+// stopRoom 下播落库（status 1→2、ended_at、在线清零、清弹幕历史）。
+// 调用方保证 room.Status == RoomStatusLive；主播下播与 SRS on_unpublish 回调共用本路径。
+func (s *Service) stopRoom(ctx context.Context, room *LiveRoom) (*RoomInfo, error) {
 	now := time.Now()
 	if err := s.repo.UpdateRoomFields(room.ID, map[string]any{
 		"status": RoomStatusEnded, "ended_at": now,
@@ -239,10 +254,10 @@ func (s *Service) ResetStreamKey(ctx context.Context, uid int64) (*ApplyResult, 
 	if err != nil {
 		return nil, err
 	}
-	return &ApplyResult{Room: info, PushURL: s.pushURL(room.ID), StreamKey: key}, nil
+	return &ApplyResult{Room: info, PushURL: s.pushURL(room.ID, key), StreamKey: key}, nil
 }
 
-// MyRoom 我的房间（含推流地址；密钥不回传）。
+// MyRoom 我的房间（含推流基址；明文密钥不回传，故不带 key 查询串）。
 func (s *Service) MyRoom(ctx context.Context, uid int64) (*ApplyResult, error) {
 	room, err := s.mustOwnedRoom(uid)
 	if err != nil {
@@ -252,7 +267,7 @@ func (s *Service) MyRoom(ctx context.Context, uid int64) (*ApplyResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ApplyResult{Room: info, PushURL: s.pushURL(room.ID)}, nil
+	return &ApplyResult{Room: info, PushURL: s.basePushURL(room.ID)}, nil
 }
 
 // mustOwnedRoom 取本人房间；无房或非主播报错。
@@ -267,8 +282,20 @@ func (s *Service) mustOwnedRoom(uid int64) (*LiveRoom, error) {
 	return room, nil
 }
 
-// pushURL 拼装 RTMP 推流地址占位（本卡不发流，LIV-01 接 SRS）。
-func (s *Service) pushURL(roomID int64) string {
+// streamApp 配置的 RTMP 应用名（缺省 live）。
+func (s *Service) streamApp() string {
+	if s.cfg != nil && s.cfg.Live.StreamApp != "" {
+		return s.cfg.Live.StreamApp
+	}
+	return "live"
+}
+
+// StreamName RTMP 流名：room_<roomID>（公开，不含密钥）。
+func StreamName(roomID int64) string { return "room_" + itoa(roomID) }
+
+// basePushURL 推流基址（不含密钥）：rtmp://<pushDomain>/<app>/room_<id>
+// MyRoom 等无明文密钥的回传口径用它。
+func (s *Service) basePushURL(roomID int64) string {
 	domain := ""
 	if s.cfg != nil {
 		domain = s.cfg.Live.PushDomain
@@ -276,7 +303,29 @@ func (s *Service) pushURL(roomID int64) string {
 	if domain == "" {
 		domain = "push.placeholder.dlidli.local"
 	}
-	return "rtmp://" + domain + "/live" + itoa(roomID) + "/"
+	return "rtmp://" + domain + "/" + s.streamApp() + "/" + StreamName(roomID)
+}
+
+// pushURL 完整推流地址（仅 Apply/ResetStreamKey 拿到明文密钥时拼 key，plan liv01 D1）。
+func (s *Service) pushURL(roomID int64, key string) string {
+	u := s.basePushURL(roomID)
+	if key == "" {
+		return u
+	}
+	return u + "?key=" + url.QueryEscape(key)
+}
+
+// playURLs 拉流地址（plan liv01 D4）：http://<playDomain>/<app>/room_<id>.m3u8|.flv，不含密钥。
+func (s *Service) playURLs(roomID int64) PlayURLs {
+	domain := ""
+	if s.cfg != nil {
+		domain = s.cfg.Live.PlayDomain
+	}
+	if domain == "" {
+		domain = "play.placeholder.dlidli.local"
+	}
+	base := "http://" + domain + "/" + s.streamApp() + "/" + StreamName(roomID)
+	return PlayURLs{HLS: base + ".m3u8", FLV: base + ".flv"}
 }
 
 // genStreamKey 生成 32 位随机密钥（crypto/rand hex）+ bcrypt 哈希。

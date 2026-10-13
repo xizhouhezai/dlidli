@@ -2,13 +2,19 @@ package live
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"strconv"
 
 	"github.com/dlidli/server/internal/middleware"
 	"github.com/dlidli/server/internal/pkg/errcode"
 	"github.com/dlidli/server/internal/pkg/response"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
+
+// callbackTokenHeader 回调 token 的备用传递头（SRS http_hooks 默认走查询串）。
+const callbackTokenHeader = "X-Live-Callback-Token"
 
 type Handler struct {
 	svc *Service
@@ -38,6 +44,11 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 
 		g.GET("/rooms", h.rooms)                        // 公开：直播中列表
 		g.GET("/rooms/:id", optionalAuth, h.roomDetail) // 详情（未开播仅主播可见）
+
+		// SRS http_hooks 回调（M4-LIV-01）：无登录态，鉴权靠共享 token（见 CheckCallbackToken），
+		// 失败一律非 2xx → SRS 拒绝推流。
+		g.POST("/stream/auth", h.streamAuth)
+		g.POST("/stream/stop", h.streamStop)
 
 		g.POST("/rooms/:id/enter", auth, h.enter)
 		g.POST("/rooms/:id/heartbeat", auth, h.heartbeat)
@@ -498,4 +509,86 @@ func pathUID(c *gin.Context) (int64, bool) {
 		return 0, false
 	}
 	return uid, true
+}
+
+// ---- SRS http_hooks 回调（M4-LIV-01）----
+
+// @Summary  SRS on_publish 回调（推流鉴权）
+// @Tags     直播
+// @Produce  json
+// @Param    token query string false "回调共享 token（亦可用 X-Live-Callback-Token 头）"
+// @Param    body  body  live.PublishAuthReq true "SRS 回调体（action/app/stream/param 等）"
+// @Success  200 {object} response.Body{data=object} "code=0 放行推流"
+// @Failure  403 {object} response.Body "91024 token 无效 / 91025 密钥错误 / 91006 未开播 / 91007 房间不存在 / 91026 流名不合法"
+// @Router   /live/stream/auth [post]
+// @Description 流名 room_<id>（公开、不含密钥），密钥在推流 URL 查询串 → SRS 放入 body.param；
+// @Description 非 2xx 即 SRS 拒绝推流。
+func (h *Handler) streamAuth(c *gin.Context) {
+	if !h.svc.CheckCallbackToken(c.Query("token"), c.GetHeader(callbackTokenHeader)) {
+		failCallback(c, errcode.ErrLiveCallbackTokenInvalid)
+		return
+	}
+	var req PublishAuthReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		failCallback(c, errcode.ErrLiveStreamFormatInvalid)
+		return
+	}
+	roomID, err := h.svc.AuthorizePublish(c.Request.Context(), &req)
+	if err != nil {
+		failCallback(c, err)
+		return
+	}
+	response.OK(c, gin.H{"room_id": roomID})
+}
+
+// @Summary  SRS on_unpublish 回调（下播联动，幂等）
+// @Tags     直播
+// @Produce  json
+// @Param    token query string false "回调共享 token（亦可用 X-Live-Callback-Token 头）"
+// @Param    body  body  live.PublishAuthReq true "SRS 回调体（action/app/stream/param 等）"
+// @Success  200 {object} response.Body{data=object} "stopped=true 本场已置下播；false 无动作（重复回调/未知流）"
+// @Failure  403 {object} response.Body "91024 token 无效"
+// @Router   /live/stream/stop [post]
+// @Description 房间处于直播中(1) 时复用主播下播路径（status=2 + ended_at + 在线清零 + 清弹幕历史）；
+// @Description 重复回调或未知流返回 200 且不改变状态。
+func (h *Handler) streamStop(c *gin.Context) {
+	if !h.svc.CheckCallbackToken(c.Query("token"), c.GetHeader(callbackTokenHeader)) {
+		failCallback(c, errcode.ErrLiveCallbackTokenInvalid)
+		return
+	}
+	var req PublishAuthReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		failCallback(c, errcode.ErrLiveStreamFormatInvalid)
+		return
+	}
+	stopped, err := h.svc.StopByStream(c.Request.Context(), &req)
+	if err != nil {
+		if errors.Is(err, errcode.ErrLiveStreamFormatInvalid) {
+			// 不是本服务的房间流：无可下播对象，按幂等返回 200（避免 SRS 重试风暴）
+			h.svc.logger().Warn("on_unpublish 流名不合法，忽略", zap.String("stream", req.Stream))
+			response.OK(c, gin.H{"stopped": false})
+			return
+		}
+		failCallback(c, err)
+		return
+	}
+	if !stopped {
+		h.svc.logger().Info("on_unpublish 无下播动作（重复回调或未知房间）", zap.String("stream", req.Stream))
+	}
+	response.OK(c, gin.H{"stopped": stopped})
+}
+
+// failCallback 回调失败响应：SRS 以 HTTP 状态码判定是否拒推，必须非 2xx，
+// 故不能走 response.Fail（业务错误统一 200 + code）。业务错误用 403，其余用 500。
+func failCallback(c *gin.Context, err error) {
+	code, msg := errcode.ErrInternal.Code, errcode.ErrInternal.Msg
+	status := http.StatusForbidden
+	var biz *errcode.Error
+	if errors.As(err, &biz) {
+		code, msg = biz.Code, biz.Msg
+	} else {
+		status = http.StatusInternalServerError
+	}
+	_ = c.Error(err)
+	c.JSON(status, response.Body{Code: code, Message: msg, Data: nil, TraceID: c.GetString(response.CtxTraceID)})
 }
