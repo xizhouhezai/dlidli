@@ -123,6 +123,13 @@ func (r *Repo) AddAdmin(roomID, uid, by int64) (bool, error) {
 	return false, res.Error
 }
 
+// ListAdmins 房间房管列表（任命时间正序）。
+func (r *Repo) ListAdmins(roomID int64) ([]LiveRoomAdmin, error) {
+	var rows []LiveRoomAdmin
+	err := r.db.Where("room_id = ?", roomID).Order("created_at ASC").Find(&rows).Error
+	return rows, err
+}
+
 // RemoveAdmin 撤销房管；返回是否确有删除。
 func (r *Repo) RemoveAdmin(roomID, uid int64) (bool, error) {
 	res := r.db.Where("room_id = ? AND user_id = ?", roomID, uid).Delete(&LiveRoomAdmin{})
@@ -152,6 +159,13 @@ func (r *Repo) MutedUntil(roomID, uid int64) (*time.Time, error) {
 	}
 	until := m.MutedUntil
 	return &until, nil
+}
+
+// ListMutes 房间禁言列表（未到期在前，其余按到期时间正序）。
+func (r *Repo) ListMutes(roomID int64) ([]LiveRoomMute, error) {
+	var rows []LiveRoomMute
+	err := r.db.Where("room_id = ?", roomID).Order("muted_until ASC").Find(&rows).Error
+	return rows, err
 }
 
 // Unmute 解除禁言；返回是否确有删除。

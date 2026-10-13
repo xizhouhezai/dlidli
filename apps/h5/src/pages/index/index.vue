@@ -88,6 +88,11 @@ function goSearch() {
 function goProfile() {
   uni.navigateTo({ url: '/pages/profile/profile' })
 }
+
+/** 直播入口（M4-LIV-06）：H5 直播间列表页 */
+function goLive() {
+  uni.navigateTo({ url: '/pages/live/live' })
+}
 </script>
 
 <template>
@@ -127,6 +132,7 @@ function goProfile() {
         <text class="sort-tab" :class="{ active: sort === 'hot' }" @tap="switchSort('hot')"
           >最热</text
         >
+        <text class="sort-tab sort-tab--live" @tap="goLive">● 直播</text>
       </view>
     </view>
 
@@ -273,6 +279,11 @@ function goProfile() {
 .sort-tab.active {
   color: v.$primary;
   font-weight: 600;
+}
+
+/* 直播入口（M4-LIV-06）：红色呼吸点样式即文案自带 ● */
+.sort-tab--live {
+  color: v.$primary;
 }
 
 /* 视频网格 */

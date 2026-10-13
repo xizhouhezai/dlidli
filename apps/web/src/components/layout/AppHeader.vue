@@ -157,6 +157,7 @@ async function onLogout() {
 
       <nav class="dli-nav flex gap-5 text-3.5 shrink-0">
         <RouterLink to="/"> 首页 </RouterLink>
+        <RouterLink to="/live"> 直播 </RouterLink>
         <RouterLink to="/feed"> 动态 </RouterLink>
         <span class="text-#c0c4cc cursor-not-allowed" title="M1 开发中">分区</span>
       </nav>
@@ -212,6 +213,9 @@ async function onLogout() {
                   稿件管理
                 </el-dropdown-item>
                 <el-dropdown-item @click="$router.push('/creator')"> 创作者中心 </el-dropdown-item>
+                <el-dropdown-item @click="$router.push('/studio/live')">
+                  开播管理
+                </el-dropdown-item>
                 <el-dropdown-item @click="$router.push('/settings')"> 账号设置 </el-dropdown-item>
                 <el-dropdown-item divided @click="onLogout"> 退出登录 </el-dropdown-item>
               </el-dropdown-menu>

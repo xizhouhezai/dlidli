@@ -56,6 +56,12 @@
       }
     },
     {
+      "path": "pages/live/live",
+      "style": {
+        "navigationBarTitleText": "直播间"
+      }
+    },
+    {
       "path": "pages/im/im",
       "style": {
         "navigationBarTitleText": "私信",
