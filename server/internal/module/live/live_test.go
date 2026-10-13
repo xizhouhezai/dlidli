@@ -62,6 +62,7 @@ func cleanup(t *testing.T, db *gorm.DB) {
 	db.Exec("DELETE FROM live_whitelist WHERE user_id BETWEEN 91000000 AND 91099999")
 	db.Exec("DELETE FROM live_room_admin WHERE user_id BETWEEN 91000000 AND 91099999")
 	db.Exec("DELETE FROM live_room_mute WHERE user_id BETWEEN 91000000 AND 91099999")
+	db.Exec("DELETE FROM live_room_msg") // 弹幕历史窗口按房间隔离，测试房间回收时全量清理
 	db.Exec("DELETE FROM `user` WHERE id BETWEEN 91000000 AND 91099999")
 	db.Exec("DELETE FROM user_auth WHERE user_id BETWEEN 91000000 AND 91099999")
 	db.Exec("DELETE FROM relation WHERE user_id BETWEEN 91000000 AND 91099999 OR target_id BETWEEN 91000000 AND 91099999")

@@ -53,7 +53,7 @@ func (o *Online) Enter(ctx context.Context, roomID, uid int64) error {
 		return nil // 已在线（心跳键未过期），不重复计数
 	}
 	if err := o.rdb.Incr(ctx, onlineKey(roomID)).Err(); err != nil {
-		return o.db.UpdateLiveCntByDelta(roomID, 1)
+		return err
 	}
 	return o.db.UpdateLiveCntByDelta(roomID, 1)
 }
@@ -135,4 +135,58 @@ func (o *Online) IsMuted(ctx context.Context, roomID, uid int64) (bool, error) {
 		return false, err
 	}
 	return time.Now().Before(*until), nil
+}
+
+// ---- WS 生命周期计数原语（M4-LIV-03：live hub 断开即离房，plan live §2B.1）----
+
+// EnterForce WS 进房：SETNX 心跳键判重后强制 INCR（连接生命周期即在线状态，
+// 不依赖 HTTP 进房先行——WS 建连即进房）；键已存在（HTTP 进房未过期）不重复计数。
+// 返回本次是否真正计数（供断开时按标志配对扣减——hb 键 TTL 30s 可能先于长连接
+// 断开过期，届时 DEL 幂等会漏扣，故扣减不能依赖键存在性）。
+func (o *Online) EnterForce(ctx context.Context, roomID, uid int64) bool {
+	if o.rdb == nil {
+		return false
+	}
+	ok, err := o.rdb.SetNX(ctx, hbKey(roomID, uid), 1, hbTTL).Result()
+	if err != nil {
+		o.log.Warn("WS 进房计数失败", zap.Int64("room", roomID), zap.Error(err))
+		return false
+	}
+	if !ok {
+		return false // 已在线（心跳键未过期），不重复计数
+	}
+	if err := o.rdb.Incr(ctx, onlineKey(roomID)).Err(); err != nil {
+		o.log.Warn("WS 进房 INCR 失败", zap.Int64("room", roomID), zap.Error(err))
+		return false
+	}
+	_ = o.db.UpdateLiveCntByDelta(roomID, 1)
+	return true
+}
+
+// Beat 心跳续命：只刷 TTL（已在在线集合内，不判定、不增减计数）。
+func (o *Online) Beat(ctx context.Context, roomID, uid int64) {
+	if o.rdb == nil {
+		return
+	}
+	if err := o.rdb.Expire(ctx, hbKey(roomID, uid), hbTTL).Err(); err != nil {
+		o.log.Warn("WS 心跳续期失败", zap.Int64("room", roomID), zap.Error(err))
+	}
+}
+
+// LeaveForce WS 离房（断开回调）：按进房时的计数标志配对扣减，并尽力 DEL 心跳键。
+// counted=true 时无条件 DECR（即使 hb 键已过期——Enter 时确曾 +1，键过期
+// 只是 TTL 先到，计数不因键消失而消失）；counted=false 不扣（判重路径进房）。
+func (o *Online) LeaveForce(ctx context.Context, roomID, uid int64, counted bool) {
+	if o.rdb == nil {
+		return
+	}
+	_, _ = o.rdb.Del(ctx, hbKey(roomID, uid)).Result()
+	if !counted {
+		return
+	}
+	if err := o.rdb.Decr(ctx, onlineKey(roomID)).Err(); err != nil {
+		o.log.Warn("WS 离房 DECR 失败", zap.Int64("room", roomID), zap.Error(err))
+		return
+	}
+	_ = o.db.UpdateLiveCntByDelta(roomID, -1)
 }

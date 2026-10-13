@@ -19,6 +19,8 @@ server/uploads_prod/
 # 临时/测试产物（脚本生成的临时媒体与下载件）
 tmp_*
 server/tmp_*
+# Go 构建缓存（沙箱会话 GOCACHE 指入工作区时产生）
+.gocache/
 
 # 会话归档解包与本地环境探测产物（含安装包，不入库）
 .session-extract/

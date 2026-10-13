@@ -33,7 +33,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -61,7 +61,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SaveAdminReq"
+                            "$ref": "#/definitions/internal_module_admin.SaveAdminReq"
                         }
                     }
                 ],
@@ -69,7 +69,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -106,7 +106,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SaveAdminReq"
+                            "$ref": "#/definitions/internal_module_admin.SaveAdminReq"
                         }
                     }
                 ],
@@ -114,7 +114,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -145,7 +145,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -182,7 +182,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.ResetPwdReq"
+                            "$ref": "#/definitions/internal_module_admin.ResetPwdReq"
                         }
                     }
                 ],
@@ -190,7 +190,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -235,7 +235,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -303,7 +303,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -383,7 +383,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -411,7 +411,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/banner.SaveReq"
+                            "$ref": "#/definitions/internal_module_banner.SaveReq"
                         }
                     }
                 ],
@@ -419,7 +419,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -456,7 +456,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/banner.SaveReq"
+                            "$ref": "#/definitions/internal_module_banner.SaveReq"
                         }
                     }
                 ],
@@ -464,7 +464,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -495,7 +495,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -519,7 +519,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -547,7 +547,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/video.SaveCategoryReq"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_module_video.SaveCategoryReq"
                         }
                     }
                 ],
@@ -555,7 +555,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -592,7 +592,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/video.SaveCategoryReq"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_module_video.SaveCategoryReq"
                         }
                     }
                 ],
@@ -600,7 +600,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -631,7 +631,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -655,7 +655,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -683,7 +683,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SaveConfigReq"
+                            "$ref": "#/definitions/internal_module_admin.SaveConfigReq"
                         }
                     }
                 ],
@@ -691,7 +691,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -728,7 +728,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SaveConfigReq"
+                            "$ref": "#/definitions/internal_module_admin.SaveConfigReq"
                         }
                     }
                 ],
@@ -736,7 +736,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -767,7 +767,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -807,7 +807,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -831,7 +831,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -859,7 +859,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SaveDictReq"
+                            "$ref": "#/definitions/internal_module_admin.SaveDictReq"
                         }
                     }
                 ],
@@ -867,7 +867,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -904,7 +904,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SaveDictReq"
+                            "$ref": "#/definitions/internal_module_admin.SaveDictReq"
                         }
                     }
                 ],
@@ -912,7 +912,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -943,7 +943,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -967,7 +967,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -995,7 +995,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/abtest.SaveReq"
+                            "$ref": "#/definitions/internal_module_abtest.SaveReq"
                         }
                     }
                 ],
@@ -1003,7 +1003,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1040,7 +1040,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/abtest.SaveReq"
+                            "$ref": "#/definitions/internal_module_abtest.SaveReq"
                         }
                     }
                 ],
@@ -1048,7 +1048,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1079,7 +1079,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1119,7 +1119,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1144,7 +1144,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.LoginReq"
+                            "$ref": "#/definitions/internal_module_admin.LoginReq"
                         }
                     }
                 ],
@@ -1152,7 +1152,7 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {token, username, role}",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1176,7 +1176,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1200,7 +1200,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1228,7 +1228,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SavePermissionReq"
+                            "$ref": "#/definitions/internal_module_admin.SavePermissionReq"
                         }
                     }
                 ],
@@ -1236,7 +1236,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1273,7 +1273,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SavePermissionReq"
+                            "$ref": "#/definitions/internal_module_admin.SavePermissionReq"
                         }
                     }
                 ],
@@ -1281,7 +1281,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1312,7 +1312,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1356,7 +1356,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1425,7 +1425,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/report.HandleReq"
+                            "$ref": "#/definitions/internal_module_report.HandleReq"
                         }
                     }
                 ],
@@ -1433,7 +1433,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1457,7 +1457,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1485,7 +1485,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SaveRoleReq"
+                            "$ref": "#/definitions/internal_module_admin.SaveRoleReq"
                         }
                     }
                 ],
@@ -1493,7 +1493,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1530,7 +1530,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.SaveRoleReq"
+                            "$ref": "#/definitions/internal_module_admin.SaveRoleReq"
                         }
                     }
                 ],
@@ -1538,7 +1538,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1569,7 +1569,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1593,7 +1593,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1621,7 +1621,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.AddWordReq"
+                            "$ref": "#/definitions/internal_module_admin.AddWordReq"
                         }
                     }
                 ],
@@ -1629,7 +1629,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1662,7 +1662,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1700,7 +1700,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1775,7 +1775,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.PunishReq"
+                            "$ref": "#/definitions/internal_module_admin.PunishReq"
                         }
                     }
                 ],
@@ -1783,7 +1783,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1839,7 +1839,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1907,7 +1907,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1940,7 +1940,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -1977,7 +1977,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/admin.ReviewReq"
+                            "$ref": "#/definitions/internal_module_admin.ReviewReq"
                         }
                     }
                 ],
@@ -1985,7 +1985,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2030,7 +2030,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2063,7 +2063,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2082,7 +2082,7 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {captcha_id, image_base64}",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2115,7 +2115,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2148,7 +2148,7 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {access_token, refresh_token, user}",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2181,7 +2181,7 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {access_token, refresh_token, user}",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2214,7 +2214,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2247,7 +2247,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2280,7 +2280,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2313,7 +2313,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2346,7 +2346,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2365,7 +2365,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2403,7 +2403,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2422,7 +2422,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2450,7 +2450,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2478,7 +2478,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/collection.CreateReq"
+                            "$ref": "#/definitions/internal_module_collection.CreateReq"
                         }
                     }
                 ],
@@ -2486,7 +2486,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2514,7 +2514,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2545,7 +2545,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2587,7 +2587,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2627,7 +2627,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2660,7 +2660,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2693,7 +2693,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2721,7 +2721,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2745,7 +2745,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2783,7 +2783,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2821,7 +2821,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2859,7 +2859,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2897,7 +2897,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2935,7 +2935,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -2973,7 +2973,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3005,7 +3005,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3043,7 +3043,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3067,7 +3067,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3091,7 +3091,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91001 未入白名单 / 91002 未实名 / 91003 粉丝不足 / 91004 已有房间",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3118,7 +3118,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/live.updateRoomReq"
+                            "$ref": "#/definitions/internal_module_live.updateRoomReq"
                         }
                     }
                 ],
@@ -3126,7 +3126,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91012 分区不存在 / 91014 标题非法 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3150,7 +3150,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3174,7 +3174,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91005 房间已开播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3198,7 +3198,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91006 房间未在直播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3222,7 +3222,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3263,13 +3263,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Body"
+                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/live.RoomListResult"
+                                            "$ref": "#/definitions/internal_module_live.RoomListResult"
                                         }
                                     }
                                 }
@@ -3301,7 +3301,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3341,7 +3341,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91008 非主播 / 91010 不能对自己 / 10005 用户不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3379,7 +3379,40 @@ const docTemplate = `{
                     "200": {
                         "description": "91008 非主播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}/danmaku/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播"
+                ],
+                "summary": "直播弹幕历史（进房回放最近 50 条）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91006 未开播 / 91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3412,7 +3445,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91006 未开播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3445,7 +3478,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3480,13 +3513,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Body"
+                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/live.RoomInfo"
+                                            "$ref": "#/definitions/internal_module_live.RoomInfo"
                                         }
                                     }
                                 }
@@ -3531,7 +3564,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/live.muteReq"
+                            "$ref": "#/definitions/internal_module_live.muteReq"
                         }
                     }
                 ],
@@ -3539,7 +3572,7 @@ const docTemplate = `{
                     "200": {
                         "description": "91009 非主播/房管 / 91013 时长非法 / 91010 不能禁言主播",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3577,7 +3610,44 @@ const docTemplate = `{
                     "200": {
                         "description": "91009 非主播/房管",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/live/rooms/{id}/ws": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "客户端上行帧（JSON）: {\"type\":\"heartbeat\"} 心跳（≤15s 一次，40s 无上行断开）；\n{\"type\":\"danmaku\",\"content\":\"文本\"} 发弹幕（服务端频控/禁言/机审，失败经 admin 侧日志，\n拒绝不下发帧）。服务端下行帧: {\"type\":\"enter\",...} 进场 / {\"type\":\"danmaku\",...} 弹幕 / {\"type\":\"pong\",...} 心跳应答。",
+                "tags": [
+                    "直播"
+                ],
+                "summary": "直播弹幕实时连接（WebSocket，M4-LIV-03）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "200": {
+                        "description": "91006 未开播 / 91007 房间不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3607,7 +3677,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/im.SendReq"
+                            "$ref": "#/definitions/internal_module_im.SendReq"
                         }
                     }
                 ],
@@ -3615,7 +3685,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3639,7 +3709,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3663,7 +3733,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3729,7 +3799,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3753,7 +3823,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3777,7 +3847,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3801,7 +3871,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3855,7 +3925,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3885,7 +3955,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/report.SubmitReq"
+                            "$ref": "#/definitions/internal_module_report.SubmitReq"
                         }
                     }
                 ],
@@ -3893,7 +3963,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3933,7 +4003,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3966,7 +4036,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -3999,7 +4069,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4032,7 +4102,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4060,7 +4130,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4088,7 +4158,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4116,7 +4186,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4144,7 +4214,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4171,7 +4241,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4204,7 +4274,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4237,7 +4307,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4280,7 +4350,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4304,7 +4374,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4332,7 +4402,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/account.UpdateProfileReq"
+                            "$ref": "#/definitions/internal_module_account.UpdateProfileReq"
                         }
                     }
                 ],
@@ -4340,7 +4410,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4376,7 +4446,7 @@ const docTemplate = `{
                     "200": {
                         "description": "data: {avatar}",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4414,7 +4484,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4438,7 +4508,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4463,7 +4533,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4499,7 +4569,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4530,7 +4600,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4554,7 +4624,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4592,7 +4662,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4616,7 +4686,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4652,7 +4722,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4676,7 +4746,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4712,7 +4782,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4757,7 +4827,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4785,7 +4855,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/video.SubmitReq"
+                            "$ref": "#/definitions/internal_module_video.SubmitReq"
                         }
                     }
                 ],
@@ -4793,7 +4863,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4829,7 +4899,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4853,7 +4923,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4892,7 +4962,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4916,7 +4986,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4944,7 +5014,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -4975,7 +5045,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5008,7 +5078,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5036,7 +5106,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5071,7 +5141,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/interaction.AddCommentReq"
+                            "$ref": "#/definitions/internal_module_interaction.AddCommentReq"
                         }
                     }
                 ],
@@ -5079,7 +5149,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5113,7 +5183,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5156,7 +5226,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5180,7 +5250,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5216,7 +5286,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5249,7 +5319,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5289,7 +5359,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5322,7 +5392,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5350,7 +5420,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5378,7 +5448,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5409,7 +5479,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5437,7 +5507,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5470,7 +5540,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5504,7 +5574,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5537,7 +5607,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5565,7 +5635,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5593,7 +5663,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Body"
+                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
                         }
                     }
                 }
@@ -5601,7 +5671,47 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "abtest.SaveReq": {
+        "github_com_dlidli_server_internal_module_video.SaveCategoryReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "parent_id": {
+                    "type": "integer"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                }
+            }
+        },
+        "github_com_dlidli_server_internal_pkg_response.Body": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_module_abtest.SaveReq": {
             "type": "object",
             "required": [
                 "name",
@@ -5644,7 +5754,7 @@ const docTemplate = `{
                 }
             }
         },
-        "account.UpdateProfileReq": {
+        "internal_module_account.UpdateProfileReq": {
             "type": "object",
             "properties": {
                 "gender": {
@@ -5658,7 +5768,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.AddWordReq": {
+        "internal_module_admin.AddWordReq": {
             "type": "object",
             "required": [
                 "word"
@@ -5670,7 +5780,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.LoginReq": {
+        "internal_module_admin.LoginReq": {
             "type": "object",
             "required": [
                 "password",
@@ -5685,7 +5795,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.PunishReq": {
+        "internal_module_admin.PunishReq": {
             "type": "object",
             "required": [
                 "action"
@@ -5714,7 +5824,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.ResetPwdReq": {
+        "internal_module_admin.ResetPwdReq": {
             "type": "object",
             "required": [
                 "password"
@@ -5727,7 +5837,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.ReviewReq": {
+        "internal_module_admin.ReviewReq": {
             "type": "object",
             "properties": {
                 "approve": {
@@ -5738,7 +5848,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.SaveAdminReq": {
+        "internal_module_admin.SaveAdminReq": {
             "type": "object",
             "required": [
                 "username"
@@ -5765,7 +5875,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.SaveConfigReq": {
+        "internal_module_admin.SaveConfigReq": {
             "type": "object",
             "required": [
                 "config_key"
@@ -5789,7 +5899,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.SaveDictReq": {
+        "internal_module_admin.SaveDictReq": {
             "type": "object",
             "required": [
                 "dict_type",
@@ -5818,7 +5928,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.SavePermissionReq": {
+        "internal_module_admin.SavePermissionReq": {
             "type": "object",
             "required": [
                 "name"
@@ -5856,7 +5966,7 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.SaveRoleReq": {
+        "internal_module_admin.SaveRoleReq": {
             "type": "object",
             "required": [
                 "name"
@@ -5882,7 +5992,7 @@ const docTemplate = `{
                 }
             }
         },
-        "banner.SaveReq": {
+        "internal_module_banner.SaveReq": {
             "type": "object",
             "properties": {
                 "bvid": {
@@ -5909,7 +6019,7 @@ const docTemplate = `{
                 }
             }
         },
-        "collection.CreateReq": {
+        "internal_module_collection.CreateReq": {
             "type": "object",
             "required": [
                 "title"
@@ -5929,7 +6039,7 @@ const docTemplate = `{
                 }
             }
         },
-        "im.SendReq": {
+        "internal_module_im.SendReq": {
             "type": "object",
             "required": [
                 "content",
@@ -5952,7 +6062,7 @@ const docTemplate = `{
                 }
             }
         },
-        "interaction.AddCommentReq": {
+        "internal_module_interaction.AddCommentReq": {
             "type": "object",
             "required": [
                 "content"
@@ -5970,14 +6080,14 @@ const docTemplate = `{
                 }
             }
         },
-        "live.ApplyResult": {
+        "internal_module_live.ApplyResult": {
             "type": "object",
             "properties": {
                 "push_url": {
                     "type": "string"
                 },
                 "room": {
-                    "$ref": "#/definitions/live.RoomInfo"
+                    "$ref": "#/definitions/internal_module_live.RoomInfo"
                 },
                 "stream_key": {
                     "description": "明文密钥仅申请/重置时返回",
@@ -5985,7 +6095,46 @@ const docTemplate = `{
                 }
             }
         },
-        "live.RoomInfo": {
+        "internal_module_live.DanmakuInfo": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "description": "已是十进制字符串（itoa），不再二次转字符串",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_module_live.HistoryResult": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_module_live.DanmakuInfo"
+                    }
+                },
+                "online": {
+                    "type": "integer"
+                },
+                "room_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_module_live.RoomInfo": {
             "type": "object",
             "properties": {
                 "anchor_id": {
@@ -6018,13 +6167,13 @@ const docTemplate = `{
                 }
             }
         },
-        "live.RoomListResult": {
+        "internal_module_live.RoomListResult": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/live.RoomInfo"
+                        "$ref": "#/definitions/internal_module_live.RoomInfo"
                     }
                 },
                 "total": {
@@ -6032,7 +6181,7 @@ const docTemplate = `{
                 }
             }
         },
-        "live.muteReq": {
+        "internal_module_live.muteReq": {
             "type": "object",
             "required": [
                 "minutes"
@@ -6047,7 +6196,7 @@ const docTemplate = `{
                 }
             }
         },
-        "live.updateRoomReq": {
+        "internal_module_live.updateRoomReq": {
             "type": "object",
             "required": [
                 "category_id",
@@ -6065,7 +6214,7 @@ const docTemplate = `{
                 }
             }
         },
-        "report.HandleReq": {
+        "internal_module_report.HandleReq": {
             "type": "object",
             "required": [
                 "action"
@@ -6099,7 +6248,7 @@ const docTemplate = `{
                 }
             }
         },
-        "report.SubmitReq": {
+        "internal_module_report.SubmitReq": {
             "type": "object",
             "required": [
                 "reason_type",
@@ -6138,22 +6287,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.Body": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {},
-                "message": {
-                    "type": "string"
-                },
-                "trace_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "video.PartSubmit": {
+        "internal_module_video.PartSubmit": {
             "type": "object",
             "required": [
                 "file_id"
@@ -6168,32 +6302,7 @@ const docTemplate = `{
                 }
             }
         },
-        "video.SaveCategoryReq": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "maxLength": 32
-                },
-                "parent_id": {
-                    "type": "integer"
-                },
-                "sort": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
-                }
-            }
-        },
-        "video.SubmitReq": {
+        "internal_module_video.SubmitReq": {
             "type": "object",
             "required": [
                 "category_id",
@@ -6229,7 +6338,7 @@ const docTemplate = `{
                     "description": "多P投稿（PRD VID-05）：每项对应一个分P（file_id + 分P标题）；空则单P兼容现状",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/video.PartSubmit"
+                        "$ref": "#/definitions/internal_module_video.PartSubmit"
                     }
                 },
                 "tags": {

@@ -160,6 +160,66 @@ func (r *Repo) Unmute(roomID, uid int64) (bool, error) {
 	return res.RowsAffected > 0, res.Error
 }
 
+// FanBadge 粉丝徽章等级（进场消息轻量信息）：关注主播的 relation.id 序（1..cap），
+// 未关注返回 0；取不到时静默降级 0（徽章是尽力而为的展示信息）。
+func (r *Repo) FanBadge(anchor, uid int64, cap int64) int64 {
+	var id int64
+	err := r.db.Table("relation").Select("id").
+		Where("user_id = ? AND target_id = ?", uid, anchor).Take(&id).Error
+	if err != nil {
+		return 0
+	}
+	if id > cap {
+		return 1
+	}
+	return id
+}
+
+// ---- 弹幕历史窗口（M4-LIV-03）----
+
+// historyWindow 每房间保留的弹幕历史条数（进房拉最近 50 条）。
+const historyWindow = 50
+
+// AddRoomMsg 追加一条弹幕并裁剪窗口：仅保留该房间最近 historyWindow 条。
+// MySQL 不支持 LIMIT 子查询，先取窗口内最小 id 作为 cutoff 再按整数键删除。
+func (r *Repo) AddRoomMsg(m *LiveRoomMsg) error {
+	if err := r.db.Create(m).Error; err != nil {
+		return err
+	}
+	var cutoff int64
+	err := r.db.Model(&LiveRoomMsg{}).Select("id").
+		Where("room_id = ?", m.RoomID).
+		Order("id DESC").Offset(historyWindow - 1).Limit(1).
+		Take(&cutoff).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil // 未超窗（不足 historyWindow 条）无需裁剪
+	}
+	if err != nil {
+		return err
+	}
+	return r.db.Where("room_id = ? AND id < ?", m.RoomID, cutoff).
+		Delete(&LiveRoomMsg{}).Error
+}
+
+// ListRoomMsg 进房历史：最近 historyWindow 条按时间正序回放。
+func (r *Repo) ListRoomMsg(roomID int64) ([]LiveRoomMsg, error) {
+	var rows []LiveRoomMsg
+	err := r.db.Where("room_id = ?", roomID).
+		Order("id DESC").Limit(historyWindow).Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 { // 反转为正序
+		rows[i], rows[j] = rows[j], rows[i]
+	}
+	return rows, nil
+}
+
+// ClearRoomMsg 清空房间弹幕历史（下播清理；口径见 plan live §2B.2）。
+func (r *Repo) ClearRoomMsg(roomID int64) error {
+	return r.db.Where("room_id = ?", roomID).Delete(&LiveRoomMsg{}).Error
+}
+
 // ---- 跨域只读（资格校验用）----
 
 // CategoryExists 分区存在且启用（复用视频分区表）。
