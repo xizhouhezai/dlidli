@@ -1,11 +1,12 @@
 # spec：直播
 
-> 模块标识：live ｜ 优先级：P2 ｜ 覆盖版本：V3（预研）
+> 模块标识：live ｜ 优先级：P2 ｜ 覆盖版本：V3（V3.1 细化）
 > 上游输入：[产品概述](/product/overview) · [版本规划](/product/versions) · [非功能需求](/product/nfr)（合规）
 > 实施状态：见 [tasks](/specs/live/tasks)（spec 不记录进度）
 >
 > 变更记录：
 > - 2026-08-21 自 PRD `live.md`（预研草案）迁移为 SDD。本文档为范围预研，开发前需细化。
+> - 2026-10-13 V3.1 细化 LIV-02（M4-LIV-02 直播间服务）：房间生命周期状态机、字段约束、在线人数口径、权限矩阵（§2.1 LIV-02 / 新增 §5A）；资格校验（LIV-01 中本卡落地的校验逻辑部分）同步细化；明确本卡与 LIV-01/03/04/05/06 的边界。
 
 ## 1. 背景与用户故事
 
@@ -20,10 +21,10 @@
 
 | ID | 需求 | 验收标准（EARS） | 优先级 |
 | --- | --- | --- | --- |
-| LIV-01 | 开播资格 | **WHERE** 用户申请开播 **THE SYSTEM SHALL** 要求实名认证 + 粉丝 ≥ 100（初期白名单制） | P2 |
-| LIV-02 | 开播管理 | **THE SYSTEM SHALL** 提供房间标题/封面/分区设置、RTMP 推流地址+密钥（配合 OBS）、开播/下播 | P2 |
+| LIV-01 | 开播资格 | **WHERE** 用户申请开播 **THE SYSTEM SHALL** 要求实名认证 + 粉丝 ≥ 100（初期白名单制）。<br>**细化（V3.1，M4-LIV-02 落地校验逻辑；真实白名单数据与 RTMP 接入属 M4-LIV-01）**：<br>**WHEN** 用户申请开播资格 **THE SYSTEM SHALL** 依次校验 ① 开播白名单（`live_whitelist` 存在且未移出）② 实名认证（账号域实名标记）③ 粉丝数 ≥ 100（relation 关系链计数），三项任一不满足 **SHALL** 拒绝并返回可区分的具体原因。<br>**WHEN** 校验通过 **THE SYSTEM SHALL** 为该用户创建常驻直播间（一主播一房间）并颁发推流密钥。 | P2 |
+| LIV-02 | 开播管理 | **THE SYSTEM SHALL** 提供房间标题/封面/分区设置、RTMP 推流地址+密钥（配合 OBS）、开播/下播。<br>**细化（V3.1）**：见 §5A 房间生命周期与字段约束、§5B 在线人数口径、§5C 权限矩阵。 | P2 |
 | LIV-03 | 直播预告 | **WHEN** 主播预约开播 **THE SYSTEM SHALL** 关联动态发布预告并在开播时提醒粉丝 | P2 |
-| LIV-04 | 房管 | **THE SYSTEM SHALL** 支持任命房管、禁言用户、弹幕关键词屏蔽 | P2 |
+| LIV-04 | 房管 | **THE SYSTEM SHALL** 支持任命房管、禁言用户、弹幕关键词屏蔽（弹幕通道执行属 LIV-03；数据模型与任命/禁言接口属 LIV-02，见 §5C） | P2 |
 
 ### 2.2 观众侧（第一期）
 
@@ -37,7 +38,10 @@
 
 ## 3. 边界与异常
 
-- **IF** 直播内容违规 **THEN THE SYSTEM SHALL** 经截帧机审（每 10s）+ 人工巡查快速切断。
+- **IF** 直播内容违规 **THEN THE SYSTEM SHALL** 经截帧机审（每 10s）+ 人工巡查快速切断（M4-LIV-05）。
+- **IF** 主播对已开播房间重复申请开播 **THEN THE SYSTEM SHALL** 返回「房间已开播」而非重复创建会话。
+- **IF** 房间 30 秒内未收到观众心跳 **THEN THE SYSTEM SHALL** 将该观众从在线人数中剔除（见 §5B）。
+- **IF** 被禁言观众尝试发言 **THEN THE SYSTEM SHALL** 在弹幕通道拒绝（执行在 LIV-03；禁言记录与到期由本模块 §5C 提供）。
 
 ## 4. 合规前置（硬约束）
 
@@ -52,7 +56,54 @@
 | 直播渗透率（V3 商业化北极星辅助指标） | 见 [产品概述](/product/overview) |
 | 推流 → 观看延迟 | HLS 6-15s；HTTP-FLV/WebRTC ≤ 3s（演进目标） |
 
-## 6. 依赖与关联
+## 5A. 房间域细化（LIV-02，V3.1）
 
-- 依赖：实名认证（[account spec](/specs/account/spec) ACC-23）、粉丝关系（[community spec](/specs/community/spec) FLW）、支付与分成（[monetization spec](/specs/monetization/spec)）、动态预告（DYN）
-- 被依赖：直播回放生成稿件（[video spec](/specs/video/spec)）；直播弹幕复用 comet 模式（[danmaku plan](/specs/danmaku/plan) hub 演进）
+### 5A.1 房间生命周期状态机
+
+房间状态 `status`：`0=空闲 idle`（有资格未开播）、`1=直播中 live`、`2=已下播 ended`（本场结束；下一场开播回到 1）。
+
+- **WHEN** 通过开播资格的用户首次申请开播 **THE SYSTEM SHALL** 创建房间（status=0）并生成推流密钥，一主播至多一间。
+- **WHEN** 主播调用开播 **AND** 房间 status ∈ {0, 2} **THE SYSTEM SHALL** 开启新场次：status→1、写 `started_at`、清空上场 `ended_at`、在线人数清零重建。
+- **IF** 主播在 status=1 时再次调用开播 **THEN THE SYSTEM SHALL** 返回「房间已开播」，不改状态、不换密钥。
+- **WHEN** 主播调用下播 **AND** 房间 status=1 **THE SYSTEM SHALL** 结束本场：status→2、写 `ended_at`、在线人数清零。
+- **IF** 房间 status ∈ {0, 2} 时调用下播 **THEN THE SYSTEM SHALL** 返回「房间未在直播」。
+- **WHEN** 主播修改标题/封面/分区 **THE SYSTEM SHALL** 允许在任意状态修改（开播中改标题即时生效于房间信息查询）。
+- **WHILE** 房间 status=1 **THE SYSTEM SHALL** 在列表/详情接口仅返回 status=1 的房间供观众侧消费（status 0/2 不进公开列表）。
+
+### 5A.2 字段约束
+
+| 字段 | 约束 |
+| --- | --- |
+| 标题 `title` | 必填，1–80 字符（UTF-8 按字符计），开播与更新均校验 |
+| 封面 `cover` | 可空字符串（本卡不做封面上传，前端复用 upload 模块后把 URL 存入；≤ 512 字符 URL） |
+| 分区 `category_id` | 必填，必须存在于视频分区表（复用 `category`），本卡校验存在性 |
+| 推流密钥 | 生成 32 位随机串（crypto/rand），**仅创建时明文返回一次**，库中仅存 bcrypt 哈希；支持「重置密钥」（旧密钥立即失效） |
+| 推流地址 | `rtmp://<推流域名>/<room_key>/` 形式占位拼装（域名走配置，本卡不发流、不校验连通性，LIV-01 接 SRS） |
+
+### 5A.3 开播资格（LIV-01 校验逻辑部分）
+
+- 白名单：`live_whitelist`（user_id 唯一，备注/操作人/时间）；资格判定以白名单为第一道闸。
+- 实名：依赖账号域实名标记（ACC-23 能力位），本卡按「存在实名标记即通过」实现，接不接真实实名单不阻塞。
+- 粉丝数：`relation` 表 `COUNT(*) WHERE target_id = uid` ≥ 100。
+
+### 5B. 在线人数口径（心跳判定）
+
+- **WHEN** 观众进入房间（status=1）**THE SYSTEM SHALL** 记录进房并在在线计数 +1（Redis，键 `live:room:{roomID}:online`）。
+- **WHILE** 观众停留在房间 **THE SYSTEM SHALL** 以 ≤ 15s 间隔上报心跳；每次心跳刷新该观众的在线过期标记（TTL 30s，键 `live:room:{roomID}:hb:{uid}`）。
+- **IF** 房间 30s 内未收到某观众心跳 **THEN THE SYSTEM SHALL** 该观众视为离线：由「先到期的懒剔除 + 定期对账」从计数扣除（见 plan §2.4 技术决策）。
+- **WHEN** 观众显式离开（离房接口）**THE SYSTEM SHALL** 立即计数 −1。
+- **口径**：对外展示的「人气值」= 在线人数（本卡不叠加热度系数；系数属 LIV-11 展示侧）。主播本人计入在线人数。同一 uid 同房间重复进房不重复计数（以心跳键存在性判重）。
+
+### 5C. 权限矩阵与房管/禁言（LIV-04 数据与接口部分）
+
+| 操作 | 主播 | 房管 | 观众 |
+| --- | :-: | :-: | :-: |
+| 开播/下播/改房间信息/重置推流密钥 | ✅ | ❌ | ❌ |
+| 任命/撤销房管 | ✅（房管人选自关注粉丝等普通用户，主播不可任命自己） | ❌ | ❌ |
+| 禁言用户（时长 1min–720h） | ✅ | ✅ | ❌ |
+| 解除禁言 | ✅ | ✅（不可解主播/其他房管，本卡先按「可解非主播」实现） | ❌ |
+| 进入房间/上报心跳 | ✅ | ✅ | ✅ |
+
+- 禁言数据模型：`live_room_mute`（房间维度，uid+room 唯一，到期时间；未到期重复禁言覆盖刷新到期）。
+- 禁言的**执行**（弹幕通道拦截）属 M4-LIV-03；本卡提供 `IsMuted(roomID, uid)` 判定接口供其调用。
+- 房管数据模型：`live_room_admin`（room+uid 唯一）；主播身份由房间表 `anchor_id` 判定，不落房管表。
