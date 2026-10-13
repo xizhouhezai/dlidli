@@ -22,7 +22,7 @@
 - [x] M4-LIV-06 Web/H5 直播间页面 + 开播管理——2026-10-13 完成
   - 覆盖：LIV-10、LIV-11、LIV-02（前端）、LIV-03、LIV-04、LIV-14
   - 实现要点（2026-10-13）：Web 直播首页 `/live`（开播中卡片 + 15s 轮询）、直播间 `/live/:id`（PlayerCore 播放器 + 演示流兜底、弹幕 WS + 本地 2s 冷却 + 进场消息、在线人数）、开播管理 `/studio/live`（申请→设置→推流密钥一次性展示与复制→开播/下播→房管/禁言管理）；H5 只读直播间 `pages/live/live`（含房间列表态）；api-client 新增 live API；后端补只读端点 `GET /live/rooms/:id/admins|mutes`（swag 全）。真实流替换点：`apps/web|apps/h5` 的 `src/config/live.ts`（demo 标志 + hlsUrl），LIV-01 后只改配置。
-  - 验证结论：API 级 E2E 13 步全 PASS（申请 91001/91003/91004 拦截→设置→开播→列表出现→双账号进房 online=2→房管任命/禁言落库→WS 弹幕双向互见→禁言者发弹幕无广播→历史→解禁/移除→重置密钥 32 位→下播 status=2→列表消失→详情 91007 拦截）；期间核实 pwsh 控制台中文编码假象非产品缺陷（fetch 适配器恒 UTF-8）。`go vet`+`go test ./internal/module/live` + 双端 `vue-tsc` + `pnpm docs:build` complete 过。未覆盖项：`pnpm web:build` 的 vite 段被沙箱拦（esbuild service spawn + vite 内部 `exec('net use')` 双子进程 EPERM，管道边界，ESBUILD_WORKER_THREADS 实测无效），vue-tsc 段已过、完整 vite 构建留待可 spawn 会话复跑；页面截图/录屏不可行（同因），UI 证据为 API 级链路走查；git 发布被 `.git` 写拒绝（同 LIV-03），命令清单见 `.dev-logs/liv06/README.md`。证据：`.dev-logs/liv06/`
+  - 验证结论：API 级 E2E 13 步全 PASS（申请 91001/91003/91004 拦截→设置→开播→列表出现→双账号进房 online=2→房管任命/禁言落库→WS 弹幕双向互见→禁言者发弹幕无广播→历史→解禁/移除→重置密钥 32 位→下播 status=2→列表消失→详情 91007 拦截）；期间核实 pwsh 控制台中文编码假象非产品缺陷（fetch 适配器恒 UTF-8）。`go vet`+`go test ./internal/module/live` + 双端 `vue-tsc` + `pnpm docs:build` complete 过。未覆盖项：`pnpm web:build` 的 vite 段被沙箱拦（esbuild service spawn + vite 内部 `exec('net use')` 双子进程 EPERM，管道边界，ESBUILD_WORKER_THREADS 实测无效），vue-tsc 段已过、完整 vite 构建留待可 spawn 会话复跑；页面截图/录屏不可行（同因），UI 证据为 API 级链路走查。已按 git 规范发布 **v0.63.0**（feature/m4-liv-06-live-web → develop → main → 附注 tag + release 分支均已推送，本地分支清理完毕）。证据：`.dev-logs/liv06/`
 
 ## 进度
 
