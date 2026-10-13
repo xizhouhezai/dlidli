@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/pkg/errcode"
 )
 
@@ -141,6 +142,113 @@ func (s *Service) RemoveAdmin(ctx context.Context, anchor, roomID, target int64)
 	}
 	_, err = s.repo.RemoveAdmin(roomID, target)
 	return err
+}
+
+// ---- 房管/禁言列表（LIV-06 开播管理前端读端点；观众侧亦可看房管与禁言名单）----
+
+// AdminBrief 房管条目（uid 字符串避免 JS 精度丢失 + 账号域简况）。
+type AdminBrief struct {
+	UserID     string `json:"user_id"`
+	Nickname   string `json:"nickname"`
+	Avatar     string `json:"avatar,omitempty"`
+	AppointedAt time.Time `json:"appointed_at"`
+}
+
+// AdminListResult 房管列表。
+type AdminListResult struct {
+	List []AdminBrief `json:"list"`
+}
+
+// MuteBrief 禁言条目。
+type MuteBrief struct {
+	UserID     string     `json:"user_id"`
+	Nickname   string     `json:"nickname"`
+	Avatar     string     `json:"avatar,omitempty"`
+	Reason     string     `json:"reason"`
+	MutedUntil time.Time  `json:"muted_until"`
+	Muted      bool       `json:"muted"` // muted_until 是否仍未到期
+}
+
+// MuteListResult 禁言列表。
+type MuteListResult struct {
+	List []MuteBrief `json:"list"`
+}
+
+// ListAdmins 房管列表（房间必须存在；登录即可看）。
+func (s *Service) ListAdmins(ctx context.Context, roomID int64) (*AdminListResult, error) {
+	room, err := s.repo.RoomByID(roomID)
+	if err != nil {
+		return nil, err
+	}
+	if room == nil {
+		return nil, errcode.ErrLiveRoomNotFound
+	}
+	rows, err := s.repo.ListAdmins(roomID)
+	if err != nil {
+		return nil, err
+	}
+	return &AdminListResult{List: s.adminBriefs(ctx, rows)}, nil
+}
+
+// adminBriefs 拼装房管简况（账号域取不到时昵称降级空串）。
+func (s *Service) adminBriefs(ctx context.Context, rows []LiveRoomAdmin) []AdminBrief {
+	out := make([]AdminBrief, 0, len(rows))
+	profiles := map[int64]account.Profile{}
+	if s.deps != nil && s.deps.Account != nil && len(rows) > 0 {
+		ids := make([]int64, 0, len(rows))
+		for _, r := range rows {
+			ids = append(ids, r.UserID)
+		}
+		if m, err := s.deps.Account.Briefs(ctx, ids); err == nil {
+			profiles = m
+		}
+	}
+	for _, r := range rows {
+		b := AdminBrief{UserID: itoa(r.UserID), AppointedAt: r.CreatedAt}
+		if p, ok := profiles[r.UserID]; ok {
+			b.Nickname, b.Avatar = p.Nickname, p.Avatar
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+// ListMutes 禁言列表（房间必须存在；登录即可看）。
+func (s *Service) ListMutes(ctx context.Context, roomID int64) (*MuteListResult, error) {
+	room, err := s.repo.RoomByID(roomID)
+	if err != nil {
+		return nil, err
+	}
+	if room == nil {
+		return nil, errcode.ErrLiveRoomNotFound
+	}
+	rows, err := s.repo.ListMutes(roomID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MuteBrief, 0, len(rows))
+	profiles := map[int64]account.Profile{}
+	if s.deps != nil && s.deps.Account != nil && len(rows) > 0 {
+		ids := make([]int64, 0, len(rows))
+		for _, r := range rows {
+			ids = append(ids, r.UserID)
+		}
+		if m, err := s.deps.Account.Briefs(ctx, ids); err == nil {
+			profiles = m
+		}
+	}
+	now := time.Now()
+	for _, r := range rows {
+		b := MuteBrief{
+			UserID: itoa(r.UserID), Reason: r.Reason,
+			MutedUntil: r.MutedUntil, Muted: r.MutedUntil.After(now),
+		}
+		if p, ok := profiles[r.UserID]; ok {
+			b.Nickname, b.Avatar = p.Nickname, p.Avatar
+		}
+		out = append(out, b)
+	}
+	return &MuteListResult{List: out}, nil
 }
 
 // ---- 禁言（LIV-04 数据与接口；执行在 LIV-03）----

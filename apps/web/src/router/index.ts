@@ -102,6 +102,24 @@ const router = createRouter({
           meta: { title: '成长中心', requiresAuth: true },
         },
         {
+          path: 'live',
+          name: 'live-home',
+          component: () => import('@/views/live/LiveHomeView.vue'),
+          meta: { title: '直播' },
+        },
+        {
+          path: 'live/:id',
+          name: 'live-room',
+          component: () => import('@/views/live/LiveRoomView.vue'),
+          meta: { title: '直播间' },
+        },
+        {
+          path: 'studio/live',
+          name: 'live-studio',
+          component: () => import('@/views/studio/LiveStudioView.vue'),
+          meta: { title: '开播管理', requiresAuth: true },
+        },
+        {
           path: 'pelican',
           name: 'pelican',
           component: () => import('@/views/lab/PelicanView.vue'),
