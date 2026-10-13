@@ -103,4 +103,10 @@ var (
 	ErrLiveDanmakuTooFast    = New(91016, "发言太频繁，请稍后再试")
 	ErrLiveDanmakuNotIn      = New(91017, "请先进入直播间")
 	ErrLiveDanmakuDuplicate  = New(91018, "请勿重复发送相同内容")
+	// 礼物系统（M4-LIV-04）
+	ErrLiveGiftNotFound    = New(91019, "礼物不存在或已下架")
+	ErrLiveGiftNotLive     = New(91020, "房间未在直播，无法赠送礼物")
+	ErrLiveMelonNotEnough  = New(91021, "金瓜子余额不足")
+	ErrLiveGiftCount       = New(91022, "赠送数量不合法（1-999）")
+	ErrLiveRechargeInvalid = New(91023, "直充金额不合法")
 )

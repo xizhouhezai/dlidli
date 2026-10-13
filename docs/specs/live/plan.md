@@ -1,12 +1,13 @@
 # plan：直播
 
 > 对应规格：[spec](/specs/live/spec) ｜ 技术基线：[总体架构](/architecture/overview) · [视频处理流水线](/architecture/video-pipeline)
-> 实施状态：V3.2（2026-10-13 LIV-03 细化）；M4-LIV-02 已交付、M4-LIV-03 已实现。
+> 实施状态：V3.3（2026-10-13 LIV-04 细化）；M4-LIV-02/03/06 已交付、M4-LIV-04 已实现。
 >
 > 变更记录：
 > - 2026-08-21 随 spec 迁移为 SDD，技术预研。
 > - 2026-10-13 补 M4-LIV-02 技术决策：房间表结构（§2.1）、WS 通道与 danmaku hub 关系（§2.2）、在线人数实现（§2.4）、开播密钥（§2.5）、API 布局（§3）。
 > - 2026-10-13 补 M4-LIV-03 技术决策：live hub 形态与连接治理（§2B.1）、弹幕持久化口径（§2B.2）、频控参数（§2B.3）、WS 端点布局（§3B）。
+> - 2026-10-13 补 M4-LIV-04 技术决策：资产强一致实现（§2C.1）、充值幂等与 PAY-01 替换点（§2C.2）、礼物/分成表结构（§2C.3）、WS 特效帧（§2C.4）。
 
 ## 1. 方案概览
 
@@ -131,3 +132,27 @@
 - `GET /api/v1/live/rooms/{id}/ws`（auth，token 走 query——WS 无法自定义 header，与 im 先例一致）。建连即进房：`EnterForce` 计数 + `enter` 帧广播 → 升级连接。上行：`heartbeat` / `danmaku`；下行：`enter` / `danmaku` / `pong`。
 - `GET /api/v1/live/rooms/{id}/danmaku/history`：最近 50 条正序 + 当前在线人数。
 - 弹幕校验链（服务端判定，不靠前端）：`EnsureCanPublish`（账号封禁/禁言）→ 房间直播中 → `InRoom`（未进房 91017）→ 房间禁言执行（91015，LIV-04 落地）→ 机审影子屏蔽（命中仅落库不广播）→ 频控（91016）→ 去重（91018）→ 落库 + 广播。拒绝经服务端日志留痕，WS 上行不回错误帧（客户端无法携带请求 id，错误提示走 LIV-06 前端本地频控预判）。
+
+## 2C. M4-LIV-04 技术决策（2026-10-13）
+
+### 2C.1 资产强一致实现
+
+**决策：MySQL 事务 + `SELECT ... FOR UPDATE` 行锁（`lockAccount`），单事务完成「锁余额 → 校验扣减 → 观众流水 → 礼物流水 → 分成流水」。**
+
+- 行锁是唯一并发闸：同账户并发扣款在锁上串行化，余额校验在锁内读，负余额不可能出现；账户行懒创建（无账户先插 0 余额行，唯一键冲突重读加锁）。
+- 广播在事务**提交成功后**执行（Service 层）：扣款失败（91021）不产生任何流水、不广播特效帧。
+- 备选（否决）：A) Redis 预扣 + 异步落库——异步崩窗会丢单，与强一致要求冲突；B) 乐观锁 version 字段——20 并发重试风暴，行锁在 MySQL 上更直接。
+
+### 2C.2 充值幂等与 PAY-01 替换点
+
+- 入账统一走 `RechargeTx(userID, delta, bizNo, remark)`：`melon_seed_log.uk_biz_no` 唯一键承载幂等，同 biz_no 重复入账返回当前余额且 `applied=false`（集成测试 TestRechargeIdempotent 覆盖）。
+- **PAY-01 替换点（写明）**：① 真实支付回调以支付单号为 bizNo 调 `RechargeTx`，天然防重放；② 开发直充 `POST /api/v1/admin/dev/recharge`（AdminAuth + RequirePerm("config:edit")），bizNo=`dev-{雪花}-{uid}`，PAY-01 启动后下线；③ 金瓜子与真实货币的兑换比价随 PAY-01 定，本卡瓜子直接按个计。
+
+### 2C.3 礼物/分成表结构（迁移 0036）
+
+五表：`melon_seed_account`（余额）/`melon_seed_log`（流水，uk_biz_no 幂等）/`gift`（配置，含价格数量级为开发口径的种子数据）/`gift_log`（赠送流水，单价/分成比例下单时快照，雪花 ID 主键）/`gift_share_log`（分成流水，uk_gift_log 防重复分成）。分成比例 700‰（plan 预研值，对齐 monetization CHG-02 的 70/30），月度结算归 creator 体系（PAY-02 消费 gift_share_log）。
+
+### 2C.4 WS 特效帧与前端渲染
+
+- live hub 新增消息类型 `gift`（`GiftFrame`：log_id/sender_id/nickname/gift_name/count/effect/level），`BroadcastGift` 走既有房间广播（复用 LIV-03 hub，单连接顶替/慢消费者丢帧语义不变）。
+- 前端（LIV-06 页面挂靠）：`GiftPanel.vue`（礼物列表/余额/连击/赠送，91021 引导提示）+ `GiftEffects.vue`（普通礼物弹幕区连击浮层、高级礼物全屏 CSS 动画——粒子上浮 + 礼物名浮现，4s 退场，不引动画库）。`useLiveDanmaku` 增加 `gift` 帧分发（`giftEvents`）。

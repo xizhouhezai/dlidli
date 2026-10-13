@@ -15,8 +15,10 @@
   - 覆盖：LIV-12、LIV-04（禁言通道执行）
   - 实现要点（2026-10-13）：独立 live hub（plan §2B.1，不复用 danmaku hub）；迁移 0035 `live_room_msg` 历史窗口 50 条（§2B.2，下播清空）；频控 2s/去重 10s（§2B.3）；校验链 91015/91016/91017/91018 + 机审影子屏蔽；WS 心跳 ≤15s + 40s 读超时踢出 + 5000 连接上限 + 单连接顶替语义；`GET /live/rooms/{id}/ws`、`/danmaku/history` 两端点（swag 注释全）；web lab 极简测试面板 `/lab/live-danmaku-test`（LIV-06 不做正式页面）
   - 验证结论：WS 实测全项 PASS——双连接广播（B 收 A 弹幕原始帧在案）、进场消息（fan_badge）、频控 91016/去重 91018/禁言执行 91015/未进房 91017 逐 code 命中、在线计数 0→2→1→0 与被踢 40s→0 断开即离房、下播清历史；期间实测修掉 4 缺陷（回调参数错位 91007、UserID 双重序列化、hb TTL 先过期计数漏扣、LIMIT 子查询不兼容）。`go vet`+`go test ./...` 25 包全绿（新增 hub 并发回归 + 窗口/校验链集成测试）+ api 重编重启实测 + vue-tsc 过。未覆盖项：`pnpm docs:build` 被会话沙箱 EPERM 拦（esbuild service 进程 spawn，非代码缺陷，文档改动为增量 markdown）；`-race` 本机无 gcc 未跑；git 发布流程被会话沙箱拦（`.git` 写拒绝，改动滞留工作区待后续会话提交发布 v0.62.0）。证据：`.dev-logs/liv03/`
-- [ ] M4-LIV-04 礼物系统（金瓜子/特效/分成）
+- [x] M4-LIV-04 礼物系统（金瓜子/特效/分成）——2026-10-13 完成
   - 覆盖：LIV-13
+  - 实现要点（2026-10-13）：迁移 0036 五表（`melon_seed_account`/`melon_seed_log`（uk_biz_no 充值幂等）/`gift`/`gift_log`（单价·分成比例下单快照）/`gift_share_log`（uk_gift_log））；强一致 = 事务 + SELECT...FOR UPDATE 行锁（余额/流水/分成同事务，余额不可负）；分成 700‰（对齐 monetization CHG-02 70/30），月度结算归 creator（PAY-02 消费）；live hub 新增 `type=gift` 特效帧；C 端 `GET /live/gifts`、`GET /live/melon/balance`、`POST /live/rooms/{id}/gifts/{giftId}`（91019-91022）；dev 直充 `POST /admin/dev/recharge`（AdminAuth+RequirePerm config:edit，开发期临时通道，PAY-01 替换点见 plan §2C.2）；Web 礼物面板 `GiftPanel.vue` + 特效 `GiftEffects.vue`（普通弹幕区连击浮层/高级全屏 CSS 动画），swag 全量重生成
+  - 验证结论：接口实测全链路——送礼×1/连击×3/全屏礼物 余额逐笔正确、`melon_seed_log`/`gift_log`/`gift_share_log` DB 逐条核对（2170+930=3100=Σtotal，70/30 逐笔符）；WS 双连接均收 `type=gift` 帧原始帧在案；余额不足 91021 且 0 流水；直充无 token/用户 token 均 401。**强一致并发**：集成测试 20 goroutine 打 600 余额恰 6 成功/14 拒绝/终 0 余额/无负数/无丢单（TestGiftConcurrentSpend）+ HTTP 接口级 20 并发同样 6/14、余额严格单调、流水 6 条；充值幂等 TestRechargeIdempotent。`go vet ./...`+`go test ./internal/module/live`（8 用例全绿）+ api 重编重启实测 + vue-tsc 过。未覆盖项：`pnpm web:build` vite 段与 `pnpm docs:build` 均被沙箱 esbuild service spawn EPERM 拦（同 LIV-03/06 边界，vue-tsc 已过、构建留待可 spawn 会话复跑）；页面级浏览器走查同因不可行，UI 证据为 API/WS 级链路走查；PAY-01 真实支付替换点=支付回调以支付单号为 biz_no 复用 RechargeTx 幂等、dev/recharge 下线（plan §2C.2）；git 发布被 `.git` 写拒绝（同 LIV-03/06），改动滞留工作区、v0.64.0 命令清单见 `.dev-logs/liv04/git-release.md`。证据：`.dev-logs/liv04/`
 - [ ] M4-LIV-05 直播截帧机审 + 快速切断
   - 覆盖：边界（spec §3）、合规（spec §4）
 - [x] M4-LIV-06 Web/H5 直播间页面 + 开播管理——2026-10-13 完成
@@ -28,7 +30,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 6 | 3 |
-| **合计** | **6** | **3** |
+| M4 | 6 | 4 |
+| **合计** | **6** | **4** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。
