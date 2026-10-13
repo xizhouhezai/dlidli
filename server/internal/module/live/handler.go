@@ -43,8 +43,10 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 		g.POST("/rooms/:id/heartbeat", auth, h.heartbeat)
 		g.POST("/rooms/:id/leave", auth, h.leave)
 
+		g.GET("/rooms/:id/admins", auth, h.adminList)
 		g.POST("/rooms/:id/admins/:uid", auth, h.addAdmin)
 		g.DELETE("/rooms/:id/admins/:uid", auth, h.removeAdmin)
+		g.GET("/rooms/:id/mutes", auth, h.muteList)
 		g.POST("/rooms/:id/mutes/:uid", auth, h.mute)
 		g.DELETE("/rooms/:id/mutes/:uid", auth, h.unmute)
 
@@ -325,6 +327,27 @@ func (h *Handler) removeAdmin(c *gin.Context) {
 	response.OK(c, gin.H{"removed": true})
 }
 
+// @Summary  房管列表（登录即可看）
+// @Tags     直播
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path int true "房间ID"
+// @Success  200 {object} response.Body{data=live.AdminListResult}
+// @Failure  200 {object} response.Body "91007 房间不存在"
+// @Router   /live/rooms/{id}/admins [get]
+func (h *Handler) adminList(c *gin.Context) {
+	id, ok := pathID(c)
+	if !ok {
+		return
+	}
+	res, err := h.svc.ListAdmins(c.Request.Context(), id)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, res)
+}
+
 type muteReq struct {
 	Minutes int64  `json:"minutes" binding:"required"` // 禁言分钟数，1 ~ 43200
 	Reason  string `json:"reason"`
@@ -386,6 +409,27 @@ func (h *Handler) unmute(c *gin.Context) {
 		return
 	}
 	response.OK(c, gin.H{"unmuted": true})
+}
+
+// @Summary  禁言列表（登录即可看；muted=false 为已过期记录）
+// @Tags     直播
+// @Produce  json
+// @Security BearerAuth
+// @Param    id path int true "房间ID"
+// @Success  200 {object} response.Body{data=live.MuteListResult}
+// @Failure  200 {object} response.Body "91007 房间不存在"
+// @Router   /live/rooms/{id}/mutes [get]
+func (h *Handler) muteList(c *gin.Context) {
+	id, ok := pathID(c)
+	if !ok {
+		return
+	}
+	res, err := h.svc.ListMutes(c.Request.Context(), id)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, res)
 }
 
 // pathID 解析路径房间 ID。

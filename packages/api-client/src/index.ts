@@ -4,6 +4,7 @@ import { createAuthApi } from './apis/auth'
 import { createUploadApi } from './apis/upload'
 import { createVideoApi } from './apis/video'
 import { createDanmakuApi } from './apis/danmaku'
+import { createLiveApi } from './apis/live'
 import { createInteractionApi } from './apis/interaction'
 import { createAdminApi } from './apis/admin'
 import { createRelationApi } from './apis/relation'
@@ -31,6 +32,17 @@ export type {
   PartItem,
 } from './apis/video'
 export type { DanmakuItem, SendDanmakuReq, DanmakuBlockItem } from './apis/danmaku'
+export type {
+  LiveRoomInfo,
+  LiveApplyResult,
+  LiveRoomListResult,
+  LiveMyRoom,
+  LiveDanmakuItem,
+  LiveDanmakuHistory,
+  LiveAdminItem,
+  LiveMuteItem,
+  LiveWsFrame,
+} from './apis/live'
 export type {
   CommentItem,
   CommentUser,
@@ -87,6 +99,7 @@ export function createApiClient(cfg: ClientConfig = {}) {
     upload: createUploadApi(http),
     video: createVideoApi(http),
     danmaku: createDanmakuApi(http),
+    live: createLiveApi(http),
     interaction: createInteractionApi(http),
     admin: createAdminApi(http),
     relation: createRelationApi(http),
