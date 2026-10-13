@@ -1,5 +1,5 @@
-// Package live 直播域（M4-LIV-02）：房间生命周期、开播资格、在线人数、房管与禁言。
-// 弹幕广播与弹幕通道拦截归 M4-LIV-03（独立 live hub，不复用 danmaku hub，见 plan live §2A.2）。
+// Package live 直播域（M4-LIV-02/03）：房间生命周期、开播资格、在线人数、房管与禁言、
+// 弹幕通道（WS hub + 频控 + 禁言执行 + 历史窗口）。
 package live
 
 import "time"
@@ -63,5 +63,19 @@ type LiveRoomMute struct {
 	CreatedAt  time.Time `json:"-"`
 	UpdatedAt  time.Time `json:"-"`
 }
+
+// LiveRoomMsg 对应 live_room_msg 表（M4-LIV-03 直播弹幕历史窗口；
+// 仅保留最近 N 条供进房拉历史，下播清理，不与稿件生命周期绑定）。
+type LiveRoomMsg struct {
+	ID        int64     `gorm:"primaryKey" json:"id"` // 雪花 ID
+	RoomID    int64     `json:"room_id"`
+	UserID    int64     `json:"user_id"`
+	Nickname  string    `json:"nickname"`
+	Avatar    string    `json:"avatar"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (LiveRoomMsg) TableName() string { return "live_room_msg" }
 
 func (LiveRoomMute) TableName() string { return "live_room_mute" }

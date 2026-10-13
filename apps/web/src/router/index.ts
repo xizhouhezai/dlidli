@@ -108,6 +108,12 @@ const router = createRouter({
           meta: { title: '提示词实验室' },
         },
         {
+          path: 'live-danmaku-test',
+          name: 'live-danmaku-test',
+          component: () => import('@/views/lab/LiveDanmakuView.vue'),
+          meta: { title: '直播弹幕测试面板' },
+        },
+        {
           path: 'pelican-night',
           name: 'pelican-night',
           component: () => import('@/views/lab/PelicanNightView.vue'),

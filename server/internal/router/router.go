@@ -241,8 +241,24 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		searchHandler.RegisterRoutes(v1)
 
 		// 直播间服务（M4-LIV-02）：房间生命周期 + 开播资格 + 在线人数 + 房管/禁言
-		liveSvc := live.NewService(live.NewRepo(res.DB), live.NewOnline(res.Redis, live.NewRepo(res.DB), log), cfg, log)
-		live.NewHandler(liveSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
+		liveRepo := live.NewRepo(res.DB)
+		liveOnline := live.NewOnline(res.Redis, liveRepo, log)
+		liveSvc := live.NewService(liveRepo, liveOnline, cfg, log)
+		// 直播弹幕（M4-LIV-03）：独立 live hub（不复用 danmaku hub，plan live §2A.2），
+		// 弹幕校验链与在线计数回调经 SetDeps 注入（live 不反向构造 account）
+		liveHub := live.NewHub(cfg.App.AllowOrigins, log)
+		// SendDanmaku 签名为 (uid, roomID)，hub 回调按 (roomID, uid) 传入——此处适配
+		liveHub.SetDeps(
+			func(ctx context.Context, roomID, uid int64, content string) error {
+				return liveSvc.SendDanmaku(ctx, uid, roomID, content)
+			},
+			liveOnline.Beat,
+			func(ctx context.Context, roomID, uid int64, counted bool) {
+				liveOnline.LeaveForce(ctx, roomID, uid, counted)
+			})
+		liveSvc.SetHub(liveHub)
+		liveSvc.SetLiveDeps(&live.LiveDeps{Account: accountSvc, RDB: res.Redis})
+		live.NewHandler(liveSvc).WithHub(liveHub).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 	} else {
 		log.Warn("MySQL/Redis 未就绪，业务模块路由未注册")
 	}
