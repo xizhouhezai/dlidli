@@ -41,6 +41,15 @@ transcode:
   # ffmpeg/ffprobe 缺省走 PATH；特殊环境用环境变量覆盖：
   #   DLIDLI_TRANSCODE_FFMPEGPATH / DLIDLI_TRANSCODE_FFPROBEPATH
 
+# 直播域（M4-LIV-01）：推拉流寻址 + SRS 回调鉴权。
+# pushDomain/playDomain 填对外域名（CDN 回源到 SRS），callbackToken 必须用环境变量
+# DLIDLI_LIVE_CALLBACKTOKEN 注入并与 SRS http_hooks 的 ?token= 一致（为空则回调一律拒绝）。
+live:
+  pushDomain: push.dlidli.example.com # TODO: 替换为正式推流域名
+  playDomain: play.dlidli.example.com # TODO: 替换为正式拉流域名
+  streamApp: live
+  callbackToken: "" # 必填：DLIDLI_LIVE_CALLBACKTOKEN
+
 # OpenTelemetry（M3-ENG-04）：生产通过 DLIDLI_TRACING_ENDPOINT 启用 OTLP/HTTP。
 # tracing:
 #   endpoint: http://otel-collector:4318

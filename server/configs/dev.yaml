@@ -67,8 +67,13 @@ wechat:
 #   pollSeconds: 3
 #   batchSize: 100
 
-# 直播域（M4-LIV-02）：RTMP 推流域名占位，本卡仅用于拼装推流地址（LIV-01 接 SRS 后生效）。
-# 可用环境变量 DLIDLI_LIVE_PUSHDOMAIN 覆盖。
-# live:
-#   pushDomain: push.example.com
+# 直播域（M4-LIV-01/02）：推拉流寻址 + SRS http_hooks 回调鉴权。
+# 可用环境变量覆盖：DLIDLI_LIVE_PUSHDOMAIN / DLIDLI_LIVE_PLAYDOMAIN /
+# DLIDLI_LIVE_STREAMAPP / DLIDLI_LIVE_CALLBACKTOKEN
+live:
+  pushDomain: 127.0.0.1:1935 # SRS RTMP 监听
+  playDomain: 127.0.0.1:8180 # SRS HTTP 服务（HLS/HTTP-FLV；8080 本机有出站占用，改用 8180）
+  streamApp: live
+  # dev 固定 token，仅供本机 SRS/替代服务器配置对齐；生产用密钥注入（见 deploy/srs/README.md）
+  callbackToken: dev-live-cb-token
 

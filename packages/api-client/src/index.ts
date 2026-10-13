@@ -34,6 +34,7 @@ export type {
 export type { DanmakuItem, SendDanmakuReq, DanmakuBlockItem } from './apis/danmaku'
 export type {
   LiveRoomInfo,
+  LivePlayUrls,
   LiveApplyResult,
   LiveRoomListResult,
   LiveMyRoom,

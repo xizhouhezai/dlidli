@@ -15,6 +15,7 @@
 | 文档站 | VitePress | 5173 | 本文档 |
 | MySQL | 8.0 | 3306/3307 | 主数据库 |
 | Redis | 7 | 6379 | 缓存/会话/计数 |
+| SRS 直播 | SRS 5 | 1935 / 8180 / 1985 | RTMP 推流 / HLS+FLV 拉流 / 运维 API（见 §5.5） |
 
 > Vite dev 端口若被占用会自动 +1，以启动日志实际输出为准。
 
@@ -456,6 +457,127 @@ pnpm h5:build                       # H5：产出 apps/h5/dist/build/h5，按普
 - [ ] Nginx SPA 回退、`/api` 与 `/static` 反代正确
 - [ ] 管理后台独立域名 + 访问控制
 - [ ] 后端进程守护（systemd）+ 日志采集 + `/metrics` 接入监控
+- [ ] SRS 直播服务器已起（`server/deploy/srs/`），1935/8180 对目标网络放通、1985 仅内网
+- [ ] `srs.conf` 的 `http_hooks` token 与后端 `live.callbackToken` 一致，且**未沿用 dev 默认值**（两个位置都要改：SRS 侧是字面值，见 §5.5 坑 2）
+- [ ] SRS 启动命令带 `-c conf/srs.conf`（不带则读镜像内置 conf，配置不生效，见 §5.5 自检）
+
+### 5.5 SRS 直播服务器（M4-LIV-01）
+
+直播链路：`主播 RTMP 推流 → SRS → HLS / HTTP-FLV 拉流`，并由 SRS 通过 HTTP 回调把
+开播/下播事件交给后端 API（`:8000`）鉴权与状态联动。
+
+配置与运行手册位置：**`server/deploy/srs/`**
+
+| 文件 | 作用 |
+| --- | --- |
+| `server/deploy/srs/srs.conf` | SRS 5 配置：端口、HLS、HTTP-FLV、回调、token（**须经 `-c` 显式指定**，见「启动」） |
+| `server/deploy/srs/docker-compose.srs.yaml` | 独立 compose（project `dlidli-live`），不影响 `deploy/docker-compose.yaml` |
+| `server/deploy/srs/README.md` | 完整启动/验证/排查手册 |
+
+#### 端口
+
+| 端口 | 用途 | 暴露范围 |
+| --- | :-: | --- |
+| 1935 | RTMP 收流（推流） | 需对主播可达 |
+| 8180 | HLS（`.m3u8`/`.ts`）与 HTTP-FLV（`.flv`） | 需对观众可达（生产建议走 CDN 回源） |
+| 1985 | SRS HTTP API（查流/踢流） | **仅内网运维**，勿对公网开放 |
+
+> 8180 而非常见的 8080：本机 8080 已有出站连接占用、且极易与外部代理冲突，故显式改到 8180。
+
+#### 启动
+
+```powershell
+# 方式 A（推荐）：compose，在仓库根目录执行
+docker compose -f server/deploy/srs/docker-compose.srs.yaml up -d
+docker compose -f server/deploy/srs/docker-compose.srs.yaml logs -f --tail 100
+docker compose -f server/deploy/srs/docker-compose.srs.yaml down
+
+# 方式 B：docker run，等价且不依赖 compose
+# ⚠️ 末尾的 objs/srs -c conf/srs.conf 不能省：SRS 镜像默认启动命令读的是内置的
+#    conf/docker.conf（HTTP 监听 8080），只挂载 srs.conf 而不覆盖启动命令会导致
+#    「配置挂载了却完全没生效」——2026-10-13 实测踩到，排查耗时最久的一处。
+docker run -d --name dlidli-srs --restart unless-stopped `
+  -p 1935:1935 -p 8180:8180 -p 1985:1985 `
+  -v "${PWD}\server\deploy\srs\srs.conf:/usr/local/srs/conf/srs.conf:ro" `
+  --add-host "host.docker.internal:host-gateway" `
+  ossrs/srs:5 ./objs/srs -c conf/srs.conf
+```
+
+> **配置生效自检**（起容器后必做，30 秒可验）：
+> ```powershell
+> # ① 校验 conf 语法（SRS 自带校验器，不启动服务）
+> docker run --rm -v "${PWD}\server\deploy\srs\srs.conf:/tmp/t.conf:ro" ossrs/srs:5 `
+>   sh -c "./objs/srs -t -c /tmp/t.conf"      # 期望：syntax is ok / test is successful
+> # ② 确认容器内确实监听 8180（十六进制 1FF4），而不是回落到 8080（1F90）
+> docker exec dlidli-srs sh -c "cat /proc/net/tcp"
+> # ③ 宿主侧应能取到静态文件
+> curl.exe -s -o NUL -w "%{http_code}" http://127.0.0.1:8180/crossdomain.xml   # 期望 200
+> ```
+
+> **SRS 5 配置的三个易踩坑**（均为 2026-10-13 实测定位，写配置时直接避开）：
+> 1. **`app <name> { }` 块已废弃**——那是 SRS 3/4 语法，5.x 解析器会直接报
+>    `unexpected end of file, expecting "}"`。流的 app 名由推流 URL 的路径段决定
+>    （`rtmp://host/live/room_x` 的 `live`），**无需也不能声明**。
+> 2. **`http_hooks` 的 URL 不做环境变量展开**，且 `env XXX=...;` 指令在 5.x 不被接受——
+>    token 必须写**字面值**；写成 `${VAR}` 还会因花括号被当作块开括号而破坏整个配置解析。
+>    改 token 时同步改后端 `live.callbackToken`（dev 默认 `dev-live-cb-token`）。
+> 3. **`hls_path` 必须落在 `http_server.dir` 之内**——否则切片照常生成，但 HTTP 侧一律 404
+>    （SRS 的 HTTP 服务只从 `dir` 提供文件）。本仓库配置已显式对齐为 `./objs/nginx/html`。
+
+#### 地址口径
+
+| 项 | 值 |
+| --- | --- |
+| app / 流名 | `live` / `room_<roomId>`（流名公开，**不含密钥**） |
+| 推流 | `rtmp://<host>:1935/live/room_<roomId>?key=<streamKey>` |
+| HLS | `http://<host>:8180/live/room_<roomId>.m3u8` |
+| HTTP-FLV | `http://<host>:8180/live/room_<roomId>.flv` |
+
+#### 验证命令
+
+```powershell
+# 推流（业务侧开播拿到 streamKey 后）
+ffmpeg -re -f lavfi -i testsrc2=size=640x360:rate=25 -f lavfi -i sine=frequency=1000 `
+  -c:v libx264 -preset veryfast -tune zerolatency -g 50 -b:v 800k -c:a aac -ar 44100 `
+  -f flv "rtmp://127.0.0.1:1935/live/room_1?key=<streamKey>"
+
+# 拉流预检
+ffprobe -v error -show_streams "http://127.0.0.1:8180/live/room_1.m3u8"
+ffprobe -v error -show_streams "http://127.0.0.1:8180/live/room_1.flv"
+curl.exe -s "http://127.0.0.1:8180/live/room_1.m3u8"     # 播放列表内容
+
+# SRS active streams
+curl.exe -s "http://127.0.0.1:1985/api/v1/streams"
+
+# 回调闭环（后端日志应出现 on_publish / on_unpublish 两条请求）
+docker logs dlidli-srs --tail 200 | Select-String 'on_publish|on_unpublish'
+```
+
+#### token 对齐（必须两边一致）
+
+`SRS_CALLBACK_TOKEN` 与后端 `live.callbackToken` 不一致时，回调返回非 2xx，
+SRS 会**直接拒绝推流**。
+
+- 后端：`server/configs/dev.yaml` 的 `live.callbackToken`（当前值 `dev-live-cb-token`，
+  可用 `DLIDLI_LIVE_CALLBACKTOKEN` 覆盖）
+- SRS：`srs.conf` 的 `env SRS_CALLBACK_TOKEN=...;`，compose 用
+  `SRS_CALLBACK_TOKEN=${SRS_CALLBACK_TOKEN:-dev-live-cb-token}` 覆盖
+- 生产环境请勿沿用默认值 `dev-live-cb-token`；改用随机密钥并两侧同源注入
+
+> ⚠️ **端口口径**：后端 `live.playDomain` 决定下发的 `play_urls` 主机端口，必须与 SRS
+> 的 HTTP 服务端口一致。本目录 SRS 使用 **8180**（`srs.conf` 与 compose 均为 8180），
+> 而 `dev.yaml` 当前 `playDomain` 为 `127.0.0.1:8080`，二者不一致会导致房间详情返回的
+> 拉流地址指向错误端口，需把 `playDomain` 对齐为 `127.0.0.1:8180`。
+
+#### 未运行验证说明（重要）
+
+> 本节配置编写于一个 **Docker 守护不可达**的会话（`npipe:////./pipe/dockerDesktopLinuxEngine`
+> 权限拒绝、TCP 2375 关闭），**容器未实际启动**。交付为「配置 + 命令级」，需在
+> Docker 可用环境按上文命令补做验证。
+
+已验证：`srs.conf` 指令结构（对照 SRS 5 官方配置示例与文档）、端口 1935/8180/1985
+本机空闲（`netstat` 实测无监听）、与后端回调契约的路径/token 一致性。
+未验证：容器启动、RTMP 实际收流、HLS/FLV 实际播放、回调实际抵达、端到端延迟。
 
 ---
 

@@ -45,6 +45,15 @@ transcode:
   # ffmpeg/ffprobe 缺省走 PATH；特殊环境用环境变量覆盖：
   #   DLIDLI_TRANSCODE_FFMPEGPATH / DLIDLI_TRANSCODE_FFPROBEPATH
 
+# 直播域（M4-LIV-01）：推拉流寻址 + SRS 回调鉴权；宿主/端口按 staging 实际部署改。
+# 可用环境变量覆盖：DLIDLI_LIVE_PUSHDOMAIN / DLIDLI_LIVE_PLAYDOMAIN /
+# DLIDLI_LIVE_STREAMAPP / DLIDLI_LIVE_CALLBACKTOKEN
+live:
+  pushDomain: 127.0.0.1:1935
+  playDomain: 127.0.0.1:8180 # SRS 的 http_server 端口（避开 API 8100 与前端 517x）
+  streamApp: live
+  callbackToken: "" # 必填：用 DLIDLI_LIVE_CALLBACKTOKEN 注入；为空则回调一律拒绝
+
 # OpenTelemetry（M3-ENG-04）：部署时通过 DLIDLI_TRACING_ENDPOINT 启用 OTLP/HTTP。
 # tracing:
 #   endpoint: http://otel-collector:4318
