@@ -22,6 +22,7 @@ import (
 	"github.com/dlidli/server/internal/module/interaction"
 	"github.com/dlidli/server/internal/module/live"
 	"github.com/dlidli/server/internal/module/notify"
+	"github.com/dlidli/server/internal/module/pay"
 	"github.com/dlidli/server/internal/module/recommend"
 	"github.com/dlidli/server/internal/module/relation"
 	"github.com/dlidli/server/internal/module/report"
@@ -279,6 +280,28 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		}
 		live.NewPatrolHandler(liveSvc).RegisterPatrolRoutes(
 			v1.Group("/admin", middleware.AdminAuth(cfg.JWT.Secret), permGift("live:audit")))
+
+		// 支付基础设施（M4-PAY-01，spec §6 / plan §2E）：统一网关（适配器模式 + mock 渠道）、
+		// 订单状态机（条件 UPDATE + RowsAffected）、回调验签与幂等、现金账户、日对账与异常处理台。
+		// 资质现实：真实支付宝/微信渠道为换入点（92004），全链路以 mock 渠道跑通。
+		payCfg := pay.Config{
+			OrderTimeoutMinutes: cfg.Pay.OrderTimeoutMinutes,
+			StuckHours:          cfg.Pay.StuckHours,
+			MockSecret:          cfg.Pay.MockSecret,
+			MaxAmount:           cfg.Pay.MaxAmount,
+			NotifyURLBase:       cfg.Pay.NotifyURLBase,
+		}
+		payRepo := pay.NewRepo(res.DB)
+		paySvc := pay.NewService(payRepo, payCfg, log)
+		payHandler := pay.NewHandler(paySvc, pay.NewReconService(payRepo, payCfg, log))
+		// C 端：资金接口需登录（authedRateLimited 已含鉴权 + 写接口限流）
+		payHandler.RegisterRoutes(v1.Group("/pay", optionalAuthMW), authedRateLimited)
+		// 回调端点单独注册：渠道服务器没有用户令牌，鉴权靠验签（spec §6.4）。
+		// 挂 authedRateLimited 会被 401 挡死真实回调。
+		payHandler.RegisterCallbackRoute(v1.Group("/pay", optionalAuthMW))
+		// 管理端：财务敏感，权限点 pay:view/pay:order/pay:recon 已落 builtinPermissions
+		payHandler.RegisterAdminRoutes(
+			v1.Group("/admin/pay", middleware.AdminAuth(cfg.JWT.Secret)), permGift)
 	} else {
 		log.Warn("MySQL/Redis 未就绪，业务模块路由未注册")
 	}
