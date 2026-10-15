@@ -100,6 +100,10 @@ func TestLoadProdGuard(t *testing.T) {
 		{"缺secret", "app:\n  env: prod\nmysql:\n  dsn: \"u:p@tcp(h)/d\"\n"},
 		{"dev占位密钥", "app:\n  env: prod\njwt:\n  secret: \"dev-secret-do-not-use-in-prod\"\nmysql:\n  dsn: \"u:p@tcp(h)/d\"\n"},
 		{"缺DSN", "app:\n  env: prod\njwt:\n  secret: \"real-secret\"\n"},
+		// 支付回调验签密钥是资金安全边界（M4-PAY-01）：缺它或留 dev 默认值上线，
+		// 等于任何人可伪造「支付成功」回调把订单刷成已支付。
+		{"缺支付回调密钥", "app:\n  env: prod\njwt:\n  secret: \"real-secret\"\nmysql:\n  dsn: \"u:p@tcp(h)/d\"\n"},
+		{"dev占位支付回调密钥", "app:\n  env: prod\njwt:\n  secret: \"real-secret\"\nmysql:\n  dsn: \"u:p@tcp(h)/d\"\npay:\n  mockSecret: \"dev-mock-pay-secret-do-not-use-in-prod\"\n"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -111,7 +115,38 @@ func TestLoadProdGuard(t *testing.T) {
 	// 正式注入后应放行
 	t.Setenv("DLIDLI_JWT_SECRET", "real-secret")
 	t.Setenv("DLIDLI_MYSQL_DSN", "u:p@tcp(h)/d")
+	t.Setenv("DLIDLI_PAY_MOCKSECRET", "real-pay-callback-secret")
 	if _, err := Load(writeTemp(t, "app:\n  env: prod\n")); err != nil {
 		t.Errorf("prod 注入环境变量后应通过: %v", err)
+	}
+}
+
+// TestPayConfigDefaults 支付域配置缺省与覆盖（M4-PAY-01）。
+func TestPayConfigDefaults(t *testing.T) {
+	cfg, err := Load(writeTemp(t, "app:\n  name: t\n"))
+	if err != nil {
+		t.Fatalf("Load 失败: %v", err)
+	}
+	if cfg.Pay.OrderTimeoutMinutes != 15 || cfg.Pay.StuckHours != 24 || cfg.Pay.MaxAmount != 1_000_000 {
+		t.Errorf("支付默认值不符: %+v", cfg.Pay)
+	}
+	if cfg.Pay.MockSecret == "" {
+		t.Error("dev 应给 mock 密钥缺省值（否则 mock 回调无密钥可验）")
+	}
+
+	t.Setenv("DLIDLI_PAY_ORDERTIMEOUTMINUTES", "30")
+	t.Setenv("DLIDLI_PAY_STUCKHOURS", "48")
+	t.Setenv("DLIDLI_PAY_MAXAMOUNT", "500000")
+	t.Setenv("DLIDLI_PAY_MOCKSECRET", "env-secret")
+	t.Setenv("DLIDLI_PAY_NOTIFYURLBASE", "https://example.com")
+	cfg2, err := Load(writeTemp(t, "app:\n  name: t\n"))
+	if err != nil {
+		t.Fatalf("Load 失败: %v", err)
+	}
+	if cfg2.Pay.OrderTimeoutMinutes != 30 || cfg2.Pay.StuckHours != 48 || cfg2.Pay.MaxAmount != 500000 {
+		t.Errorf("环境变量应覆盖支付配置: %+v", cfg2.Pay)
+	}
+	if cfg2.Pay.MockSecret != "env-secret" || cfg2.Pay.NotifyURLBase != "https://example.com" {
+		t.Errorf("环境变量应覆盖密钥与回调前缀: %+v", cfg2.Pay)
 	}
 }

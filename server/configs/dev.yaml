@@ -90,3 +90,16 @@ live:
     blackYAvgMax: 24 # 灰度均值 ≤ 24 判为黑屏
     flatRangeMax: 12 # YMAX-YMIN ≤ 12 判为纯色遮挡
 
+# 支付域（M4-PAY-01，spec §6 / plan §2E）。
+# 资质现实：真实支付宝/微信需要支付通道资质，当前不具备 —— 只有 mock 渠道可跑通全链路，
+# alipay/wechat 为换入点（调用返回 92004「渠道未实现」，接入步骤见 internal/module/pay/alipay.go）。
+# 可用环境变量覆盖：DLIDLI_PAY_ORDERTIMEOUTMINUTES / DLIDLI_PAY_STUCKHOURS /
+# DLIDLI_PAY_MOCKSECRET / DLIDLI_PAY_MAXAMOUNT / DLIDLI_PAY_NOTIFYURLBASE
+pay:
+  orderTimeoutMinutes: 15 # 订单支付超时（分钟）；过期由惰性关单置为「已关闭」
+  stuckHours: 24 # 对账「长期挂起」阈值（小时）
+  # dev 固定 mock 密钥（回调验签 HMAC-SHA256）；prod 必须用环境变量注入，否则启动即失败
+  mockSecret: dev-mock-pay-secret-do-not-use-in-prod
+  maxAmount: 1000000 # 单笔上限（分，即 1 万元）；防把「元」当「分」误传
+  notifyURLBase: http://localhost:8000 # 渠道异步回调地址前缀
+

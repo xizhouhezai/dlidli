@@ -100,6 +100,12 @@ var builtinPermissions = []Permission{
 	// 直播巡查（M4-LIV-05，spec §5E.4）：直播中房间列表 / 手动切断 / 恢复
 	{Code: "live:audit", Name: "直播巡查", Type: "menu", Path: "/live-patrol", Icon: "i-mingcute-video-line", Sort: 16},
 	{Code: "live:cut", Name: "切断/恢复直播", Type: "button", Parent: "live:audit"},
+	// 支付与对账（M4-PAY-01，spec §6.7）：订单查询 / 手动补单 / 对账与异常处理台。
+	// 属财务敏感权限：默认只授予 super（super 鉴权短路放行），**不**分配给审核/运营/
+	// 数据分析角色 —— 能手动补单等于能凭空给账户加钱，不应是审核岗的默认能力。
+	{Code: "pay:view", Name: "支付订单与对账", Type: "menu", Path: "/pay-orders", Icon: "i-mingcute-wallet-3-line", Sort: 17},
+	{Code: "pay:order", Name: "手动补单", Type: "button", Parent: "pay:view"},
+	{Code: "pay:recon", Name: "对账与异常处理", Type: "button", Parent: "pay:view"},
 }
 
 // 内置角色定义（code → 权限码集合；super 特殊，拥有全部）。

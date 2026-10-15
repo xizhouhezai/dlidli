@@ -1,0 +1,26 @@
+feat(pay): 支付网关 + 订单系统 + 对账（M4-PAY-01，商业化线第 1 张）
+
+形态=全量建机制 + mock 渠道（用户拍板）：订单状态机/适配器接口/回调幂等/对账
+全部按真实契约实现，真实支付宝/微信写成明确换入点，不等资质与密钥。
+
+- 迁移 0038 六表：pay_order（状态机+金额存分）/ cash_account / cash_log
+  （uk_biz_no 幂等索引）/ pay_callback_log / pay_recon_daily / pay_recon_issue
+- 支付网关适配器四方法（下单/查单/退款/回调验签）：mock 实现 + alipay/wechat 骨架
+- 回调 POST /pay/callback/{channel}：HMAC 验签 + 幂等（uk_biz_no + 条件 UPDATE）
+- 现金与虚拟币严格分离：只写 cash_*，不触碰 coin_log / melon_seed_*
+- 对账：日对账单聚合 + 异常订单清单（金额不符/长期挂起）；
+  真实渠道对账文件解析写为换入点
+- 13 个 pay 端点 + RBAC 权限 + admin 对账/异常处理台 + dev 模拟回调通道
+
+实测证据（.dev-logs/pay01/）：
+- 幂等铁证：同一订单收 20 次并发回调 → cash_log 恰 1 条（uk_biz_no 生效）
+- 分离证据：支付域流水 biz_type 仅支付/退款，coin_log 与 melon_seed_* 零写入
+- 退款：status 3 + 一笔 -2500；余额 8600-2500=6100 与 DB 一致
+- 并发：3×20 轮集成测试 0 应用级错误；InnoDB 因两种相反加锁顺序偶发死锁
+  （5 轮中 2 轮），由 retryTx 吸收——如实记录，非静默掩盖
+- 回调端点公开可达（返 92005 而非 401）——真实渠道回调的必要设计点
+- 自查修复 2 处自身缺陷：CloseExpired 重试时预算重复累加；Run/Daily 泄漏
+  GORM 原始模型（Go 字段名）与 DTO 不一致，并补回归测试
+
+闸门：go vet / go test ./...（26 包全绿）/ api 重编重启 / docs:build 全过
+未覆盖：真实渠道联调（需资质与密钥）、内购、对账文件解析、未成年人限制完整实现

@@ -22,6 +22,25 @@ type Config struct {
 	Search    Search
 	Tracing   Tracing
 	Live      Live
+	Pay       Pay
+}
+
+// Pay 支付域配置（M4-PAY-01，spec §6 / plan §2E）。
+//
+// **资质现实**：真实支付宝/微信渠道需要支付通道资质，当前不具备，故只有 mock 渠道可用；
+// alipay/wechat 的凭据段预留但不配置（配了也走 92004「渠道未实现」，见 pay/alipay.go 接入步骤）。
+type Pay struct {
+	// OrderTimeoutMinutes 订单支付超时分钟数（默认 15），过期由惰性关单置为已关闭。
+	OrderTimeoutMinutes int
+	// StuckHours 对账「长期挂起」判定阈值小时数（默认 24）。
+	StuckHours int
+	// MockSecret mock 渠道共享密钥（回调验签，HMAC-SHA256）。
+	// 为空时由 config.Load 落 dev 缺省值；**prod 必须显式注入**（validateProd 强制）。
+	MockSecret string
+	// MaxAmount 单笔金额上限（分，默认 1000000 即 1 万元）：防把「元」当「分」误传。
+	MaxAmount int64
+	// NotifyURLBase 渠道异步回调的地址前缀（部署决定域名，业务侧不硬编码）。
+	NotifyURLBase string
 }
 
 // Live 直播域配置（M4-LIV-01/02）：推拉流寻址与 SRS 回调鉴权。
@@ -195,6 +214,23 @@ func Load(path string) (*Config, error) {
 	if audit.FlatRangeMax <= 0 {
 		audit.FlatRangeMax = 12
 	}
+	// 支付域（M4-PAY-01）：超时/阈值/上限给零值兜底；mock 密钥 dev 缺省（prod 由 validateProd 强制注入）
+	pay := &cfg.Pay
+	if pay.OrderTimeoutMinutes <= 0 {
+		pay.OrderTimeoutMinutes = 15
+	}
+	if pay.StuckHours <= 0 {
+		pay.StuckHours = 24
+	}
+	if pay.MaxAmount <= 0 {
+		pay.MaxAmount = 1_000_000
+	}
+	if pay.MockSecret == "" {
+		pay.MockSecret = "dev-mock-pay-secret-do-not-use-in-prod"
+	}
+	if pay.NotifyURLBase == "" {
+		pay.NotifyURLBase = "http://localhost:8000"
+	}
 	if err := validateProd(&cfg); err != nil {
 		return nil, err
 	}
@@ -250,6 +286,12 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("live.audit.framedir", "./uploads/live-frames")
 	v.SetDefault("live.audit.blackyavgmax", 24.0)
 	v.SetDefault("live.audit.flatrangemax", 12.0)
+	// 支付域（M4-PAY-01）
+	v.SetDefault("pay.ordertimeoutminutes", 15)
+	v.SetDefault("pay.stuckhours", 24)
+	v.SetDefault("pay.mocksecret", "")
+	v.SetDefault("pay.maxamount", 1000000)
+	v.SetDefault("pay.notifyurlbase", "")
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。
@@ -262,6 +304,10 @@ func validateProd(cfg *Config) error {
 	}
 	if cfg.MySQL.DSN == "" {
 		return fmt.Errorf("prod 环境必须通过 DLIDLI_MYSQL_DSN 注入数据库连接串")
+	}
+	// 支付回调的验签密钥是资金安全边界：dev 默认值上线等于任何人可伪造支付成功回调。
+	if cfg.Pay.MockSecret == "" || cfg.Pay.MockSecret == "dev-mock-pay-secret-do-not-use-in-prod" {
+		return fmt.Errorf("prod 环境必须通过 DLIDLI_PAY_MOCKSECRET 注入支付回调验签密钥")
 	}
 	return nil
 }
