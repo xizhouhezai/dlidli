@@ -1,6 +1,6 @@
 // Package errcode 定义统一业务错误码。
 // 分段规则：1xxxx 通用；2xxxx 账号；3xxxx 视频；4xxxx 弹幕；5xxxx 互动；
-// 6xxxx 社区；7xxxx 消息；8xxxx 审核后台；9xxxx 商业化（直播 91000+，M4-LIV）。
+// 6xxxx 社区；7xxxx 消息；8xxxx 审核后台；9xxxx 商业化（直播 91001-91030，M4-LIV；支付 92001+，M4-PAY）。
 package errcode
 
 import "fmt"
@@ -118,4 +118,24 @@ var (
 	ErrLiveRoomBanned     = New(91028, "直播间已被封禁")
 	ErrLiveRoomNotBanned  = New(91029, "直播间未被封禁")
 	ErrLiveNoActiveStream = New(91030, "直播间当前无推流")
+)
+
+// 支付错误码（92001+，商业化段支付子段，M4-PAY-01，spec §6.8 / plan §2E.9）
+var (
+	// 资金与订单
+	ErrPayOrderNotFound   = New(92001, "订单不存在")
+	ErrPayOrderStatus     = New(92002, "订单状态不允许该操作")
+	ErrPayChannelUnknown  = New(92003, "支付渠道不存在或未启用")
+	ErrPayChannelNotImpl  = New(92004, "支付渠道未实现（真实渠道尚未接入）")
+	// 回调
+	ErrPayCallbackSign    = New(92005, "支付回调验签失败")
+	ErrPayCallbackInvalid = New(92006, "支付回调报文不合法")
+	ErrPayOrderExpired    = New(92007, "订单已过期")
+	// 金额
+	ErrPayAmountInvalid   = New(92008, "金额不合法")
+	ErrPayRefundInvalid   = New(92009, "退款金额不合法")
+	ErrPayCashNotEnough   = New(92010, "现金账户余额不足")
+	// 对账与合规
+	ErrPayReconDateInvalid = New(92011, "对账日期不合法")
+	ErrPayMinorRestricted  = New(92012, "未成年人消费受限")
 )
