@@ -13,6 +13,7 @@ import (
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/module/admin"
 	"github.com/dlidli/server/internal/module/banner"
+	"github.com/dlidli/server/internal/module/charge"
 	"github.com/dlidli/server/internal/module/collection"
 	"github.com/dlidli/server/internal/module/creator"
 	"github.com/dlidli/server/internal/module/danmaku"
@@ -38,6 +39,7 @@ import (
 	"github.com/dlidli/server/internal/pkg/tracing"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 
 	_ "github.com/dlidli/server/docs" // swag 生成的 OpenAPI 文档（swag init）
 	swaggerFiles "github.com/swaggo/files"
@@ -336,7 +338,8 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		}
 		vipSvc := vip.NewService(vip.NewRepo(res.DB), paySvc, vipCfg, log)
 		paySvc.SetSkuHook(vipSvc)
-		paySvc.SetPaidHook(vipSvc.ApplyPaidHook)
+		// 注意：PaidHook 在此**不设置**——它由下方充电域装配时统一组合注入
+		// （会员权益 + 充电分成两件事共用一个入账事务，见 charge 段注释）。
 		vipHandler := vip.NewHandler(vipSvc)
 		// C 端：plans/status 匿名可访问（价格公开；游客必须能拿到「不是会员」而不是 401，
 		// 否则首页无法决定是否显示会员入口）；下单/签约需登录。
@@ -362,6 +365,37 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// 清晰度权益位（max_resolution）由 M4-VIP-02 在视频域落地（见上 SetVipChecker）。
 		interactionSvc.SetVipBadge(vipSvc)
 		liveSvc.SetVipBadge(vipSvc)
+
+		// 充电打赏 + 分成结算 + 提现（M4-PAY-02，spec CHG-01/02/03、CRT-31/32 / plan §2H）：
+		// 观众现金充电走 PAY-01 支付链路；创作者分成入**现金负债**账户（creator_income /
+		// creator_balance，与硬币/金瓜子严格分离）；提现走 mock 出款通道（真实出款为换入点）。
+		chargeCfg := charge.Config{
+			MinWithdrawAmount:     cfg.Charge.MinWithdrawAmount,
+			MaxWithdrawPerDay:     cfg.Charge.MaxWithdrawPerDay,
+			SettleEnabled:         cfg.Charge.SettleEnabled,
+			SettleIntervalSeconds: cfg.Charge.SettleIntervalSeconds,
+			SettleDay:             cfg.Charge.SettleDay,
+		}
+		chargeSvc := charge.NewService(charge.NewRepo(res.DB), paySvc, chargeCfg, log)
+		// **分成发放的接法**：pay 域只有单个 PaidHook 槽位，且该槽位已被会员占用，
+		// 而「只有一个钩子能生效」会让充电分成在会员卡先上线后**静默失效**——
+		// 这是最难发现的一类缺陷（钱收了、分成没记，且没有任何报错）。
+		// 故此处改为**组合钩子**：会员权益与充电分成都在入账事务内按订单号各自认领，
+		// 互不干扰、都保持「要么都有、要么都没有」（plan §2H.6）。
+		paySvc.SetPaidHook(func(tx *gorm.DB, orderNo string, userID int64) error {
+			if err := vipSvc.ApplyPaidHook(tx, orderNo, userID); err != nil {
+				return err
+			}
+			return chargeSvc.ApplyPaidHook(tx, orderNo, userID)
+		})
+		chargeHandler := charge.NewHandler(chargeSvc)
+		// C 端：档位/鸣谢公开可读（游客也要看得见「谁充过电」），下单/提现需登录。
+		chargeHandler.RegisterRoutes(v1.Group("/charge", optionalAuthMW), authedRateLimited)
+		// 管理端：查询 / 审核 / 打款 / 月结 各挂独立权限点（charge:view/audit/payout/settle）。
+		chargeHandler.RegisterAdminRoutes(
+			v1.Group("/admin/charge", middleware.AdminAuth(cfg.JWT.Secret)), permGift)
+		// 月度结算 Worker（dev 默认关闭，charge.settleEnabled=true 打开）。
+		chargeSvc.StartSettleWorker(context.Background())
 	} else {
 		log.Warn("MySQL/Redis 未就绪，业务模块路由未注册")
 	}

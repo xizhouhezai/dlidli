@@ -44,6 +44,32 @@ video_part / video_collection(_item)                                        -- �
 
 - [ ] 播放来源/留存曲线/互动漏斗（CRT-11 细化，需埋点扩展）
 - [ ] 粉丝画像（CRT-12）、数据对比（CRT-13）
-- [ ] 提现与月度结算（CRT-32，依赖支付基础设施）
-- [ ] 充电分成（CRT-31，依赖 [monetization](/specs/monetization/spec)）
+- [x] 提现与月度结算（CRT-32，依赖支付基础设施）—— **2026-10-15 由 M4-PAY-02 交付**
+- [x] 充电分成（CRT-31，依赖 [monetization](/specs/monetization/spec)）—— **2026-10-15 由 M4-PAY-02 交付**
 - [ ] 观看时长指标（待行为数据扩展）
+
+## 7. 充电收入与提现（CRT-31/32，由 M4-PAY-02 交付）
+
+> 实现位置：`server/internal/module/charge`（**不在本模块**）。验收依据：
+> [monetization spec §9](/specs/monetization/spec) + [monetization plan §2H](/specs/monetization/plan)。
+> 本模块只消费其读模型，不重复实现结算与提现。
+
+**为什么放在 monetization 域而不是 creator 域**：充电的入账发生在**支付回调事务内**
+（与支付域强耦合），提现涉及资金状态机与出款通道，二者与支付基础设施同属一层；
+creator 域保持「只读聚合 + 激励结算」的定位，避免支付语义渗入内容侧模块。
+
+与本模块的接口关系：
+
+| 事项 | 实现 | 与本模块的关系 |
+| --- | --- | --- |
+| 充电分成入账 | `charge_log` → `creator_income`（70‰）→ `creator_balance` | 创作者收益的**新来源**，与创作激励并存 |
+| 月度结算 | `creator_charge_settlement` + 复用 `creator_settlement`（`source='charge'`） | **复用本模块既有的结算表**（plan §3 的既定决策），按（月 × 创作者 × 稿件）落行 |
+| 收益查询 | `GET /charge/balance`、`GET /charge/settlements` | 本模块 `GET /creator/overview` 的 `earnings` 已把 `creator_settlement` 全额计入，故**充电分成会自动出现在既有总览里** |
+| 提现 | `withdraw_order` 状态机 + mock 出款 | 本模块不涉及；真实出款与个税代扣为换入点 |
+
+**口径一致性（硬要求）**：充电分成 700‰/300‰ 与 [live plan](/specs/live/plan) LIV-04 礼物分成**必须相同**。
+两处均以落库快照（`charge_log.share_rate` / `gift_log.share_rate`）为准，已实测一致（各 700‰）。
+
+**未覆盖（如实声明）**：**直播礼物分成尚未接入月结**——`creator_income.source_type=2` 已预留该维度，
+但 LIV-04 的礼物分成目前只落 `gift_share_log`，本卡未改动其归属，避免跨卡在口径未定论时先行变更。
+**个税代扣与税务合规**同理未实现（无税务资质与规则输入，不得宣称达标）。
