@@ -22,6 +22,7 @@ import (
 	"github.com/dlidli/server/internal/pkg/contentmod"
 	"github.com/dlidli/server/internal/pkg/errcode"
 	"github.com/dlidli/server/internal/pkg/playsign"
+	"github.com/dlidli/server/internal/pkg/qualitytier"
 	"github.com/dlidli/server/internal/pkg/snowflake"
 	"github.com/dlidli/server/internal/pkg/storage"
 	"github.com/redis/go-redis/v9"
@@ -34,11 +35,64 @@ const coverMaxSize = 5 << 20 // 5MB
 // playSignTTL 播放地址签名有效期（下发给客户端的 URL 过期时间）。
 const playSignTTL = 6 * time.Hour
 
+// VIPChecker 会员判定（服务端权威口径），装配时注入实现（vip.Service.IsVip）。
+type VIPChecker interface {
+	IsVip(userID int64) (bool, error)
+}
+
 // signedPlayURL 拼接带 HMAC 签名与过期的播放地址。
-func (s *Service) signedPlayURL(playPath string) string {
+//
+// 两类签名（M4-VIP-02）：
+//   - 转码档位产物（`videos/hls/...`）：走**门禁签名**，把档位号与用户 ID 一并签进待签内容，
+//     /static 侧据此拦截「改档位参数」与「转发他人签名」（plan monetization §2G.3）；
+//   - 原画源文件等非档位路径（`videos/source/...`）：沿用历史签名（内容一字未变），
+//     线上既有 URL 与审核预览链路不受影响。这类资源的权益控制靠**下发时的过滤**完成。
+func (s *Service) signedPlayURL(playPath string, quality int16, uid int64) string {
 	base := strings.TrimRight(s.cfg.Storage.BaseURL, "/")
-	q := playsign.Query(s.cfg.JWT.Secret, playPath, playSignTTL)
+	var q string
+	if isTierPath(playPath) {
+		q = playsign.QueryGated(s.cfg.JWT.Secret, playPath, quality, uid, playSignTTL)
+	} else {
+		q = playsign.Query(s.cfg.JWT.Secret, playPath, playSignTTL)
+	}
 	return fmt.Sprintf("%s/%s?%s", base, playPath, q)
+}
+
+// isTierPath 判断是否为转码档位产物路径（transcoder 的输出布局 `videos/hls/<视频>/<分P>/<档位>/...`）。
+func isTierPath(playPath string) bool {
+	return strings.HasPrefix(playPath, "videos/hls/")
+}
+
+// isVip 会员判定。uid<=0（未登录）与判定出错都按**免费**处理：
+// 清晰度是付费权益，判定失败时宁可少给档位，不可多给（fail closed）。
+func (s *Service) isVip(uid int64) bool {
+	if uid <= 0 || s.vipCheck == nil {
+		return false
+	}
+	ok, err := s.vipCheck.IsVip(uid)
+	if err != nil {
+		s.log.Warn("会员判定失败，按免费用户处理清晰度", zap.Int64("uid", uid), zap.Error(err))
+		return false
+	}
+	return ok
+}
+
+// viewerCtxKey 观看者身份在 ctx 中的键。
+type viewerCtxKey struct{}
+
+// WithViewer 把观看者 uid 放进 ctx（handler 从令牌解析后注入；0/缺省 = 未登录 = 按免费处理）。
+//
+// 为什么走 ctx 而不是给 Parts/PublicDetail 加参数：这两个读模型被 banner/collection/admin
+// 等多处复用，改公开签名会波及一批无关调用点；而「谁在看」本来就是请求作用域的事实。
+func WithViewer(ctx context.Context, uid int64) context.Context {
+	return context.WithValue(ctx, viewerCtxKey{}, uid)
+}
+
+func viewerUID(ctx context.Context) int64 {
+	if v, ok := ctx.Value(viewerCtxKey{}).(int64); ok {
+		return v
+	}
+	return 0
 }
 
 var coverExts = map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
@@ -51,6 +105,10 @@ type Service struct {
 	rdb        *redis.Client
 	cfg        *config.Config
 	log        *zap.Logger
+	// tiers 清晰度档位配置快照（M4-VIP-02）：转码参数、投稿排程、下发过滤共用一份
+	tiers *qualitytier.Store
+	// vipCheck 会员判定（装配时注入；未注入一律按免费处理，见 isVip）
+	vipCheck VIPChecker
 	// publishHook 稿件发布旁路回调（动态生成等），装配时注入
 	publishHook PublishHook
 	// searchHook 稿件检索索引变更回调（M2-SRH-02：upsert|delete），装配时注入
@@ -58,8 +116,16 @@ type Service struct {
 }
 
 func NewService(repo *Repo, uploadSvc *upload.Service, accountSvc *account.Service, growthSvc *growth.Service, rdb *redis.Client, cfg *config.Config, log *zap.Logger) *Service {
-	return &Service{repo: repo, uploadSvc: uploadSvc, accountSvc: accountSvc, growthSvc: growthSvc, rdb: rdb, cfg: cfg, log: log}
+	return &Service{
+		repo: repo, uploadSvc: uploadSvc, accountSvc: accountSvc, growthSvc: growthSvc,
+		rdb: rdb, cfg: cfg, log: log,
+		// 空快照起步：装配方 LoadTiers 后替换；未加载时判定一律放行（等于升级前行为）
+		tiers: qualitytier.NewStore(qualitytier.NewSet(nil)),
+	}
 }
+
+// SetVipChecker 注入会员判定（router 装配时调用，vip 服务不反向依赖 video）。
+func (s *Service) SetVipChecker(c VIPChecker) { s.vipCheck = c }
 
 // Categories 分区列表。
 func (s *Service) Categories(_ context.Context) ([]Category, error) {
@@ -199,7 +265,9 @@ func (s *Service) Submit(ctx context.Context, uid int64, req *SubmitReq) (*Detai
 	var jobs []int16
 	if s.cfg.Transcode.Enabled {
 		v.Status = StatusTranscoding
-		jobs = []int16{360, 720}
+		// 排哪些档位由配置表决定（transcode_enabled）：4K 默认关闭（单机 CPU 成本），
+		// 运营在管理端开启后新投稿才会包含该档位（M4-VIP-02，plan §2G.5）。
+		jobs = s.tiers.Set().TranscodeQualities()
 	} else {
 		v.Status = StatusReviewing
 		if s.cfg.App.AutoApprove {
@@ -272,6 +340,8 @@ func (s *Service) Parts(ctx context.Context, bv string) ([]PartItem, error) {
 	if err != nil {
 		return nil, err
 	}
+	uid := viewerUID(ctx)
+	vip := s.isVip(uid)
 	byPart := make(map[int8][]Stream, len(parts))
 	for _, st := range streams {
 		byPart[st.PartIndex] = append(byPart[st.PartIndex], st)
@@ -283,7 +353,13 @@ func (s *Service) Parts(ctx context.Context, bv string) ([]PartItem, error) {
 		sort.Slice(ss, func(i, j int) bool { return ss[i].Quality < ss[j].Quality })
 		sis := make([]StreamItem, 0, len(ss))
 		for _, st := range ss {
-			sis = append(sis, StreamItem{Quality: st.Quality, Format: st.Format, URL: s.signedPlayURL(st.PlayPath)})
+			if !s.tiers.Set().Decide(st.Quality, st.Height, vip).Allowed {
+				continue // 权益过滤：免费用户拿不到 4K 档（spec §2.1）
+			}
+			sis = append(sis, StreamItem{
+				Quality: st.Quality, Format: st.Format, Height: st.Height,
+				URL: s.signedPlayURL(st.PlayPath, st.Quality, uid),
+			})
 		}
 		items = append(items, PartItem{Index: int(p.PartIndex), Title: p.Title, Duration: p.Duration, Streams: sis})
 	}
@@ -609,7 +685,8 @@ func (s *Service) ReviewList(ctx context.Context, page, size int) ([]ReviewItem,
 		}
 		for _, st := range streams {
 			if st.Quality == 0 {
-				item.PlayURL = s.signedPlayURL(st.PlayPath)
+				// 审核预览：管理员看原画，不涉及会员档位（uid=0 走非门禁路径）
+				item.PlayURL = s.signedPlayURL(st.PlayPath, st.Quality, 0)
 				break
 			}
 		}
@@ -897,12 +974,20 @@ func (s *Service) detail(ctx context.Context, v *Video, withStreams bool) (*Deta
 		if err != nil {
 			return nil, err
 		}
+		uid := viewerUID(ctx)
+		vip := s.isVip(uid)
 		for _, st := range streams {
+			// 权益过滤：免费用户（含未登录）不下发 4K 档与超上限分辨率（spec §2.1 / §8.2）。
+			if !s.tiers.Set().Decide(st.Quality, st.Height, vip).Allowed {
+				continue
+			}
 			d.Streams = append(d.Streams, StreamItem{
 				Quality: st.Quality,
 				Format:  st.Format,
-				// 签名下发（PLY/VID-05）：HMAC + 过期；生产环境可叠加 CDN
-				URL: s.signedPlayURL(st.PlayPath),
+				Height:  st.Height,
+				// 签名下发（PLY/VID-05 + M4-VIP-02）：档位产物走门禁签名（档位+用户绑定），
+				// 原画源文件沿用历史签名（内容未变，既有 URL 继续有效）。
+				URL: s.signedPlayURL(st.PlayPath, st.Quality, uid),
 			})
 		}
 	}

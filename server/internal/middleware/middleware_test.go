@@ -167,7 +167,8 @@ func TestRecovery(t *testing.T) {
 }
 
 func TestPlaySignGuard(t *testing.T) {
-	guard := PlaySignGuard(secret)
+	gate := NewPlayGate()
+	guard := PlaySignGuard(secret, gate)
 	e := gin.New()
 	e.GET("/static/*path", guard, func(c *gin.Context) { c.String(200, "served") })
 

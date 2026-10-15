@@ -39,7 +39,7 @@
 | ID | 需求 | 验收标准（EARS） | 优先级 |
 | --- | --- | --- | --- |
 | VID-10 | 自动转码 | **WHEN** 上传完成 **THE SYSTEM SHALL** 自动入队转码并输出 HLS（H.264 + AAC） | P0 |
-| VID-11 | 清晰度档位 | **THE SYSTEM SHALL** 提供 MVP 360P/720P；V1 +1080P；V3 +4K（大会员，见 [monetization spec](/specs/monetization/spec)） | P0 |
+| VID-11 | 清晰度档位 | **THE SYSTEM SHALL** 提供 MVP 360P/720P；V1 +1080P；V3 +4K（大会员）。**V3 部分已细化**：档位编号/鉴权位置/签名绑定与兼容口径见 [monetization spec §8](/specs/monetization/spec)，**§8 是该条 V3 部分的唯一验收依据** | P0 |
 | VID-12 | 转码进度通知 | **WHEN** 转码状态变化 **THE SYSTEM SHALL** 发送站内通知并在创作者中心展示状态（见 [notification spec](/specs/notification/spec)） | P1 |
 | VID-13 | 视频指纹 | **WHEN** 稿件提交 **THE SYSTEM SHALL** 计算抽帧 hash 用于重复/搬运检测 | P2 |
 
@@ -57,7 +57,7 @@
 | ID | 需求 | 验收标准（EARS） | 优先级 |
 | --- | --- | --- | --- |
 | PLY-01 | HLS 播放器 | **THE SYSTEM SHALL** 提供 HLS 播放能力（Web 播放器内核；H5/小程序原生 video + HLS 地址） | P0 |
-| PLY-02 | 清晰度切换 | **THE SYSTEM SHALL** 支持手动切换与按带宽自动切换；未登录限 480P 以下，大会员解锁 4K | P0 |
+| PLY-02 | 清晰度切换 | **THE SYSTEM SHALL** 支持手动切换与按带宽自动切换；免费用户（含未登录）最高 1080P，大会员解锁 4K | P0 |
 | PLY-03 | 倍速播放 | **THE SYSTEM SHALL** 支持 0.5x / 0.75x / 1x / 1.25x / 1.5x / 2x / 3x 倍速 | P0 |
 | PLY-04 | 进度记忆 | **WHEN** 用户中断观看 **THE SYSTEM SHALL** 服务端记录进度并支持跨端续播 | P0 |
 | PLY-05 | 播放统计 | **WHEN** 观看时长 > 5s **THE SYSTEM SHALL** 计一次有效播放（去重计数），并埋点完播率 | P0 |
