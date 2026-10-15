@@ -42,6 +42,18 @@ func (s *Service) SetLiveDeps(deps *LiveDeps) { s.deps = deps }
 // SetHub 注入弹幕广播 Hub（router 装配）。
 func (s *Service) SetHub(hub *Hub) { s.hub = hub }
 
+// SetVipBadge 注入会员标识提供者（M4-VIP-01 权益落地：直播弹幕带会员徽章）。
+//
+// 写在 deps 上而非新增字段：会员标识与弹幕资料同属「弹幕通道的跨域只读依赖」，
+// 分两处存放会让「deps 齐了但徽章没注入」这种半装配状态难以察觉。
+// deps 为 nil 时惰性创建（装配顺序不该成为正确性的前提）。
+func (s *Service) SetVipBadge(p VipBadgeProvider) {
+	if s.deps == nil {
+		s.deps = &LiveDeps{}
+	}
+	s.deps.Vip = p
+}
+
 // ---- DTO ----
 
 // ApplyResult 申请开播返回：房间 + 推流地址 + 明文密钥（仅此一次）。

@@ -139,3 +139,16 @@ var (
 	ErrPayReconDateInvalid = New(92011, "对账日期不合法")
 	ErrPayMinorRestricted  = New(92012, "未成年人消费受限")
 )
+
+// 会员错误码（92101+，商业化段会员子段，M4-VIP-01，spec §2.7 / plan §2F.10）
+var (
+	ErrVipPlanNotFound   = New(92101, "会员套餐不存在或已下架")
+	ErrVipPlanNotRenew   = New(92102, "该套餐不支持连续包月")
+	ErrVipOrderNotVip    = New(92103, "订单不是会员商品")
+	ErrVipAlreadyApplied = New(92104, "该订单的会员权益已生效（幂等）")
+	ErrVipNoSubscription = New(92105, "无有效的连续包月签约")
+	ErrVipSubscribed     = New(92106, "已有生效中的连续包月签约")
+	ErrVipCoinGranted    = New(92107, "本月会员硬币已发放（幂等）")
+	ErrVipRenewFailed    = New(92108, "自动续期扣款失败")
+	ErrVipMonthsInvalid  = New(92109, "会员时长不合法")
+)

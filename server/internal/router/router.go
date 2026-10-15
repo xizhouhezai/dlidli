@@ -30,6 +30,7 @@ import (
 	"github.com/dlidli/server/internal/module/searchindex"
 	"github.com/dlidli/server/internal/module/upload"
 	"github.com/dlidli/server/internal/module/video"
+	"github.com/dlidli/server/internal/module/vip"
 	"github.com/dlidli/server/internal/module/wechat"
 	"github.com/dlidli/server/internal/pkg/config"
 	"github.com/dlidli/server/internal/pkg/metrics"
@@ -302,6 +303,43 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// 管理端：财务敏感，权限点 pay:view/pay:order/pay:recon 已落 builtinPermissions
 		payHandler.RegisterAdminRoutes(
 			v1.Group("/admin/pay", middleware.AdminAuth(cfg.JWT.Secret)), permGift)
+
+		// 大会员（M4-VIP-01，spec §2.1/§2.2/§2.7 / plan §2F）：套餐、开通/顺延、权益判定、
+		// 连续包月（自动续期走 mock 渠道，真实免密代扣为换入点）与月度赠币。
+		//
+		// 与支付域的接法（**本卡的关键结构决策**）：把会员域的两个钩子注入支付域，
+		// 而不是让 vip 去调 pay 之后再补记权益 —— 前者保证「订单迁移 + 入账 + 开会员 + 赠币」
+		// 在同一事务内，任一失败整体回滚，不会出现「已收钱但没开会员」（plan §2F.4）。
+		vipCfg := vip.Config{
+			CoinPerMonth:     cfg.Vip.CoinPerMonth,
+			ExpireRemindDays: cfg.Vip.ExpireRemindDays,
+			RenewEnabled:     cfg.Vip.RenewEnabled,
+			RenewIntervalSec: cfg.Vip.RenewIntervalSeconds,
+			RenewBatchSize:   cfg.Vip.RenewBatchSize,
+			MaxFailCount:     cfg.Vip.MaxFailCount,
+		}
+		vipSvc := vip.NewService(vip.NewRepo(res.DB), paySvc, vipCfg, log)
+		paySvc.SetSkuHook(vipSvc)
+		paySvc.SetPaidHook(vipSvc.ApplyPaidHook)
+		vipHandler := vip.NewHandler(vipSvc)
+		// C 端：plans/status 匿名可访问（价格公开；游客必须能拿到「不是会员」而不是 401，
+		// 否则首页无法决定是否显示会员入口）；下单/签约需登录。
+		vipHandler.RegisterRoutes(v1.Group("/vip", optionalAuthMW), authedRateLimited)
+		// 管理端：vip:view / vip:plan / vip:grant 已落 builtinPermissions
+		vipHandler.RegisterAdminRoutes(
+			v1.Group("/admin/vip", middleware.AdminAuth(cfg.JWT.Secret)), permGift)
+		// 首次启动播种默认套餐（表非空则不动：运营改过的价不会被自动播种覆盖）。
+		vipSvc.SeedDefaultPlans()
+		// 连续包月自动续期 Worker（dev 默认关闭，vip.renewEnabled=true 打开）。
+		vipSvc.StartRenewWorker(context.Background())
+
+		// 会员身份标识落地点（M4-VIP-01 权益落地，plan §2F.6）：
+		//   ① 视频评论：UserBrief.is_vip / nickname_color
+		//   ② 直播弹幕（实时帧 + 历史回放）：DanmakuInfo.is_vip / nickname_color
+		// 两处都只注入**最小只读接口**（VipColors），读模型不 import 会员域。
+		// 清晰度权益位（max_resolution）本卡只下发不鉴权，消费方为 M4-VIP-02。
+		interactionSvc.SetVipBadge(vipSvc)
+		liveSvc.SetVipBadge(vipSvc)
 	} else {
 		log.Warn("MySQL/Redis 未就绪，业务模块路由未注册")
 	}
