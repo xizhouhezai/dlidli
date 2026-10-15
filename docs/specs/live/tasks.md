@@ -25,8 +25,11 @@
   - 覆盖：LIV-13
   - 实现要点（2026-10-13）：迁移 0036 五表（`melon_seed_account`/`melon_seed_log`（uk_biz_no 充值幂等）/`gift`/`gift_log`（单价·分成比例下单快照）/`gift_share_log`（uk_gift_log））；强一致 = 事务 + SELECT...FOR UPDATE 行锁（余额/流水/分成同事务，余额不可负）；分成 700‰（对齐 monetization CHG-02 70/30），月度结算归 creator（PAY-02 消费）；live hub 新增 `type=gift` 特效帧；C 端 `GET /live/gifts`、`GET /live/melon/balance`、`POST /live/rooms/{id}/gifts/{giftId}`（91019-91022）；dev 直充 `POST /admin/dev/recharge`（AdminAuth+RequirePerm config:edit，开发期临时通道，PAY-01 替换点见 plan §2C.2）；Web 礼物面板 `GiftPanel.vue` + 特效 `GiftEffects.vue`（普通弹幕区连击浮层/高级全屏 CSS 动画），swag 全量重生成
   - 验证结论：接口实测全链路——送礼×1/连击×3/全屏礼物 余额逐笔正确、`melon_seed_log`/`gift_log`/`gift_share_log` DB 逐条核对（2170+930=3100=Σtotal，70/30 逐笔符）；WS 双连接均收 `type=gift` 帧原始帧在案；余额不足 91021 且 0 流水；直充无 token/用户 token 均 401。**强一致并发**：集成测试 20 goroutine 打 600 余额恰 6 成功/14 拒绝/终 0 余额/无负数/无丢单（TestGiftConcurrentSpend）+ HTTP 接口级 20 并发同样 6/14、余额严格单调、流水 6 条；充值幂等 TestRechargeIdempotent。`go vet ./...`+`go test ./internal/module/live`（8 用例全绿）+ api 重编重启实测 + vue-tsc 过。未覆盖项：`pnpm web:build` vite 段与 `pnpm docs:build` 均被沙箱 esbuild service spawn EPERM 拦（同 LIV-03/06 边界，vue-tsc 已过、构建留待可 spawn 会话复跑）；页面级浏览器走查同因不可行，UI 证据为 API/WS 级链路走查；PAY-01 真实支付替换点=支付回调以支付单号为 biz_no 复用 RechargeTx 幂等、dev/recharge 下线（plan §2C.2）；git 发布被 `.git` 写拒绝（同 LIV-03/06），改动滞留工作区、v0.64.0 命令清单见 `.dev-logs/liv04/git-release.md`。证据：`.dev-logs/liv04/`
-- [ ] M4-LIV-05 直播截帧机审 + 快速切断
-  - 覆盖：边界（spec §3）、合规（spec §4）
+- [x] M4-LIV-05 直播截帧机审 + 快速切断 —— 2026-10-15 完成
+  - 覆盖：边界（spec §3）、合规（spec §4）；细化见 spec §5E / plan §2D
+  - 实现要点（2026-10-15）：迁移 0037（`live_frame_audit` 判定凭据 + `live_violation_log` 违规流水 + `live_room` 四列封禁字段）；`live/audit.go` 截帧 Worker（`time.Ticker` 同转码 worker 风格，dev 默认关）+ HTTP-FLV 单帧截帧（SRS 5 无截图 API）+ `contentmod.CheckImage` 画面机审 + 处置链（先落流水→SRS 踢流→封禁，`cut_mode` 回填）+ `RestoreRoom`；封禁与 `status` 正交，并以**封禁闸**接入 `AuthorizePublish`（被封禁者持正确密钥也拒推）；巡查三接口 + 机审状态接口挂 `AdminAuth`+`RequirePerm("live:audit")`，权限点已落库；错误码 91027-91030。
+  - 验证结论：**真实推流端到端全链闭合**——截帧产出真 PNG 且尺寸与推流源一致（640x360）；黑帧推流 → `live_frame_audit.pass=0`（`degraded=0`）→ 违规流水 `cut_mode=1` → **SRS `/streams/` 变空 + ffmpeg 退出** → 房间 `status=2`（on_unpublish 回调）且 `ban_status=1`；封禁闸实测 403/91028（**带正确密钥**仍被拒）、重复切断 91028 幂等、未开播房间切断 91006 且**零副作用**（无流水/未封禁）、`/restore` 与重复恢复 91029 逐项符合；巡查鉴权矩阵无 token 401 / 用户 token 401 / 管理员 200 实测命中。**期间实测修掉 1 处自身严重缺陷**：`StartAuditWorker` 内联跑循环致 `router.New` 永不返回、HTTP server 从未监听（改 `go auditLoop`）；另由独立验收者提出并确认修复 1 处 spec 缺口（`CutRoom` 未校验场次状态）。闸门：`go vet` ✅ · `go test ./...`（**25 包全绿，本卡新增 23 用例，含 DB 集成**）✅ · `bin/api.exe` 重编重启实测 ✅ · `go run ./cmd/migrate`（0037）✅ · `swag init` 重生成 ✅ · `pnpm docs:build` build complete ✅ 证据：`.dev-logs/liv05/`（E2E 全文 `lead-e2e/EVIDENCE.md`，阈值标定 `recon/thresholds.md`）
+  - 未覆盖：**外部图审服务未接入**（`CheckImage` 仅本地画面规则「黑屏/纯色遮挡」，语义级审核是包内既有 TODO 替换点）；**机审不可用走 fail-open（不切断仅记 `degraded`）——待替换点**，接外部图审后应改为「无法判定 ≠ 通过」+ degraded 比率告警；**多实例部署未验证**（进程内定时器会重复截帧，需分片+分布式锁）；**60 天留存无 TTL/归档作业**（仅由配置声明策略）；管理端**页面**未做（本卡只交付后端接口）；`-race` 未跑（本机无 gcc）
 - [x] M4-LIV-06 Web/H5 直播间页面 + 开播管理——2026-10-13 完成
   - 覆盖：LIV-10、LIV-11、LIV-02（前端）、LIV-03、LIV-04、LIV-14
   - 实现要点（2026-10-13）：Web 直播首页 `/live`（开播中卡片 + 15s 轮询）、直播间 `/live/:id`（PlayerCore 播放器 + 演示流兜底、弹幕 WS + 本地 2s 冷却 + 进场消息、在线人数）、开播管理 `/studio/live`（申请→设置→推流密钥一次性展示与复制→开播/下播→房管/禁言管理）；H5 只读直播间 `pages/live/live`（含房间列表态）；api-client 新增 live API；后端补只读端点 `GET /live/rooms/:id/admins|mutes`（swag 全）。真实流替换点：`apps/web|apps/h5` 的 `src/config/live.ts`（demo 标志 + hlsUrl），LIV-01 后只改配置。
@@ -36,7 +39,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M4 | 6 | 5 |
-| **合计** | **6** | **5** |
+| M4 | 6 | 6 |
+| **合计** | **6** | **6** |
 
 > 勾选任务后同步更新上表与 [开发进度管理](/project/progress) 的模块矩阵。

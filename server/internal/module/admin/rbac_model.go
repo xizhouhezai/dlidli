@@ -97,6 +97,9 @@ var builtinPermissions = []Permission{
 	// 运营 - A/B 实验
 	{Code: "experiment:view", Name: "A/B 实验", Type: "menu", Path: "/experiments", Icon: "i-mingcute-flask-line", Sort: 15},
 	{Code: "experiment:edit", Name: "增删改实验", Type: "button", Parent: "experiment:view"},
+	// 直播巡查（M4-LIV-05，spec §5E.4）：直播中房间列表 / 手动切断 / 恢复
+	{Code: "live:audit", Name: "直播巡查", Type: "menu", Path: "/live-patrol", Icon: "i-mingcute-video-line", Sort: 16},
+	{Code: "live:cut", Name: "切断/恢复直播", Type: "button", Parent: "live:audit"},
 }
 
 // 内置角色定义（code → 权限码集合；super 特殊，拥有全部）。
@@ -109,14 +112,16 @@ type builtinRole struct {
 
 var builtinRoles = []builtinRole{
 	{Code: SuperRoleCode, Name: "超级管理员", Perms: nil, Remark: "拥有全部权限，含账号/角色/权限管理"},
-	{Code: "review_lead", Name: "审核主管", Remark: "审核 + 稿件管理 + 敏感词库", Perms: []string{
+	{Code: "review_lead", Name: "审核主管", Remark: "审核 + 稿件管理 + 敏感词库 + 直播巡查", Perms: []string{
 		"dashboard:view", "review:view", "review:approve", "video:view", "video:manage", "sensitive:view", "sensitive:edit",
+		"live:audit", "live:cut",
 	}},
 	{Code: "reviewer", Name: "审核员", Remark: "仅稿件审核", Perms: []string{
 		"dashboard:view", "review:view", "review:approve", "video:view",
 	}},
-	{Code: "moderator", Name: "用户治理", Remark: "用户查询与处罚、举报处理", Perms: []string{
+	{Code: "moderator", Name: "用户治理", Remark: "用户查询与处罚、举报处理、直播巡查", Perms: []string{
 		"dashboard:view", "user:view", "user:punish", "report:view", "report:handle",
+		"live:audit", "live:cut",
 	}},
 	{Code: "operator", Name: "运营", Remark: "运营配置（分区、Banner、A/B 实验等）", Perms: []string{
 		"dashboard:view", "category:view", "category:edit", "banner:view", "banner:edit",

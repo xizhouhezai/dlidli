@@ -76,4 +76,17 @@ live:
   streamApp: live
   # dev 固定 token，仅供本机 SRS/替代服务器配置对齐；生产用密钥注入（见 deploy/srs/README.md）
   callbackToken: dev-live-cb-token
+  # 截帧机审与快速切断（M4-LIV-05，spec §5E / plan §2D）。
+  # enabled 默认 false：机审会周期拉起 ffmpeg 拉流截帧，默认关闭避免影响其它测试；
+  # 联调/验收时改为 true（或用 DLIDLI_LIVE_AUDIT_ENABLED=true 覆盖）。
+  # 错误码：91027 机审未启用 / 91028 房间已被封禁 / 91029 房间未被封禁 / 91030 无推流。
+  audit:
+    enabled: false
+    frameIntervalSeconds: 10 # spec §3 硬要求：每 10s 截帧
+    flvTimeoutSeconds: 15 # 单房间截帧超时（ffmpeg 挂死兜底）
+    srsApiBase: http://127.0.0.1:1985 # SRS HTTP API（查流/踢流）；1985 为内网运维端口
+    frameDir: ./uploads/live-frames # 截帧图落盘目录（合规存档，spec §4）
+    # 画面低信息量判据（plan §2D.5 实测标定：纯黑 YAVG=0；testsrc 正常帧 YAVG=127.5）
+    blackYAvgMax: 24 # 灰度均值 ≤ 24 判为黑屏
+    flatRangeMax: 12 # YMAX-YMIN ≤ 12 判为纯色遮挡
 

@@ -90,6 +90,51 @@ func (r *Repo) ResetLiveCnt(roomID int64) error {
 	return r.db.Model(&LiveRoom{}).Where("id = ?", roomID).Update("live_cnt", 0).Error
 }
 
+// ---- 截帧机审与违规流水（M4-LIV-05）----
+
+// ListLiveRoomsAll 全部直播中房间（截帧机审遍历用，不分页）。
+func (r *Repo) ListLiveRoomsAll() ([]LiveRoom, error) {
+	var list []LiveRoom
+	err := r.db.Where("status = ?", RoomStatusLive).Order("id ASC").Find(&list).Error
+	return list, err
+}
+
+// CreateFrameAudit 落一条截帧机审记录（spec §5E.5 合规存档凭据）。
+func (r *Repo) CreateFrameAudit(rec *LiveFrameAudit) error {
+	return r.db.Create(rec).Error
+}
+
+// LatestFrameAudit 房间最近一次截帧判定（巡查列表摘要用）；无记录返回 (nil, nil)。
+func (r *Repo) LatestFrameAudit(roomID int64) (*LiveFrameAudit, error) {
+	var rec LiveFrameAudit
+	err := r.db.Where("room_id = ?", roomID).Order("id DESC").First(&rec).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &rec, nil
+}
+
+// CreateViolation 落一条违规流水（先于切断动作写入，保证可审计）。
+func (r *Repo) CreateViolation(log *LiveViolationLog) error {
+	return r.db.Create(log).Error
+}
+
+// SetViolationCutMode 回填违规流水的实际切断方式（1 srs_api / 2 degraded）。
+func (r *Repo) SetViolationCutMode(id int64, mode int8) error {
+	return r.db.Model(&LiveViolationLog{}).Where("id = ?", id).
+		Update("cut_mode", mode).Error
+}
+
+// ListViolationsByRoom 房间违规流水（巡查/追溯用，倒序分页）。
+func (r *Repo) ListViolationsByRoom(roomID int64, limit int) ([]LiveViolationLog, error) {
+	var list []LiveViolationLog
+	err := r.db.Where("room_id = ?", roomID).Order("id DESC").Limit(limit).Find(&list).Error
+	return list, err
+}
+
 // ---- 白名单 ----
 
 // Whitelisted 用户是否在开播白名单内（removed_at IS NULL）。

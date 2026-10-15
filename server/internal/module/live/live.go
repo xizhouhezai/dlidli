@@ -23,8 +23,14 @@ type LiveRoom struct {
 	StartedAt     *time.Time `json:"started_at,omitempty"`
 	EndedAt       *time.Time `json:"ended_at,omitempty"`
 	LiveCnt       int64      `json:"-"` // DB 兜底计数，对外读 Redis
-	CreatedAt     time.Time  `json:"-"`
-	UpdatedAt     time.Time  `json:"-"`
+	// 封禁（M4-LIV-05，迁移 0037）：与 status 正交——status 是场次生命周期，
+	// ban_status 是合规处置（plan §2D.3）。二者不复用，避免污染列表查询与开播校验。
+	BanStatus int8       `json:"ban_status"`
+	BanReason string     `json:"ban_reason"`
+	BanBy     int64      `json:"ban_by"`
+	BanAt     *time.Time `json:"ban_at,omitempty"`
+	CreatedAt time.Time  `json:"-"`
+	UpdatedAt time.Time  `json:"-"`
 }
 
 func (LiveRoom) TableName() string { return "live_room" }
@@ -79,3 +85,51 @@ type LiveRoomMsg struct {
 func (LiveRoomMsg) TableName() string { return "live_room_msg" }
 
 func (LiveRoomMute) TableName() string { return "live_room_mute" }
+
+// 房间封禁状态（M4-LIV-05，迁移 0037）
+const (
+	RoomBanNone    = 0 // 正常
+	RoomBanApplied = 1 // 已封禁
+)
+
+// 违规来源与切断方式（live_violation_log，spec §5E.3）
+const (
+	ViolationSourceAuto   = 1 // 机审自动命中
+	ViolationSourceManual = 2 // 人工巡查手动切断
+
+	CutModeSrsAPI   = 1 // SRS API 踢流成功（确定性主通道）
+	CutModeDegraded = 2 // SRS API 不可达：仅封禁 + 登记（不静默，plan §2D.3）
+)
+
+// LiveFrameAudit 对应 live_frame_audit 表（M4-LIV-05）：每截帧周期每房间一行。
+// 这是 spec §4「内容存档 ≥60 天」与「判定发生过」的审计凭据（spec §5E.5）。
+type LiveFrameAudit struct {
+	ID        int64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	RoomID    int64     `json:"room_id"`
+	AnchorID  int64     `json:"anchor_id"`
+	ImageKey  string    `json:"image_key"` // 落盘失败留空，但判定仍须落库
+	Width     int       `json:"width"`
+	Height    int       `json:"height"`
+	Pass      bool      `json:"pass"`
+	HitWords  string    `json:"hit_words"` // 逗号分隔
+	Degraded  bool      `json:"degraded"`  // 机审不可用（fail-open，不切断）
+	CostMs    int       `json:"cost_ms"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (LiveFrameAudit) TableName() string { return "live_frame_audit" }
+
+// LiveViolationLog 对应 live_violation_log 表（M4-LIV-05）：违规流水。
+type LiveViolationLog struct {
+	ID           int64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	RoomID       int64     `json:"room_id"`
+	AnchorID     int64     `json:"anchor_id"`
+	Source       int8      `json:"source"`         // 1 机审 2 人工巡查
+	Reason       string    `json:"reason"`         //
+	CutMode      int8      `json:"cut_mode"`       // 1 srs_api 2 degraded
+	FrameAuditID *int64    `json:"frame_audit_id"` // 人工巡查无来源帧则为 NULL
+	CutBy        int64     `json:"cut_by"`         // 0=系统
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+func (LiveViolationLog) TableName() string { return "live_violation_log" }
