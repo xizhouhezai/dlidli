@@ -117,3 +117,16 @@ vip:
   coinPerMonth: 5 # 会员每月赠币枚数（spec §2.1 硬要求：5 枚）
   expireRemindDays: 3 # 到期前提醒天数（spec VIP-04：3 天）
 
+# 充电/分成/提现（M4-PAY-02，spec CHG-01/02/03 + creator spec CRT-31/32 / plan §2H）。
+# 资质现实：真实出款（打款到支付宝/银行卡）与真实渠道收款一样需要支付通道资质，
+# 当前不具备 —— 打款走 mock 通道，但状态机/冻结扣减/打款幂等全部按真实契约实现；
+# 真实出款接口为换入点（见 internal/module/charge/repo.go PayoutWithdrawTx）。
+# 可用环境变量覆盖：DLIDLI_CHARGE_MINWITHDRAWAMOUNT / DLIDLI_CHARGE_MAXWITHDRAWPERDAY /
+# DLIDLI_CHARGE_SETTLEENABLED / DLIDLI_CHARGE_SETTLEINTERVALSECONDS / DLIDLI_CHARGE_SETTLEDAY
+charge:
+  minWithdrawAmount: 10000 # 最低提现额（分，即 100 元）：低于此额度出款成本占比过高
+  maxWithdrawPerDay: 3 # 24h 内提现申请次数上限：提现是人工审核环节，限制试错与刷单
+  settleEnabled: false # 月度结算 Worker（dev 默认关闭，同 vip.renewEnabled 口径）
+  settleIntervalSeconds: 3600 # 结算扫描周期（秒）
+  settleDay: 1 # 每月 1 号结算上一自然月
+

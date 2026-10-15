@@ -24,6 +24,24 @@ type Config struct {
 	Live      Live
 	Pay       Pay
 	Vip       Vip
+	Charge    Charge
+}
+
+// Charge 充电/分成/提现配置（M4-PAY-02，spec CHG-01/02/03 + CRT-32 / plan §2H）。
+//
+// **资质现实**：真实出款（打款到支付宝/银行卡）与真实渠道收款一样需要支付通道资质，
+// 当前不具备，故打款走 mock 通道；真实出款为显式换入点（plan §2H.7）。
+type Charge struct {
+	// MinWithdrawAmount 最低提现金额（分，默认 10000 = 100 元）。
+	MinWithdrawAmount int64
+	// MaxWithdrawPerDay 单用户 24h 提现申请次数上限（默认 3）。
+	MaxWithdrawPerDay int
+	// SettleEnabled 月度结算 Worker 开关（dev 默认 false）。
+	SettleEnabled bool
+	// SettleIntervalSeconds 结算扫描周期秒（默认 3600）。
+	SettleIntervalSeconds int
+	// SettleDay 自动结算触发日（默认 1）。
+	SettleDay int
 }
 
 // Vip 会员域配置（M4-VIP-01，spec §2.1/§2.2 / plan §2F）。
@@ -268,6 +286,21 @@ func Load(path string) (*Config, error) {
 	if vip.ExpireRemindDays <= 0 {
 		vip.ExpireRemindDays = 3
 	}
+	// 充电域（M4-PAY-02）：提现门槛/频次/结算周期给零值兜底，
+	// 避免「配了 0」被当成合法的「零门槛提现」。
+	chg := &cfg.Charge
+	if chg.MinWithdrawAmount <= 0 {
+		chg.MinWithdrawAmount = 10_000
+	}
+	if chg.MaxWithdrawPerDay <= 0 {
+		chg.MaxWithdrawPerDay = 3
+	}
+	if chg.SettleIntervalSeconds <= 0 {
+		chg.SettleIntervalSeconds = 3600
+	}
+	if chg.SettleDay <= 0 || chg.SettleDay > 28 {
+		chg.SettleDay = 1
+	}
 	if err := validateProd(&cfg); err != nil {
 		return nil, err
 	}
@@ -336,6 +369,13 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("vip.maxfailcount", 3)
 	v.SetDefault("vip.coinpermonth", 5)
 	v.SetDefault("vip.expirereminddays", 3)
+	// 充电/分成/提现（M4-PAY-02）：结算 Worker 默认关闭（同 vip/live 口径），
+	// 门槛与频次给默认值，避免「配了 0」被当成合法的零门槛提现。
+	v.SetDefault("charge.minwithdrawamount", 10000)
+	v.SetDefault("charge.maxwithdrawperday", 3)
+	v.SetDefault("charge.settleenabled", false)
+	v.SetDefault("charge.settleintervalseconds", 3600)
+	v.SetDefault("charge.settleday", 1)
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。

@@ -115,6 +115,13 @@ var builtinPermissions = []Permission{
 	{Code: "vip:view", Name: "会员与套餐", Type: "menu", Path: "/vip-members", Icon: "i-mingcute-crown-line", Sort: 18},
 	{Code: "vip:plan", Name: "套餐配置（改价/上下架）", Type: "button", Parent: "vip:view"},
 	{Code: "vip:grant", Name: "手工补发会员硬币", Type: "button", Parent: "vip:view"},
+	// 充电与创作者结算（M4-PAY-02，spec CHG-01/02/03 + CRT-32）。
+	// **审核与打款必须是独立权限点**：能看记录不等于能动钱——把「查询」与「出款」
+	// 合并成一个权限点，是财务系统最典型的越权漏洞（与 PAY-01 的 pay:view/pay:order 同口径）。
+	{Code: "charge:view", Name: "充电与结算", Type: "menu", Path: "/charge-settlements", Icon: "i-mingcute-lightning-line", Sort: 19},
+	{Code: "charge:audit", Name: "提现审核", Type: "button", Parent: "charge:view"},
+	{Code: "charge:payout", Name: "提现打款", Type: "button", Parent: "charge:view"},
+	{Code: "charge:settle", Name: "手动触发月度结算", Type: "button", Parent: "charge:view"},
 }
 
 // 内置角色定义（code → 权限码集合；super 特殊，拥有全部）。
