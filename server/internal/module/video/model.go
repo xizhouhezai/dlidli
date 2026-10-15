@@ -51,9 +51,12 @@ type Stream struct {
 	VideoID   int64
 	PartIndex int8 // 分P（0=单P默认，>0 对应 video_part.part_index）
 	Quality   int16
-	Format    string
-	PlayPath  string
-	FileSize  int64
+	// Height 该流实际画面高度（M4-VIP-02，迁移 0040）：原画行=源文件真实高度，转码行=目标高度。
+	// 0 表示未探测（历史行）——判定侧对未知高度只按档位配置判定，保证升级前行为不变。
+	Height   int
+	Format   string
+	PlayPath string
+	FileSize int64
 }
 
 func (Stream) TableName() string { return "video_stream" }
@@ -187,7 +190,9 @@ type Card struct {
 type StreamItem struct {
 	Quality int16  `json:"quality"` // 0=原画
 	Format  string `json:"format"`
-	URL     string `json:"url"`
+	// Height 实际画面高度（0=未探测）；前端据此展示「4K」等标签，M4-VIP-02
+	Height int    `json:"height"`
+	URL    string `json:"url"`
 }
 
 // Detail 稿件详情。

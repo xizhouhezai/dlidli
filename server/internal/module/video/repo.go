@@ -314,6 +314,15 @@ func (r *Repo) AddStream(st *Stream) error {
 	return r.db.Create(st).Error
 }
 
+// SetStreamHeight 回填某条流的实际画面高度（M4-VIP-02）。
+// 用于转码时把**原画行**的真实分辨率写库——原画直出源文件，其高度决定免费用户
+// 能否拿到该流（见 qualitytier 包注释）。
+func (r *Repo) SetStreamHeight(videoID int64, partIndex int8, quality int16, height int) error {
+	return r.db.Model(&Stream{}).
+		Where("video_id = ? AND part_index = ? AND quality = ?", videoID, partIndex, quality).
+		Update("height", height).Error
+}
+
 // UpdateVideoFields 按字段更新稿件（转码回写时长/封面/状态用）。
 func (r *Repo) UpdateVideoFields(id int64, fields map[string]any) error {
 	return r.db.Model(&Video{}).Where("id = ?", id).Updates(fields).Error

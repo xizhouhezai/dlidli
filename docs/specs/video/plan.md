@@ -15,6 +15,7 @@
 | 转码队列 | DB 任务表 + `FOR UPDATE SKIP LOCKED` 认领 + 失败重试 2 次 | 免 Kafka 依赖即可用；接口层预留切换 | Kafka 任务队列（规模化后） |
 | 转码执行 | dev 内嵌进程 Worker：FFmpeg 输出 HLS（360P/720P）+ 抽帧封面 + ffprobe 时长 | 单机起步，部署环境可拆独立 Worker | 独立转码集群 |
 | 播放防盗链 | playsign 包 HMAC-SHA256 签名路径 + 过期参数（TTL 6h），PlaySignGuard 中间件校验 `/static/videos` 入口（.m3u8/.mp4），.ts 分片/封面/头像放行 | 签名校验集中在播放入口；E2E：签名 200 / 无签 403 / 篡改 403 | 全路径签名（分片流量大不划算） |
+| 清晰度档位与权益（M4-VIP-02） | 档位编号沿用 `quality`（0/360/720/1080/2160），参数与开关落 `video_quality_tier` 配置表；下发流列表时按身份过滤（未登录按免费）；转码档位产物的签名覆盖**档位 + 用户**，静态入口再加会员复核；新增 `video_stream.height` 记录实际画面高度（原画行=源高度，防 4K 源走原画绕过上限） | 权益不可前端绕过，且泄漏的 URL 也被兜住（改档位参数/转发他人签名均 403）；既有 0/360/720 数据与签名语义零影响 | 只在下发时过滤（泄漏 URL 无法兜底）／只签路径（改档位即越权）／编号重排（需数据迁移 + 全端改造） |
 | 观看进度 | Redis 存储 90d + 前端 10s 节流上报 / 离开落盘 / 续播定位 | 高频写不进 MySQL | 直写 MySQL |
 | 播放计数 | > 5s 上报 + UID/IP 8h Redis 去重 | 防刷且容忍近似 | 实时精确计数（成本高） |
 | 播放器 | 独立包 `@dlidli/player`：PlayerCore 框架无关封装 hls.js（生命周期/清晰度切换保留进度/mp4 兜底）+ bindKeyboard + qualityLabel 工具 | 多端复用（Web/H5） | 各端各写播放器 |
@@ -42,8 +43,9 @@ transcode_job         { video_id, part_index, status, retry_cnt }   -- 任务队
 | POST | /api/v1/upload/init ｜ /upload/{id}/parts/{index} ｜ /upload/{id}/complete | 分片上传三段式（init 返回任务与已传分片；upload 独立模块路由，见 upload handler） |
 | GET | /api/v1/upload/{id} | 上传进度查询 |
 | POST/PUT/DELETE | /api/v1/videos... | 稿件 CRUD（投稿/详情/我的稿件/公开列表/软删除） |
-| GET | /api/v1/videos/{bvid}/parts | 分 P 列表（各 P 签名流） |
-| GET | /api/v1/videos/{bvid} | 详情（含签名播放地址下发） |
+| GET | /api/v1/videos/{bvid}/parts | 分 P 列表（各 P 签名流，**按会员状态过滤档位**；挂 optionalAuth，未登录按免费） |
+| GET | /api/v1/videos/{bvid} | 详情（含签名播放地址下发，**同上过滤**；挂 optionalAuth） |
+| GET/PUT | /api/v1/admin/videos/quality-tiers[/:quality] | 清晰度档位配置（挂 AdminAuth + `video:view` / `video:tier`） |
 
 > 完整契约以 swaggo 生成的 OpenAPI 为准（`server/docs/`）。
 
@@ -57,7 +59,8 @@ transcode_job         { video_id, part_index, status, retry_cnt }   -- 任务队
 
 - [ ] MinIO 预签名直传接入（部署环境）
 - [ ] Kafka 替换 DB 任务队列（规模化）
-- [ ] 1080P / 4K 档位与会员清晰度鉴权（V1 / V3）
+- [x] 1080P / 4K 档位与会员清晰度鉴权（V1 / V3）已实现（2026-10-15，M4-VIP-02：档位配置表 + 下发时过滤 + 签名绑定档位与用户 + 静态入口会员复核；规格见 [monetization spec §8](/specs/monetization/spec)、决策见 [monetization plan §2G](/specs/monetization/plan)）
+- [ ] 整片 4K 转码的量级验证与运维开关（本卡 4K 默认不排程，以 3 秒样片实测链路）
 - [ ] 定时发布（VID-04）、视频指纹（VID-13）未实现
 - [x] 上传文件归属校验（VID-24）已实现（2026-08-25，投稿前 uid 校验 + 跨用户秒传禁复用）
 - [ ] 稿件编辑重新送审完整闭环（VID-06，编辑入口已随稿件管理页补）

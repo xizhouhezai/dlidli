@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dlidli/server/internal/pkg/qualitytier"
 	"github.com/dlidli/server/internal/pkg/storage"
 	"go.uber.org/zap"
 )
@@ -18,18 +20,17 @@ import (
 const pollInterval = 3 * time.Second
 
 // transcodeJobTimeout 单个转码任务上限：ffmpeg/ffprobe 挂死时由 ctx 超时兜底，避免永久占用 Worker。
-const transcodeJobTimeout = 30 * time.Minute
+// 4K 档位（M4-VIP-02）单机 CPU 转码远慢于 360/720，故放宽到 2 小时：
+// 仍是有界超时（不会永久占位），但给 4K 留出可完成的窗口（验收用短视频实测）。
+const transcodeJobTimeout = 2 * time.Hour
 
-// 转码档位参数（对齐 docs/architecture/video-pipeline.md §3）
-var presets = map[int16]struct {
+// preset 单个档位的转码参数（取自 video_quality_tier 配置，见 tier.go）。
+type preset struct {
 	height  int
 	vBits   string
 	maxRate string
 	bufSize string
 	aBits   string
-}{
-	360: {360, "500k", "600k", "1000k", "96k"},
-	720: {720, "2000k", "2400k", "4000k", "128k"},
 }
 
 // StartTranscodeWorkers 启动进程内转码 Worker（dev 便利；部署环境改由独立 cmd/worker 运行）。
@@ -132,9 +133,13 @@ func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver,
 }
 
 func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver, job *TranscodeJob) error {
-	preset, ok := presets[job.Quality]
-	if !ok {
+	tier, ok := s.tiers.Set().Get(job.Quality)
+	if !ok || job.Quality == qualitytier.Origin {
 		return fmt.Errorf("未知转码档位: %d", job.Quality)
+	}
+	preset := preset{height: tier.Height, vBits: tier.VBits, maxRate: tier.MaxRate, bufSize: tier.BufSize, aBits: tier.ABits}
+	if preset.vBits == "" {
+		return fmt.Errorf("档位 %d 缺少码率配置", job.Quality)
 	}
 
 	v, err := s.repo.FindVideoByID(job.VideoID)
@@ -151,9 +156,11 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 		return err
 	}
 	var srcKey string
+	originHeight := 0
 	for _, st := range streams {
-		if st.Quality == 0 {
+		if st.Quality == qualitytier.Origin {
 			srcKey = st.PlayPath
+			originHeight = st.Height
 			break
 		}
 	}
@@ -161,6 +168,38 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 		return fmt.Errorf("找不到源文件流")
 	}
 	src := resolver.LocalPath(srcKey)
+
+	// 源分辨率：既用于 HLS 播放列表的 RESOLUTION 标注，更用于**流的实际高度落库**——
+	// 免费用户的 1080P 上限判定靠它（4K 源的原画行 height=3840 > 1080，下发给免费用户即 4K 越权）。
+	// 探测失败不阻断转码（height 记 0，判定侧对未知高度只按档位配置判定）。
+	srcW, srcH, err := s.probeResolution(ctx, src)
+	if err != nil {
+		s.log.Warn("ffprobe 取源分辨率失败，流高度将记 0", zap.Error(err), zap.Int64("video_id", v.ID))
+	}
+	// 回填原画行的真实高度：原画直出的是上传的源文件，4K 源在这一行上就是 4K。
+	// 不回填的话，免费用户会通过「原画」这条路径拿到超上限分辨率（spec §8.2 的核心缺口）。
+	// 回填时机选在这里（而不是投稿请求里）有两个理由：① 投稿是同步请求，探测会给它加一次
+	// ffprobe 往返；② 转码本来就持有本地路径与 ffprobe 调用，零额外依赖。
+	// 仅当该行尚未探测（height=0）或与实测不一致时才写 —— 多档位任务并发时也只是重复写同一个值。
+	// 边界：转码总开关关闭时没有任何任务运行，原画行高度保持 0（此时也不存在任何档位产物，
+	// 与升级前的行为一致）。
+	if srcH > 0 && originHeight != srcH {
+		if err := s.repo.SetStreamHeight(v.ID, job.PartIndex, qualitytier.Origin, srcH); err != nil {
+			s.log.Warn("回填原画流高度失败", zap.Error(err), zap.Int64("video_id", v.ID))
+		}
+	}
+	// 实际上限：档位目标高于源分辨率时按源输出（放大只会浪费码率且无收益）。
+	outH := preset.height
+	if srcH > 0 && outH > srcH {
+		outH = srcH
+	}
+	// 目标高度须为偶数（libx264 要求，奇数会导致 -22）。
+	if outH <= 0 {
+		return fmt.Errorf("档位 %d 目标高度非法: %d", job.Quality, outH)
+	}
+	if outH%2 != 0 {
+		outH--
+	}
 
 	// 时长与封面：单P写 video.duration，多P写 video_part.duration；封面仅单P抽帧
 	if v.Duration == 0 && job.PartIndex == 0 {
@@ -184,8 +223,31 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 		}
 	}
 
-	// HLS 输出目录（分P隔离防覆盖）
+	// 目标宽度：按源宽高比换算并置偶数。不用 `scale=-2:<h>` 让 ffmpeg 自己算宽度，
+	// 是因为部分低码率测试源的宽高比会在取整后得到奇数宽度，libx264 直接报 -22
+	// （与「不指定 profile」同一个踩坑来源，见下方注释）。
+	scale := fmt.Sprintf("scale=-2:%d", outH)
+	outW := 0
+	if srcW > 0 && srcH > 0 {
+		outW = int(math.Round(float64(srcW) * float64(outH) / float64(srcH)))
+		if outW < 2 {
+			outW = 2
+		}
+		if outW%2 != 0 {
+			outW--
+		}
+		// setsar=1：源带非方形像素（SAR≠1）时，否则播放器会把画面拉伸。
+		scale = fmt.Sprintf("scale=%d:%d,setsar=1", outW, outH)
+	}
+
+	// HLS 输出目录（分P隔离防覆盖）。
+	// 目标宽度已知时把它编入目录名：**同一档位可能因源分辨率不同产出不同画幅**，
+	// 目录不含宽度会让「先转 4K、换源再转 4K」的产物互相覆盖（同 (video,part,quality) 唯一键下
+	// 是同一行 yet 不同内容）。宽度未知（探测失败）时退回旧目录名，保持向后兼容。
 	outKey := fmt.Sprintf("videos/hls/%d/%d/%d", v.ID, job.PartIndex, job.Quality)
+	if outW > 0 {
+		outKey = fmt.Sprintf("videos/hls/%d/%d/%d/%d", v.ID, job.PartIndex, job.Quality, outW)
+	}
 	outDir := resolver.LocalPath(outKey)
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
@@ -195,7 +257,7 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 		"-y", "-i", src,
 		"-c:v", "libx264", // 不指定 profile：兼容低码率/低分辨率测试源（指定 main 时部分源报 -22）
 		"-b:v", preset.vBits, "-maxrate", preset.maxRate, "-bufsize", preset.bufSize,
-		"-vf", fmt.Sprintf("scale=-2:%d", preset.height),
+		"-vf", scale,
 		"-r", "30", "-g", "60",
 		"-c:a", "aac", "-b:a", preset.aBits, "-ac", "2",
 		"-hls_time", "6", "-hls_playlist_type", "vod",
@@ -214,7 +276,36 @@ func (s *Service) doTranscode(ctx context.Context, resolver storage.PathResolver
 		Format:    "hls",
 		PlayPath:  outKey + "/index.m3u8",
 		FileSize:  dirSize(outDir),
+		Height:    outH,
 	})
+}
+
+// probeResolution 用 ffprobe 读取视频流的宽高（像素）。
+func (s *Service) probeResolution(ctx context.Context, src string) (int, int, error) {
+	cmd := exec.CommandContext(ctx, s.cfg.Transcode.FfprobePath,
+		"-v", "error", "-select_streams", "v:0",
+		"-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", src)
+	out, err := cmd.Output()
+	if err != nil {
+		return 0, 0, err
+	}
+	line := strings.TrimSpace(string(out))
+	if i := strings.IndexByte(line, '\n'); i >= 0 {
+		line = line[:i]
+	}
+	parts := strings.Split(strings.TrimSpace(line), "x")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("无法解析分辨率: %q", line)
+	}
+	w, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return 0, 0, err
+	}
+	h, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return 0, 0, err
+	}
+	return w, h, nil
 }
 
 // probeDuration 用 ffprobe 读取视频时长（秒）。

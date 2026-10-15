@@ -61,6 +61,9 @@ var builtinPermissions = []Permission{
 	// 稿件管理（内容治理）
 	{Code: "video:view", Name: "稿件管理", Type: "menu", Path: "/videos", Icon: "i-mingcute-play-circle-line", Sort: 14},
 	{Code: "video:manage", Name: "下架/恢复/删除稿件", Type: "button", Parent: "video:view"},
+	// 清晰度档位配置（M4-VIP-02，spec §8.6）：改档位开关/码率/会员限定直接影响
+	// 「谁能看多清晰」，属内容治理与权益边界的配置能力，故不并入稿件下架权限。
+	{Code: "video:tier", Name: "清晰度档位配置", Type: "button", Parent: "video:view"},
 	// 敏感词
 	{Code: "sensitive:view", Name: "敏感词库", Type: "menu", Path: "/sensitive-words", Icon: "i-mingcute-shield-line", Sort: 3},
 	{Code: "sensitive:edit", Name: "增删敏感词", Type: "button", Parent: "sensitive:view"},
