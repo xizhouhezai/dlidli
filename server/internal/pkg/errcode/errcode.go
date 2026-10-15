@@ -99,10 +99,10 @@ var (
 	ErrLiveMuteRange       = New(91013, "禁言时长需在 1 分钟到 720 小时之间")
 	ErrLiveTitleRequired   = New(91014, "房间标题不能为空（1-80 字）")
 	// 直播弹幕通道（M4-LIV-03）
-	ErrLiveDanmakuMuted      = New(91015, "您已被房管禁言，暂无法发言")
-	ErrLiveDanmakuTooFast    = New(91016, "发言太频繁，请稍后再试")
-	ErrLiveDanmakuNotIn      = New(91017, "请先进入直播间")
-	ErrLiveDanmakuDuplicate  = New(91018, "请勿重复发送相同内容")
+	ErrLiveDanmakuMuted     = New(91015, "您已被房管禁言，暂无法发言")
+	ErrLiveDanmakuTooFast   = New(91016, "发言太频繁，请稍后再试")
+	ErrLiveDanmakuNotIn     = New(91017, "请先进入直播间")
+	ErrLiveDanmakuDuplicate = New(91018, "请勿重复发送相同内容")
 	// 礼物系统（M4-LIV-04）
 	ErrLiveGiftNotFound    = New(91019, "礼物不存在或已下架")
 	ErrLiveGiftNotLive     = New(91020, "房间未在直播，无法赠送礼物")
@@ -113,4 +113,9 @@ var (
 	ErrLiveCallbackTokenInvalid = New(91024, "直播回调鉴权失败")
 	ErrLiveStreamKeyInvalid     = New(91025, "推流密钥错误")
 	ErrLiveStreamFormatInvalid  = New(91026, "推流流名不合法")
+	// 截帧机审与快速切断（M4-LIV-05，spec §5E.6）
+	ErrLiveAuditDisabled  = New(91027, "截帧机审未启用")
+	ErrLiveRoomBanned     = New(91028, "直播间已被封禁")
+	ErrLiveRoomNotBanned  = New(91029, "直播间未被封禁")
+	ErrLiveNoActiveStream = New(91030, "直播间当前无推流")
 )

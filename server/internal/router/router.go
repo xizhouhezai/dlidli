@@ -268,6 +268,17 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		giftHandler.RegisterGiftRoutes(v1.Group("/live", optionalAuthMW))
 		permGift := func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) }
 		giftHandler.RegisterDevRoutes(v1.Group("/admin", middleware.AdminAuth(cfg.JWT.Secret), permGift("config:edit")))
+
+		// 截帧机审与快速切断（M4-LIV-05，spec §5E / plan §2D）：
+		// 进程内定时器截帧 → contentmod 机审 → 命中走 SRS 踢流 + 封禁；
+		// 人工巡查接口挂 admin 中间件（AdminAuth + 权限点 live:audit）。
+		if cfg.Live.Audit.Enabled {
+			liveSvc.StartAuditWorker(context.Background())
+		} else {
+			log.Info("截帧机审未启用（live.audit.enabled=false，spec §5E.1 dev 默认关闭）")
+		}
+		live.NewPatrolHandler(liveSvc).RegisterPatrolRoutes(
+			v1.Group("/admin", middleware.AdminAuth(cfg.JWT.Secret), permGift("live:audit")))
 	} else {
 		log.Warn("MySQL/Redis 未就绪，业务模块路由未注册")
 	}

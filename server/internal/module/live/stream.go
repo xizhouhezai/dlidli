@@ -114,6 +114,11 @@ func (s *Service) AuthorizePublish(ctx context.Context, req *PublishAuthReq) (in
 	if room.Status != RoomStatusLive {
 		return 0, errcode.ErrLiveNotLive
 	}
+	// 封禁房间即使密钥正确也拒绝推流（M4-LIV-05，plan §2D.3）：
+	// 否则被切断的主播立刻重推，快速切断形同虚设。
+	if room.BanStatus == RoomBanApplied {
+		return 0, errcode.ErrLiveRoomBanned
+	}
 	if q.key == "" {
 		return 0, errcode.ErrLiveStreamKeyInvalid
 	}
