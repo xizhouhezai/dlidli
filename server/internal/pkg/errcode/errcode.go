@@ -123,18 +123,18 @@ var (
 // 支付错误码（92001+，商业化段支付子段，M4-PAY-01，spec §6.8 / plan §2E.9）
 var (
 	// 资金与订单
-	ErrPayOrderNotFound   = New(92001, "订单不存在")
-	ErrPayOrderStatus     = New(92002, "订单状态不允许该操作")
-	ErrPayChannelUnknown  = New(92003, "支付渠道不存在或未启用")
-	ErrPayChannelNotImpl  = New(92004, "支付渠道未实现（真实渠道尚未接入）")
+	ErrPayOrderNotFound  = New(92001, "订单不存在")
+	ErrPayOrderStatus    = New(92002, "订单状态不允许该操作")
+	ErrPayChannelUnknown = New(92003, "支付渠道不存在或未启用")
+	ErrPayChannelNotImpl = New(92004, "支付渠道未实现（真实渠道尚未接入）")
 	// 回调
 	ErrPayCallbackSign    = New(92005, "支付回调验签失败")
 	ErrPayCallbackInvalid = New(92006, "支付回调报文不合法")
 	ErrPayOrderExpired    = New(92007, "订单已过期")
 	// 金额
-	ErrPayAmountInvalid   = New(92008, "金额不合法")
-	ErrPayRefundInvalid   = New(92009, "退款金额不合法")
-	ErrPayCashNotEnough   = New(92010, "现金账户余额不足")
+	ErrPayAmountInvalid = New(92008, "金额不合法")
+	ErrPayRefundInvalid = New(92009, "退款金额不合法")
+	ErrPayCashNotEnough = New(92010, "现金账户余额不足")
 	// 对账与合规
 	ErrPayReconDateInvalid = New(92011, "对账日期不合法")
 	ErrPayMinorRestricted  = New(92012, "未成年人消费受限")
@@ -151,4 +151,35 @@ var (
 	ErrVipCoinGranted    = New(92107, "本月会员硬币已发放（幂等）")
 	ErrVipRenewFailed    = New(92108, "自动续期扣款失败")
 	ErrVipMonthsInvalid  = New(92109, "会员时长不合法")
+)
+
+// 充电错误码（92201+，商业化段充电子段，M4-PAY-02，spec CHG-01/02/03 / plan §2H.9）
+//
+// 分段依据：91001-91030 直播、92001-92012 支付、92101-92109 会员均已占用，
+// 故充电自 92201 起、提现自 92301 起、结算自 92401 起，各留足余量。
+var (
+	ErrChargeTierNotFound   = New(92201, "充电档位不存在或已下架")
+	ErrChargeAmountInvalid  = New(92202, "充电金额不合法（低于下限或超出上限）")
+	ErrChargeSelf           = New(92203, "不能给自己充电")
+	ErrChargeAnchorNotFound = New(92204, "充电对象不存在")
+	ErrChargeNotFound       = New(92205, "充电记录不存在")
+	ErrChargeOrderInvalid   = New(92206, "充电订单不合法（订单与充电金额不符）")
+	ErrChargeMessageTooLong = New(92207, "充电留言过长（最多 200 字）")
+)
+
+// 提现错误码（92301+，商业化段提现子段，M4-PAY-02，spec CRT-32 / plan §2H.7）
+var (
+	ErrWithdrawNotFound        = New(92301, "提现单不存在")
+	ErrWithdrawAmountInvalid   = New(92302, "提现金额不合法（低于起提额或超出可用余额）")
+	ErrWithdrawStatus          = New(92303, "提现单状态不允许该操作")
+	ErrWithdrawTooFrequent     = New(92304, "提现过于频繁（超出当日次数上限）")
+	ErrWithdrawChannelNotImpl  = New(92305, "出款通道未接入（真实出款需支付资质）")
+	ErrCreatorBalanceNotEnough = New(92306, "创作者余额不足")
+	ErrWithdrawAccountInvalid  = New(92307, "收款账户信息不合法")
+)
+
+// 结算错误码（92401+，商业化段结算子段，M4-PAY-02，spec CHG-02 / plan §2H.5）
+var (
+	ErrSettleMonthInvalid = New(92401, "结算月份不合法（格式应为 YYYY-MM）")
+	ErrSettlementNotFound = New(92402, "结算单不存在")
 )

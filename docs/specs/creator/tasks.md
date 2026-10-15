@@ -19,6 +19,23 @@
 - [x] M3-CRT-05 多P投稿 + 合集功能（多P：0021~0024 迁移（video_part 表 + video_stream/transcode_job 加 part_index + 唯一键含分P）；Submit 扩展 parts（逐 P 建 video_part+原画流+转码任务）；转码 worker 按分P隔离（源流/输出目录/时长回写）；GET /videos/:bvid/parts（各 P 签名流）；投稿页分P管理（最多 10 P）+ 播放页分P列表切换；合集：0025 迁移 video_collection/video_collection_item（改名避收藏夹冲突）；collection 模块（创建/列表/详情/归集稿件，仅本人管理）；空间页合集 Tab（新建弹窗/卡片）+ 合集详情页；E2E 实测：双P投稿→转码完成各 3 档流、播放切P、合集 CRUD、空列表/ID 序列化修复全通） `2026-08-05`
   - 覆盖：VID-05、VID-23（跨模块，见 [video spec](/specs/video/spec)）
 
+## 跨模块交付（登记不计数）
+
+> CRT-31/32 由 **M4-PAY-02** 在 monetization 域交付（**任务归属 monetization，见
+> [monetization tasks](/specs/monetization/tasks)**，此处仅登记需求覆盖关系，**不计入本模块任务数**，
+> 避免同一交付在两处重复计数）。
+
+| 需求 | 覆盖任务 | 交付日期 | 验收依据 |
+| --- | --- | --- | --- |
+| CRT-31 充电收入（UP 主 70% / 平台 30%） | M4-PAY-02 | 2026-10-15 | [monetization spec §9.2](/specs/monetization/spec) |
+| CRT-32 提现（绑定账户 / 月度结算 / 个税代扣提示） | M4-PAY-02 | 2026-10-15 | [monetization spec §9.4/§9.5](/specs/monetization/spec) |
+
+- **CRT-31 已交付**：充电分成 700‰ 与 LIV-04 礼物同源（双方落库快照实测一致），
+  每笔可追溯来源订单，月度结算按支付时间归属自然月且可重放。
+- **CRT-32 部分交付**：**绑定收款账户（支付宝/银行卡号，脱敏存储与展示）+ 月度结算**已落地；
+  **个税代扣提示未实现** —— 无税务资质与规则输入，仅记录账户与姓名，**不得宣称合规达标**；
+  **真实出款通道未接入**（打款走 mock，需支付通道资质，为显式换入点）。
+
 ## 进度
 
 | 里程碑 | 任务数 | 已完成 |

@@ -25,6 +25,7 @@ server/tmp_*
 .npm-cache/
 # 沙箱会话的运行时工作目录（推流/切片/证据等，脚本自建）
 .liv01-run/
+.pay02run/
 
 # 会话归档解包与本地环境探测产物（含安装包，不入库）
 .session-extract/
