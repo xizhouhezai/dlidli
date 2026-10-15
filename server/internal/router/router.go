@@ -105,9 +105,13 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 	})
 
 	// 本地存储静态资源（dev；生产由 CDN/对象存储直出）
-	// 播放入口（videos 下 .m3u8/.mp4）需 HMAC 签名校验（VID-05），封面/头像放行
+	// 播放入口（videos 下 .m3u8/.mp4）需 HMAC 签名校验（VID-05）；转码档位产物再加会员门禁
+	// （M4-VIP-02）。门禁依赖（档位配置/会员判定）在业务模块装配时就绪后回填 ——
+	// 静态服务在任何驱动下都要能起（含 DB 未就绪的降级态），故不在注册时取依赖。
+	playGate := middleware.NewPlayGate()
 	if cfg.Storage.Driver == "local" || cfg.Storage.Driver == "" {
-		e.Group("/static", middleware.PlaySignGuard(cfg.JWT.Secret)).Static("/", cfg.Storage.LocalDir)
+		e.Group("/static", middleware.PlaySignGuard(cfg.JWT.Secret, playGate)).
+			Static("/", cfg.Storage.LocalDir)
 	}
 
 	v1 := e.Group("/api/v1")
@@ -155,6 +159,13 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		uploadSvc.StartCleanupWorker(context.Background(), 30*time.Minute)
 
 		videoSvc := video.NewService(video.NewRepo(res.DB), uploadSvc, accountSvc, growthSvc, res.Redis, cfg, log)
+		// 清晰度档位配置（M4-VIP-02）：装配时加载一次快照；配置缺失/读表失败不阻断启动
+		// （判定侧对空快照一律放行，等于升级前行为，不会让全站不可播）。
+		if set, err := videoSvc.LoadTiers(); err != nil {
+			log.Warn("清晰度档位配置加载失败，档位判定暂不生效", zap.Error(err))
+		} else {
+			videoSvc.SetTierSet(set)
+		}
 		video.NewHandler(videoSvc, res.Storage).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
 		// dev 内嵌转码 Worker（部署环境由独立 cmd/worker 承担）
@@ -203,6 +214,11 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 
 		adminSvc := admin.NewService(admin.NewRepo(res.DB), videoSvc, accountSvc, cfg, log)
 		admin.NewHandler(adminSvc).WithInviteGen(accountSvc.GenerateInviteCodes).RegisterRoutes(v1, middleware.AdminAuth(cfg.JWT.Secret))
+		// 清晰度档位配置（M4-VIP-02）：权限点 video:view（查看）/ video:tier（改配置）已落
+		// builtinPermissions，此处挂 AdminAuth + RequirePerm。
+		video.NewHandler(videoSvc, res.Storage).RegisterAdminRoutes(
+			v1.Group("/admin/videos", middleware.AdminAuth(cfg.JWT.Secret)),
+			func(code string) gin.HandlerFunc { return middleware.RequirePerm(adminSvc.HasPerm, code) })
 
 		// 举报体系（M2-AUD-03）：C 端提交 + 后台队列处理
 		reportSvc := report.NewService(report.NewRepo(res.DB), videoSvc, accountSvc,
@@ -333,11 +349,17 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		// 连续包月自动续期 Worker（dev 默认关闭，vip.renewEnabled=true 打开）。
 		vipSvc.StartRenewWorker(context.Background())
 
+		// 清晰度档位产物（videos/hls/...）的签名校验需要会员判定：注入最小只读接口
+		// （middleware 不 import 会员域，与 interaction/live 的 VipColors 同一思路，plan §2F.6）。
+		videoSvc.SetVipChecker(vipSvc)
+		// /static 门禁回填：档位快照与 video 域共享同一份持有者（管理端改配置后门禁立即生效）。
+		playGate.SetTiers(videoSvc.TierStore())
+		playGate.SetVIP(func(_ context.Context, uid int64) (bool, error) { return vipSvc.IsVip(uid) })
 		// 会员身份标识落地点（M4-VIP-01 权益落地，plan §2F.6）：
 		//   ① 视频评论：UserBrief.is_vip / nickname_color
 		//   ② 直播弹幕（实时帧 + 历史回放）：DanmakuInfo.is_vip / nickname_color
 		// 两处都只注入**最小只读接口**（VipColors），读模型不 import 会员域。
-		// 清晰度权益位（max_resolution）本卡只下发不鉴权，消费方为 M4-VIP-02。
+		// 清晰度权益位（max_resolution）由 M4-VIP-02 在视频域落地（见上 SetVipChecker）。
 		interactionSvc.SetVipBadge(vipSvc)
 		liveSvc.SetVipBadge(vipSvc)
 	} else {

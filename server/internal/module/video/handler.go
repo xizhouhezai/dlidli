@@ -20,7 +20,7 @@ func NewHandler(svc *Service, store storage.Storage) *Handler {
 	return &Handler{svc: svc, store: store}
 }
 
-// RegisterRoutes 注册稿件域路由。
+// RegisterRoutes 注册稿件域路由（C 端）。
 func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.HandlerFunc) {
 	v1.GET("/categories", h.categories)
 
@@ -29,8 +29,10 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 		g.GET("", h.publicList)
 		g.GET("/mine", auth, h.mine)       // 需在 /:bvid 之前注册同级静态路由
 		g.GET("/history", auth, h.history) // 观看历史，同样需在 /:bvid 之前
-		g.GET("/:bvid", h.publicDetail)
-		g.GET("/:bvid/parts", h.parts)
+		// 公开读接口挂 optionalAuth（M4-VIP-02）：不拦截游客，但登录时把 uid 注入，
+		// 供「按会员状态过滤清晰度档位」使用（未登录按免费处理）。前端无法绕过该判定。
+		g.GET("/:bvid", optionalAuth, h.publicDetail)
+		g.GET("/:bvid/parts", optionalAuth, h.parts)
 		g.POST("", auth, h.submit)
 		g.POST("/cover", auth, h.uploadCover)
 		g.POST("/:bvid/view", optionalAuth, h.addView) // 游客也计播放
@@ -38,6 +40,17 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 		g.POST("/:bvid/progress", auth, h.saveProgress)
 		g.DELETE("/:bvid", auth, h.remove)
 	}
+}
+
+// RegisterAdminRoutes 注册清晰度档位配置（管理端，M4-VIP-02 spec §8.6）。
+//
+// 单独一个方法而不是塞进 RegisterRoutes：管理端要 AdminAuth + 权限点，
+// 而权限检查器（RequirePerm(adminSvc.HasPerm, ...)）在 router 里的构建时机晚于稿件域装配，
+// 故由装配方在 adminSvc 就绪后再调（与 pay/vip 的 RegisterAdminRoutes 同口径）。
+func (h *Handler) RegisterAdminRoutes(g *gin.RouterGroup, perm func(string) gin.HandlerFunc) {
+	// 查询与改配置分两个权限点：能看到档位不等于能改「谁能看多清晰」。
+	g.GET("/quality-tiers", perm("video:view"), h.adminTiers)
+	g.PUT("/quality-tiers/:quality", perm("video:tier"), h.adminUpdateTier)
 }
 
 // @Summary  分区列表
@@ -130,12 +143,50 @@ func (h *Handler) publicList(c *gin.Context) {
 // @Success  200 {object} response.Body
 // @Router   /videos/{bvid}/parts [get]
 func (h *Handler) parts(c *gin.Context) {
-	items, err := h.svc.Parts(c.Request.Context(), c.Param("bvid"))
+	ctx := WithViewer(c.Request.Context(), c.GetInt64(middleware.CtxUserID))
+	items, err := h.svc.Parts(ctx, c.Param("bvid"))
 	if err != nil {
 		response.Fail(c, err)
 		return
 	}
 	response.OK(c, gin.H{"list": items})
+}
+
+// @Summary  清晰度档位配置列表（管理端）
+// @Tags     视频
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /admin/videos/quality-tiers [get]
+func (h *Handler) adminTiers(c *gin.Context) {
+	response.OK(c, gin.H{"list": h.svc.AdminTiers()})
+}
+
+// @Summary  更新清晰度档位配置（管理端：开关/码率/会员限定/排序）
+// @Tags     视频
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    quality path int true "档位编号"
+// @Success  200 {object} response.Body
+// @Router   /admin/videos/quality-tiers/{quality} [put]
+func (h *Handler) adminUpdateTier(c *gin.Context) {
+	q, err := strconv.ParseInt(c.Param("quality"), 10, 16)
+	if err != nil {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	var req TierUpdate
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	view, err := h.svc.AdminUpdateTier(int16(q), &req, c.GetInt64(middleware.CtxAdminID))
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, view)
 }
 
 // @Summary  视频详情（含播放地址/流）
@@ -145,7 +196,8 @@ func (h *Handler) parts(c *gin.Context) {
 // @Success  200 {object} response.Body
 // @Router   /videos/{bvid} [get]
 func (h *Handler) publicDetail(c *gin.Context) {
-	detail, err := h.svc.PublicDetail(c.Request.Context(), c.Param("bvid"))
+	ctx := WithViewer(c.Request.Context(), c.GetInt64(middleware.CtxUserID))
+	detail, err := h.svc.PublicDetail(ctx, c.Param("bvid"))
 	if err != nil {
 		response.Fail(c, err)
 		return
