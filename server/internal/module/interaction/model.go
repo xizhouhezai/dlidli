@@ -79,6 +79,10 @@ type UserBrief struct {
 	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`
 	Level    int8   `json:"level"`
+	// 会员身份标识（M4-VIP-01 权益落地点之一）：
+	// 徽章与昵称颜色由**服务端**判定后下发，前端只负责渲染，无法通过改请求参数伪造。
+	IsVip     bool   `json:"is_vip"`
+	NickColor string `json:"nickname_color,omitempty"`
 }
 
 // CommentItem 评论条目。

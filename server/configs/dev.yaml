@@ -103,3 +103,17 @@ pay:
   maxAmount: 1000000 # 单笔上限（分，即 1 万元）；防把「元」当「分」误传
   notifyURLBase: http://localhost:8000 # 渠道异步回调地址前缀
 
+# 会员域（M4-VIP-01，spec §2.1/§2.2 / plan §2F）。
+# 连续包月的真实「免密代扣」同样需要支付通道资质，当前不具备 —— 自动续期走 mock 渠道
+# （建订单 + mock 渠道回调，与用户手动支付同一条链），真实代扣为换入点（见 vip/service.go mockCharge）。
+# 可用环境变量覆盖：DLIDLI_VIP_RENEWENABLED / DLIDLI_VIP_RENEWINTERVALSECONDS /
+# DLIDLI_VIP_RENEWBATCHSIZE / DLIDLI_VIP_MAXFAILCOUNT / DLIDLI_VIP_COINPERMONTH /
+# DLIDLI_VIP_EXPIREREMINDDAYS
+vip:
+  renewEnabled: false # dev 默认关闭（与 live.audit.enabled 同口径：周期任务不干扰其它测试）
+  renewIntervalSeconds: 60 # 续期扫描周期（秒）
+  renewBatchSize: 100 # 单轮扫描签约数上限（限流）
+  maxFailCount: 3 # 连续扣款失败达此数自动解约
+  coinPerMonth: 5 # 会员每月赠币枚数（spec §2.1 硬要求：5 枚）
+  expireRemindDays: 3 # 到期前提醒天数（spec VIP-04：3 天）
+

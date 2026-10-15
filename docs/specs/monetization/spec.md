@@ -7,6 +7,7 @@
 > 变更记录：
 > - 2026-08-21 自 PRD `monetization.md`（V1.0 草案）迁移为 SDD；补录 PAY-01（支付基础设施）、ADV-01（广告系统），原 §4/§5 未编号条目
 > - 2026-10-15 V3.0 细化 PAY-01（M4-PAY-01 支付网关 + 订单系统 + 对账，新增 §6）：订单状态机与金额精度、渠道适配器契约与 mock 渠道口径、回调验签与幂等键、日对账与异常清单、现金账户与虚拟币严格分离、合规钩子边界（未成年人/退款通道）、错误码 92001+。**背景：真实支付渠道资质（增值电信/支付通道）当前不具备，用户明确选择「全量建机制 + mock 渠道」**——机制按真实契约实现，将来接真渠道只换适配器实现。
+> - 2026-10-15 V3.1 细化 VIP-01/VIP-04（M4-VIP-01 会员套餐 + 权益判定 + 连续包月，新增 §2.7）：套餐与订单链路复用、开通/续期顺延语义、会员状态判定口径（服务端 + 不缓存）、连续包月签约与自动续期的 mock 扣款换入点、月度赠币幂等键、权益落地点与未覆盖边界、管理端权限点、错误码 92101+。**背景：真实免密代扣同样需要支付通道资质，故自动续期走 mock 渠道（与 PAY-01 同一现实）。**
 
 ## 1. 背景与商业化原则
 
@@ -39,6 +40,9 @@
 | VIP-02 | 支付 | **THE SYSTEM SHALL** 支持支付宝、微信支付；App 内购（V3 App） | P2 |
 | VIP-03 | 订单系统 | **THE SYSTEM SHALL** 维护订单状态机，支付回调幂等，支持退款流程 | P2 |
 | VIP-04 | 到期管理 | **WHEN** 会员到期前 3 天 **THE SYSTEM SHALL** 提醒；连续包月自动扣款且可随时取消 | P2 |
+
+> VIP-01/VIP-04 的细化规格见 §2.7（V3.1，2026-10-15）。**§2.7 是这两条的唯一验收依据**：本表格保留为模块级需求索引，验收按 §2.7 逐条核对。
+> 现实边界（必须写明）：**连续包月的真实「免密代扣」与 PAY-01 一样需要支付通道资质**，当前不具备，故自动续期走 mock 渠道（与用户手动支付复用同一条回调链，非旁路）；真实代扣为显式换入点。**「到期前 3 天提醒」本卡只落地可判定的到期提醒位（`expiring_soon`），真实触达（站内信/短信/推送）为换入点**——与 §6.6 合规钩子的处理口径一致。
 
 ### 2.3 充电计划（观众打赏 UP 主）
 
@@ -161,3 +165,76 @@
 ### 6.8 错误码
 
 - 沿用 9xxxx 商业化段。直播子段已用 91001-91030，**支付子段自 92001 起**（92001-92012，见 plan §2E.9）。
+- **会员子段自 92101 起**（92101-92109，见 plan §2F.10）。
+
+## 7. 会员细化（VIP-01/VIP-04，V3.1）
+
+> 交付形态：**机制全量 + 自动续期走 mock 渠道**（资质现实见 §2.2 说明）。技术决策见 [plan §2F](/specs/monetization/plan)。
+> 任务：M4-VIP-01（[tasks](/specs/monetization/tasks)）。
+
+### 7.1 套餐与下单（VIP-01）
+
+- **THE SYSTEM SHALL** 提供套餐表（`vip_plan`）：code、名称、时长（月）、现价（分）、划线价、连续包月首月优惠价、是否支持连续包月、排序、上下架状态。
+- **THE SYSTEM SHALL** 以月度/季度/年度三档为初始套餐（价格是可运营的初值，管理端可改，见 §7.7）。
+- **WHEN** 用户下单 **THE SYSTEM SHALL** 复用支付域的订单链路（[§6.2](#62-订单系统与状态机)）：会员卡以 `pay_order.sku = vip_plan.code` 关联套餐，**订单与商品台账（`vip_order`）在同一事务内落库**。
+- **THE SYSTEM SHALL** 由**服务端**计算应付金额：客户端只传套餐 code，**SHALL NOT** 采信客户端传入的价格。
+- **WHEN** 客户端传入的金额 ≠ 该用户当前应付价 **THEN THE SYSTEM SHALL** 拒绝下单（92008），**SHALL NOT** 静默按服务端价纠正（否则用户以为按自己看到的价格付了款）。
+- **WHERE** 套餐为连续包月 **AND** 用户从未开通过会员 **THE SYSTEM SHALL** 按首月优惠价计价；判据是「**membership 行不存在**」而非「当前不是会员」，否则退订后再签可无限刷首月价。
+
+### 7.2 会员状态与判定（VIP-01）
+
+- **THE SYSTEM SHALL** 以 `membership` 表承载会员状态：`user_id` 唯一、`expire_at`、`auto_renew`、`started_at`、累计月数、最近生效订单号。
+- **THE SYSTEM SHALL** 以 **`expire_at > NOW()`** 作为会员判定的唯一依据（`level` 不参与判定，避免「level=1 但已过期」被判为会员）。
+- **THE SYSTEM SHALL** 在**服务端**完成判定：`GET /vip/status` 的 `is_vip` **SHALL NOT** 接受任何客户端输入，前端无法绕过。
+- **THE SYSTEM SHALL** 提供权益位（`rights`）：清晰度上限、HDR、专属内容、身份标识（徽章 + 昵称颜色）、每月赠币枚数、经验加成、装扮。
+- **THE SYSTEM SHALL NOT** 对本卡的判定结果做长时间缓存（判定为一条带索引的 `expire_at > NOW()` 查询；缓存带来的「刚买完仍是免费」体验损失与失效复杂度不划算）；**IF** 将来因流量需要缓存 **THEN** TTL **SHALL** 不超过 60 秒并写明失效策略——本卡取「不缓存」，见 plan §2F.2 的理由。
+- **WHEN** 会员已过期 **THEN THE SYSTEM SHALL** 判定为免费用户并返回免费权益位（到期时间仍返回，供前端提示「已过期」）。
+
+### 7.3 开通与续期语义（VIP-01）
+
+- **WHEN** 支付成功回调到达 **THE SYSTEM SHALL** 在**支付入账的同一事务内**完成会员权益发放：订单迁移 + 现金入账 + 会员顺延 + 月度赠币四者要么全成、要么全不成。
+- **WHEN** 用户当前仍是会员 **THEN THE SYSTEM SHALL** 顺延：`expire_at = max(now(), expire_at) + 套餐时长`（**SHALL NOT** 覆盖剩余时长）。
+- **WHEN** 用户已过期或从未开通 **THEN THE SYSTEM SHALL** 从 `now()` 起算：`expire_at = now() + 套餐时长`。
+- **THE SYSTEM SHALL** 保证**同一订单只生效一次**：`vip_order.uk_order_no` 为第二道闸（第一道是支付域条件 UPDATE 的 `RowsAffected`），回调重放与并发**SHALL NOT** 产生第二次顺延或第二次赠币。
+- **THE SYSTEM SHALL** 在 `vip_order` 中记录顺延前后的 `expire_before` / `expire_after`，作为顺延语义的审计凭据（客诉与验收均以此为准）。
+- **THE SYSTEM SHALL** 以 `vip_order.months`（**下单时快照**）而非「生效时回查套餐」决定开通时长——套餐可能被改下架甚至删除，已付款的订单不得因此无法生效。
+
+### 7.4 连续包月（VIP-04）
+
+- **THE SYSTEM SHALL** 以 `vip_subscription`（`user_id` 唯一）承载签约：套餐、渠道、状态（签约中/已解约）、签约时间、解约时间、**下次扣款时间**、最近扣款时间、累计失败次数。
+- **WHEN** 购买「支持连续包月」的套餐并生效 **THE SYSTEM SHALL** 自动建立或刷新签约，`next_charge_at` = 新生效的 `expire_at`。
+- **WHEN** 定时任务扫描到「签约中 **AND** `next_charge_at <= now()`」**THE SYSTEM SHALL** 以**条件 UPDATE（CAS，`WHERE user_id=? AND status=1 AND next_charge_at=<读取值>`）**抢占本轮续期权，`RowsAffected` 为 1 者执行扣款；**SHALL NOT** 依赖分布式锁。
+- **THE SYSTEM SHALL** 先推进扣款时间、再执行扣款：**IF** 扣款过程崩溃 **THEN** 本轮不再重复扣款（宁可少扣一次，不可重复扣一次）。
+- **WHEN** 扣款成功 **THEN THE SYSTEM SHALL** 走**与用户手动支付完全相同的处理链**（建订单 → mock 渠道回调 → 验签 → 幂等 → 入账 → 顺延 → 赠币），**SHALL NOT** 使用旁路实现。
+- **WHEN** 扣款失败 **THEN THE SYSTEM SHALL** 累加失败次数、把下次扣款改到次日重试；**WHEN** 失败次数达到配置阈值（默认 3）**THEN THE SYSTEM SHALL** 自动解约，**SHALL NOT** 无限重试。
+- **THE SYSTEM SHALL** 允许用户**随时解约**（幂等：已解约再解约返回 92105 而非静默成功）；**解约 SHALL NOT 影响已开通的会员时长**（到期自然失效，不做按比例退款——退款走 §6.2 的退款通道）。
+- **THE SYSTEM SHALL** 以**进程内定时器**（`time.Ticker` + 单轮 panic 自隔离，与直播截帧机审/视频转码 worker 同风格）承载续期扫描；dev 默认关闭（`vip.renewEnabled=false`），**SHALL** 提供手动触发入口且**与定时任务调用同一函数**（联调结果才可信）。
+- **实现程度（如实声明）**：真实「免密代扣」为**显式换入点**——扣款实现集中在 `vip.Service.mockCharge` 一处，接入真实渠道只替换该函数，顺延/签约推进/失败计数逻辑零改动。
+
+### 7.5 月度赠币（权益矩阵「硬币」行）
+
+- **THE SYSTEM SHALL** 为生效中的会员按自然月发放**硬币**（`user.coin` + `coin_log`），枚数由配置决定（默认 5，spec §2.1 权益矩阵）。
+- **THE SYSTEM SHALL** 以 **`(user_id, 周期键 YYYY-MM)` 唯一索引**承载发放幂等：同月第二次发放撞唯一键后**SHALL** 视为正常（`applied=false`）而非错误——定时补发与运维手工补发会反复调用。
+- **WHEN** 会员开通或续期生效 **THE SYSTEM SHALL** 即时发放当月硬币；**THE SYSTEM SHALL** 另提供月度补发扫描（生效中 ∩ 本月未发），覆盖「月中开通、跨月续费」而无开通事件的月份。
+- **THE SYSTEM SHALL NOT** 把赠币写入 `melon_seed_account` / `melon_seed_log`（**金瓜子是直播礼物资产**，spec §2.1 权益矩阵的「硬币」与其不同，§6.1 已确立二者严格分离）。
+- **THE SYSTEM SHALL** 在 `vip_coin_grant` 中记录发放台账（周期键、枚数、关联 `coin_log.id`、来源），使「币从哪来」可逐条溯源。
+
+### 7.6 权益落地（本卡范围）
+
+- **THE SYSTEM SHALL** 至少落地**身份标识**与**每月赠币**两项权益。
+- **THE SYSTEM SHALL** 在**服务端**判定身份标识并随读模型下发：视频评论（`user.is_vip` + `user.nickname_color`）与直播弹幕（`is_vip` + `nickname_color`，实时帧与历史回放一致）。
+- **IF** 会员标识查询失败 **THEN THE SYSTEM SHALL** 降级为「无徽章」并**继续返回内容**——徽章是展示增强，**SHALL NOT** 因会员服务抖动而使评论列表或直播弹幕不可用。
+- **THE SYSTEM SHALL** 在权益位中保留 `max_resolution` / `hdr`（清晰度）与 `exclusive`（专属内容）**只下发不鉴权**：清晰度的实际鉴权归 **VIP-02**（本卡不做，plan §2F.7）；专属内容的稿件级鉴权涉及 video 模块权限，本卡**只留钩子**。
+- **THE SYSTEM SHALL NOT** 宣称已实现**装扮/皮肤**（无前端设计资源）——该权益恒为 `false`，登记为未覆盖项。
+
+### 7.7 管理端（挂后台鉴权链）
+
+- **THE SYSTEM SHALL** 提供套餐配置（新建 / 改价 / 划线价 / 首月价 / 上下架 / 排序）、会员查询（按用户、只看生效中、分页）、手工补发当月硬币。
+- **THE SYSTEM SHALL** 将上述接口挂 `AdminAuth` + 权限点（`vip:view` / `vip:plan` / `vip:grant`），且**权限点须落库**（非仅路由存在）。
+- **THE SYSTEM SHALL** 把「改价」与「补发硬币」分为独立权限点：改价直接影响收入、补发硬币等价于凭空发币，**SHALL NOT** 与查询权限合并（否则给查询权限等于给改账权限）。
+- **IF** 请求未携带管理员令牌或令牌无效 **THEN** 401；**IF** 令牌有效但缺少权限点 **THEN** 403。
+- **THE SYSTEM SHALL** 只在**套餐表为空时**播种默认套餐：**SHALL NOT** 覆盖运营已改过的价格。
+
+### 7.8 错误码（92101+）
+
+见 plan §2F.10。

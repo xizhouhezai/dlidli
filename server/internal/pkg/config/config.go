@@ -23,6 +23,26 @@ type Config struct {
 	Tracing   Tracing
 	Live      Live
 	Pay       Pay
+	Vip       Vip
+}
+
+// Vip 会员域配置（M4-VIP-01，spec §2.1/§2.2 / plan §2F）。
+//
+// **资质现实**：连续包月的真实「免密代扣」同样需要支付通道资质，当前不具备，
+// 故自动续期走 mock 渠道（plan §2F.5）；真实代扣为显式换入点。
+type Vip struct {
+	// RenewEnabled 自动续期 Worker 总开关（dev 默认 false，避免周期任务干扰其它测试）。
+	RenewEnabled bool
+	// RenewIntervalSeconds 续期扫描周期秒（默认 60）。
+	RenewIntervalSeconds int
+	// RenewBatchSize 单轮扫描的签约数上限（限流，避免一轮吃满）。
+	RenewBatchSize int
+	// MaxFailCount 连续扣款失败达到该次数则自动解约（默认 3，对齐渠道重试惯例）。
+	MaxFailCount int
+	// CoinPerMonth 会员每月赠币枚数（spec §2.1 硬要求：5）。
+	CoinPerMonth int
+	// ExpireRemindDays 到期前提醒天数（spec VIP-04：3 天）。
+	ExpireRemindDays int
 }
 
 // Pay 支付域配置（M4-PAY-01，spec §6 / plan §2E）。
@@ -231,6 +251,23 @@ func Load(path string) (*Config, error) {
 	if pay.NotifyURLBase == "" {
 		pay.NotifyURLBase = "http://localhost:8000"
 	}
+	// 会员域（M4-VIP-01）：周期/枚数/阈值给零值兜底（写 0 或负数时回落默认，避免 ticker panic）
+	vip := &cfg.Vip
+	if vip.RenewIntervalSeconds <= 0 {
+		vip.RenewIntervalSeconds = 60
+	}
+	if vip.RenewBatchSize <= 0 {
+		vip.RenewBatchSize = 100
+	}
+	if vip.MaxFailCount <= 0 {
+		vip.MaxFailCount = 3
+	}
+	if vip.CoinPerMonth <= 0 {
+		vip.CoinPerMonth = 5
+	}
+	if vip.ExpireRemindDays <= 0 {
+		vip.ExpireRemindDays = 3
+	}
 	if err := validateProd(&cfg); err != nil {
 		return nil, err
 	}
@@ -292,6 +329,13 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("pay.mocksecret", "")
 	v.SetDefault("pay.maxamount", 1000000)
 	v.SetDefault("pay.notifyurlbase", "")
+	// 会员域（M4-VIP-01）：自动续期默认关闭（dev 与截帧机审同口径，避免周期任务干扰测试）
+	v.SetDefault("vip.renewenabled", false)
+	v.SetDefault("vip.renewintervalseconds", 60)
+	v.SetDefault("vip.renewbatchsize", 100)
+	v.SetDefault("vip.maxfailcount", 3)
+	v.SetDefault("vip.coinpermonth", 5)
+	v.SetDefault("vip.expirereminddays", 3)
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。

@@ -48,6 +48,7 @@ type PayOrder struct {
 	Amount         int64      // 金额（分）
 	Channel        string     // mock / alipay / wechat
 	Subject        string     // 商品描述
+	Sku            string     // 商品标识（M4-VIP-01 补列；会员卡为 vip_plan.code）
 	Status         int8       // 0/1/2/3
 	ChannelTradeNo *string    // 渠道交易号（未支付为 NULL）
 	RefundAmount   int64      // 已退款金额（分）

@@ -51,6 +51,10 @@ type DanmakuInfo struct {
 	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar,omitempty"`
 	Content  string `json:"content"`
+	// 会员身份标识（M4-VIP-01 权益落地点之二）：服务端判定后随弹幕帧下发，
+	// 前端只渲染。**弹幕是直播场景里身份标识最直观的落点**（滚动中出现频率最高）。
+	IsVip     bool   `json:"is_vip,omitempty"`
+	NickColor string `json:"nickname_color,omitempty"`
 }
 
 // HistoryResult 进房拉历史（本房间最近 N 条，按时间正序回放）。
