@@ -65,6 +65,9 @@ type createOrderReq struct {
 	Amount  int64  `json:"amount"`
 	Channel string `json:"channel" binding:"required"`
 	Subject string `json:"subject"`
+	// Sku 商品标识（M4-VIP-01）。会员商品由 /vip/orders 下单（金额由服务端算），
+	// 此处保留可选 sku 是为支付域自身也能受理「带商品」的通用下单（如后续 PAY-02）。
+	Sku string `json:"sku"`
 }
 
 // @Summary  创建支付订单（金额单位：分）
@@ -95,6 +98,7 @@ func (h *Handler) createOrder(c *gin.Context) {
 		Amount:   req.Amount,
 		Channel:  req.Channel,
 		Subject:  req.Subject,
+		Sku:      req.Sku,
 		ClientIP: c.ClientIP(),
 	})
 	if err != nil {

@@ -26,6 +26,15 @@ const (
 type LiveDeps struct {
 	Account *account.Service
 	RDB     *redis.Client
+	// Vip 会员标识提供者（M4-VIP-01 权益落地：直播弹幕带会员徽章）。
+	// 同样用最小接口注入，live 不 import 会员域（plan §2F.6）。
+	Vip VipBadgeProvider
+}
+
+// VipBadgeProvider 会员标识只读提供者（M4-VIP-01）。
+type VipBadgeProvider interface {
+	// VipColors 返回「生效中会员」的 uid → 昵称颜色（非会员不在返回值中）。
+	VipColors(userIDs []int64) (map[int64]string, error)
 }
 
 // SendDanmaku 直播弹幕校验链（WS 上行走 HTTP 语义等价校验，服务端判定不靠前端）：
@@ -80,6 +89,8 @@ func (s *Service) SendDanmaku(ctx context.Context, uid, roomID int64, content st
 	if err != nil {
 		return err
 	}
+	// 会员标识（M4-VIP-01）：服务端判定后随帧下发；查询失败降级为无徽章（不阻断弹幕）。
+	nickColor, isVip := s.vipColor(ctx, uid)
 	msg := &LiveRoomMsg{
 		ID: snowflake.NextID(), RoomID: roomID, UserID: uid,
 		Nickname: profile.Nickname, Avatar: profile.Avatar, Content: content,
@@ -90,6 +101,7 @@ func (s *Service) SendDanmaku(ctx context.Context, uid, roomID int64, content st
 	item := DanmakuInfo{
 		ID: msg.ID, UserID: itoa(uid), Nickname: profile.Nickname,
 		Avatar: profile.Avatar, Content: content,
+		IsVip: isVip, NickColor: nickColor,
 	}
 	if !shadow {
 		s.hub.BroadcastDanmaku(roomID, item)
@@ -135,12 +147,41 @@ func (s *Service) History(ctx context.Context, roomID int64) (*HistoryResult, er
 	if err != nil {
 		return nil, err
 	}
+	// 会员标识批量补齐（M4-VIP-01）：历史回放同样要带徽章，否则「刷出来的弹幕有徽章、
+	// 回放的历史弹幕没有」会让用户以为徽章是随机出现的。一次查询覆盖整页。
+	uids := make([]int64, 0, len(rows))
+	for _, m := range rows {
+		uids = append(uids, m.UserID)
+	}
+	vipColors := s.vipColors(ctx, uids)
 	list := make([]DanmakuInfo, 0, len(rows))
 	for _, m := range rows {
+		color, isVip := vipColors[m.UserID]
 		list = append(list, DanmakuInfo{
 			ID: m.ID, UserID: itoa(m.UserID), Nickname: m.Nickname,
 			Avatar: m.Avatar, Content: m.Content,
+			IsVip: isVip, NickColor: color,
 		})
 	}
 	return &HistoryResult{List: list, Online: n, RoomID: roomID}, nil
+}
+
+// vipColor 单人会员标识（查询失败降级为无徽章，不阻断弹幕发送）。
+func (s *Service) vipColor(ctx context.Context, uid int64) (string, bool) {
+	m := s.vipColors(ctx, []int64{uid})
+	c, ok := m[uid]
+	return c, ok
+}
+
+// vipColors 批量会员标识；未注入或查询失败一律返回空 map（降级为无徽章）。
+func (s *Service) vipColors(ctx context.Context, uids []int64) map[int64]string {
+	if s.deps == nil || s.deps.Vip == nil || len(uids) == 0 {
+		return map[int64]string{}
+	}
+	m, err := s.deps.Vip.VipColors(uids)
+	if err != nil {
+		s.log.Warn("直播弹幕会员标识查询失败，降级为无徽章", zap.Error(err))
+		return map[int64]string{}
+	}
+	return m
 }

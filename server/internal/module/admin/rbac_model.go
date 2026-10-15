@@ -106,6 +106,12 @@ var builtinPermissions = []Permission{
 	{Code: "pay:view", Name: "支付订单与对账", Type: "menu", Path: "/pay-orders", Icon: "i-mingcute-wallet-3-line", Sort: 17},
 	{Code: "pay:order", Name: "手动补单", Type: "button", Parent: "pay:view"},
 	{Code: "pay:recon", Name: "对账与异常处理", Type: "button", Parent: "pay:view"},
+	// 会员与套餐（M4-VIP-01，spec §2.7）：套餐配置 / 会员查询 / 手工补发硬币。
+	// 与支付权限同理属财务相关：改价直接影响收入、补发硬币等价于凭空发币，
+	// 故默认只授予 super，不分配给运营/审核默认角色。
+	{Code: "vip:view", Name: "会员与套餐", Type: "menu", Path: "/vip-members", Icon: "i-mingcute-crown-line", Sort: 18},
+	{Code: "vip:plan", Name: "套餐配置（改价/上下架）", Type: "button", Parent: "vip:view"},
+	{Code: "vip:grant", Name: "手工补发会员硬币", Type: "button", Parent: "vip:view"},
 }
 
 // 内置角色定义（code → 权限码集合；super 特殊，拥有全部）。

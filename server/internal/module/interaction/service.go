@@ -18,6 +18,15 @@ import (
 
 const replyPreviewCount = 2
 
+// VipBadgeProvider 会员标识的只读提供者（M4-VIP-01 权益落地：评论带徽章）。
+//
+// 用「最小接口 + 注入」而非 import 会员域：读模型只需知道「谁是会员、昵称什么颜色」，
+// 不因此与会员域互相依赖；也便于测试注入替身（无需真实 membership 表）。
+type VipBadgeProvider interface {
+	// VipColors 返回「生效中会员」的 uid → 昵称颜色（非会员不在返回值中）。
+	VipColors(userIDs []int64) (map[int64]string, error)
+}
+
 type Service struct {
 	repo       *Repo
 	videoSvc   *video.Service
@@ -25,11 +34,16 @@ type Service struct {
 	notifySvc  *notify.Service
 	growthSvc  *growth.Service
 	log        *zap.Logger
+	// vipBadge 会员标识提供者（router 装配注入；nil 表示不渲染会员标识）。
+	vipBadge VipBadgeProvider
 }
 
 func NewService(repo *Repo, videoSvc *video.Service, accountSvc *account.Service, notifySvc *notify.Service, growthSvc *growth.Service, log *zap.Logger) *Service {
 	return &Service{repo: repo, videoSvc: videoSvc, accountSvc: accountSvc, notifySvc: notifySvc, growthSvc: growthSvc, log: log}
 }
+
+// SetVipBadge 注入会员标识提供者（M4-VIP-01；nil 表示不渲染，向后兼容）。
+func (s *Service) SetVipBadge(p VipBadgeProvider) { s.vipBadge = p }
 
 // ---- 评论 ----
 
@@ -317,14 +331,29 @@ func (s *Service) toItems(ctx context.Context, list []Comment, viewerUID int64) 
 	if err != nil {
 		return nil, err
 	}
+	// 会员标识（M4-VIP-01）：一次批量查询，避免每条评论各查一次会员表（N+1）。
+	// 查询失败不阻断评论列表 —— 会员徽章是展示增强，不是数据完整性的一部分；
+	// 但它必须来自服务端，故失败时降级为「无徽章」而不是报错或伪造。
+	vipColors := map[int64]string{}
+	if s.vipBadge != nil {
+		if m, e := s.vipBadge.VipColors(uids); e == nil {
+			vipColors = m
+		} else {
+			s.log.Warn("会员标识查询失败，评论降级为无徽章", zap.Error(e))
+		}
+	}
 
 	items := make([]CommentItem, 0, len(list))
 	for _, c := range list {
 		b := briefs[c.UserID]
+		color, isVip := vipColors[c.UserID]
 		items = append(items, CommentItem{
-			ID:        fmt.Sprintf("%d", c.ID),
-			Content:   c.Content,
-			User:      UserBrief{ID: b.ID, Nickname: b.Nickname, Avatar: b.Avatar, Level: b.Level},
+			ID:      fmt.Sprintf("%d", c.ID),
+			Content: c.Content,
+			User: UserBrief{
+				ID: b.ID, Nickname: b.Nickname, Avatar: b.Avatar, Level: b.Level,
+				IsVip: isVip, NickColor: color,
+			},
 			LikeCnt:   c.LikeCnt,
 			ReplyCnt:  c.ReplyCnt,
 			IsTop:     c.IsTop == 1,

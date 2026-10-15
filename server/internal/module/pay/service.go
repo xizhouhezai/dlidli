@@ -11,6 +11,7 @@ import (
 
 	"github.com/dlidli/server/internal/pkg/errcode"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // Config 支付域配置（router 装配注入，缺省值由 config.Load 兜底）。
@@ -58,6 +59,11 @@ type Service struct {
 	cfg   Config
 	log   *zap.Logger
 	guard ConsumptionGuard
+	// hook 支付成功后的权益发放钩子（M4-VIP-01 注入；nil 表示无权益，纯支付行为）。
+	// 只在**本次真正发生迁移**（applied=true）时触发，确保重放/并发不会重复发权益。
+	hook PaidHook
+	// skuHook 商品契约钩子（M4-VIP-01 注入；nil 表示本部署未启用商品体系）。
+	skuHook SkuHook
 }
 
 // NewService 构造（cfg 零值时用 DefaultConfig 兜底）。
@@ -99,6 +105,12 @@ func (s *Service) SetGuard(g ConsumptionGuard) {
 	s.guard = g
 }
 
+// SetPaidHook 注入支付成功后的权益发放钩子（M4-VIP-01；nil 表示不发放任何权益）。
+func (s *Service) SetPaidHook(h PaidHook) { s.hook = h }
+
+// SetSkuHook 注入商品契约钩子（M4-VIP-01；nil 表示本部署无商品体系，sku 一律拒绝）。
+func (s *Service) SetSkuHook(h SkuHook) { s.skuHook = h }
+
 // MockSecret 暴露 mock 密钥（dev 回调端点构造签名用；与验签口径单一来源）。
 func (s *Service) MockSecret() string { return s.cfg.MockSecret }
 
@@ -106,11 +118,33 @@ func (s *Service) MockSecret() string { return s.cfg.MockSecret }
 
 // CreateOrderReq 下单请求。
 type CreateOrderReq struct {
-	UserID   int64
-	Amount   int64  // 分
-	Channel  string // mock / alipay / wechat
-	Subject  string
+	UserID  int64
+	Amount  int64  // 分
+	Channel string // mock / alipay / wechat
+	Subject string
+	// Sku 商品标识（M4-VIP-01 补列）。**为什么必须落库**：回调侧只拿得到订单号与金额，
+	// 而金额会随运营改价变化，「支付成功后该给用户开哪档会员」必须来自下单时的快照。
+	Sku      string
 	ClientIP string
+}
+
+// PaidHook 支付成功后的权益发放钩子（M4-VIP-01）。
+//
+// **在入账的同一事务内调用**：钩子返回错误则整个事务回滚——订单不迁移、不入账。
+// 这是「钱与权益要么都有、要么都没有」的结构保证；若把权益发放放在事务外，
+// 一旦发放失败就会留下「已收钱但没开会员」的账实不符（且渠道不会重投，无法自愈）。
+type PaidHook func(tx *gorm.DB, orderNo string, userID int64) error
+
+// SkuHook 商品（sku）契约（M4-VIP-01）。
+//
+// 两个方法都在**下单前**调用：CheckSku 保证「用户实付金额 = 商品当前定价」，
+// CreateOrderTx 把商品台账与订单落进同一事务（避免订单已建、台账缺失，
+// 导致回调时不知该开哪档权益）。接口留在 pay 侧，使 pay 不依赖 vip 包。
+type SkuHook interface {
+	// CheckSku 校验商品可售且金额一致（金额单位：分）。
+	CheckSku(sku string, userID, amount int64) error
+	// CreateOrderTx 在订单事务内落商品台账。
+	CreateOrderTx(tx *gorm.DB, orderNo string, userID int64, sku string) error
 }
 
 // OrderView 订单对外视图（金额一律整数分，spec §6.1）。
@@ -159,6 +193,9 @@ func toOrderView(o *PayOrder) *OrderView {
 //
 // 惰性关单在入口执行一次（plan §2E.3）：保证「过期订单不会被支付」这一不变量
 // 不依赖任何后台 Worker 存活。
+//
+// M4-VIP-01 扩展：req.Sku 非空时先把订单落 vip_order 台账（同上锁），
+// 使「已付款但套餐后来被下架/删价」仍能按**下单时长快照**开通（plan §2F.4）。
 func (s *Service) CreateOrder(ctx context.Context, req *CreateOrderReq) (*OrderView, error) {
 	if err := s.closeExpired(); err != nil {
 		s.log.Warn("惰性关单失败（不阻断下单）", zap.Error(err))
@@ -174,6 +211,15 @@ func (s *Service) CreateOrder(ctx context.Context, req *CreateOrderReq) (*OrderV
 	if err := s.guard.Check(ctx, req.UserID, req.Amount); err != nil {
 		return nil, err
 	}
+	// 商品校验钩子：金额必须与商品当前定价一致，否则拒绝（防止改价窗口内被下错价）。
+	if req.Sku != "" {
+		if s.skuHook == nil {
+			return nil, errcode.ErrVipOrderNotVip
+		}
+		if err := s.skuHook.CheckSku(req.Sku, req.UserID, req.Amount); err != nil {
+			return nil, err
+		}
+	}
 	now := time.Now()
 	o := &PayOrder{
 		OrderNo:  genOrderNo(),
@@ -181,11 +227,12 @@ func (s *Service) CreateOrder(ctx context.Context, req *CreateOrderReq) (*OrderV
 		Amount:   req.Amount,
 		Channel:  req.Channel,
 		Subject:  req.Subject,
+		Sku:      req.Sku,
 		Status:   StatusPending,
 		ClientIP: req.ClientIP,
 		ExpireAt: now.Add(time.Duration(s.cfg.OrderTimeoutMinutes) * time.Minute),
 	}
-	if err := s.repo.CreateOrder(o); err != nil {
+	if err := s.repo.CreateOrderWithSku(o, req.Sku, s.skuHook); err != nil {
 		return nil, err
 	}
 	resp, err := adapter.CreatePayment(ctx, &CreatePaymentReq{
@@ -327,7 +374,7 @@ func (s *Service) HandleCallback(ctx context.Context, channel string, rawBody []
 		return nil, err
 	}
 
-	applied, err := s.repo.MarkPaidTx(res.OrderNo, res.ChannelTradeNo)
+	applied, err := s.repo.MarkPaidTx(res.OrderNo, res.ChannelTradeNo, s.hook)
 	if err != nil {
 		logRow.Result = "入账失败：" + err.Error()
 		if e := s.repo.InsertCallbackLog(logRow); e != nil {
@@ -422,7 +469,7 @@ func (s *Service) ManualMarkPaid(orderNo string, adminID int64) (*CallbackOutcom
 	if err := s.closeExpired(); err != nil {
 		s.log.Warn("惰性关单失败（不阻断补单）", zap.Error(err))
 	}
-	applied, err := s.repo.MarkPaidManualTx(orderNo, adminID, "")
+	applied, err := s.repo.MarkPaidManualTx(orderNo, adminID, "", s.hook)
 	if err != nil {
 		return nil, err
 	}

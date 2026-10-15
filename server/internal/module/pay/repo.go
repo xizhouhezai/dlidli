@@ -67,6 +67,22 @@ func NewRepo(db *gorm.DB) *repo { return newRepo(db) }
 // CreateOrder 落订单（order_no 唯一由 DB 兜底）。
 func (r *repo) CreateOrder(o *PayOrder) error { return r.db.Create(o).Error }
 
+// CreateOrderWithSku 落订单 + 商品台账（**同一事务**，M4-VIP-01）。
+//
+// 若拆成两次写入：订单已建而台账缺失时，回调只知道订单号，无从判断该开哪档权益，
+// 而用户已经付了钱——这是不可自愈的账实不符。故两者必须同事务。
+func (r *repo) CreateOrderWithSku(o *PayOrder, sku string, h SkuHook) error {
+	if sku == "" || h == nil {
+		return r.db.Create(o).Error
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(o).Error; err != nil {
+			return err
+		}
+		return h.CreateOrderTx(tx, o.OrderNo, o.UserID, sku)
+	})
+}
+
 // GetOrder 按业务单号取订单；不存在返回 92001。
 func (r *repo) GetOrder(orderNo string) (*PayOrder, error) {
 	var o PayOrder
@@ -182,19 +198,19 @@ const closeBatchSize = 200
 // MarkPaidTx 支付成功入账（spec §6.2/§6.4 一致性核心）。
 //
 // 单一事务内：① 条件 UPDATE 推进 0→1（RowsAffected 是唯一权威判据）；
-// ② 行锁现金账户、加余额；③ 写现金流水（uk_biz_no 幂等）。
+// ② 行锁现金账户、加余额；③ 写现金流水（uk_biz_no 幂等）；④ 权益发放钩子（M4-VIP-01）。
 //
 // 返回 applied 表示**本次是否真正发生了迁移与入账**：
 //   - applied=true：订单迁移 + 入账 + 流水三者同时生效。
 //   - applied=false, err=nil：订单此前已支付（重放/并发对手已生效），本次未做任何副作用。
-//   - err≠nil：被拒（订单不存在 92001 / 已关闭 92007 / 已退款 92002）。
+//   - err≠nil：被拒（订单不存在 92001 / 已关闭 92007 / 已退款 92002 / 权益发放失败）。
 //
 // 之所以必须把「金额核对」放在本函数之外（Service 层）：金额不符属于**回调报文的可信度**问题，
 // 应当在验签后、入账前判定并留痕，而不是让资金层接受一个可疑金额。
-func (r *repo) MarkPaidTx(orderNo, channelTradeNo string) (applied bool, err error) {
+func (r *repo) MarkPaidTx(orderNo, channelTradeNo string, hook PaidHook) (applied bool, err error) {
 	err = retryTx(func() error {
 		applied = false
-		return r.markPaidOnce(orderNo, channelTradeNo, &applied)
+		return r.markPaidOnce(orderNo, channelTradeNo, hook, &applied)
 	})
 	if err != nil {
 		return false, err
@@ -203,7 +219,7 @@ func (r *repo) MarkPaidTx(orderNo, channelTradeNo string) (applied bool, err err
 }
 
 // markPaidOnce 单次尝试（由 MarkPaidTx 在死锁/锁超时时重试）。
-func (r *repo) markPaidOnce(orderNo, channelTradeNo string, applied *bool) error {
+func (r *repo) markPaidOnce(orderNo, channelTradeNo string, hook PaidHook, applied *bool) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// ① 条件 UPDATE：把「判定 + 变更」压成一条语句交给行锁串行化。
 		res := tx.Model(&PayOrder{}).
@@ -245,6 +261,14 @@ func (r *repo) markPaidOnce(orderNo, channelTradeNo string, applied *bool) error
 			"支付入账："+o.Subject)
 		if e != nil {
 			return e
+		}
+		// ④ 权益发放（M4-VIP-01）：**同一事务**。失败则整体回滚——绝不留下
+		// 「已收钱但没开会员」；重放时本函数已在 RowsAffected==0 分支提前返回，
+		// 故钩子只在真正迁移的那一次执行，天然不重复发放。
+		if hook != nil {
+			if e := hook(tx, orderNo, o.UserID); e != nil {
+				return e
+			}
 		}
 		*applied = true
 		return nil
@@ -307,10 +331,10 @@ func (r *repo) refundOnce(orderNo string, applied *bool) error {
 //
 // 与回调入账共用同一套保证（条件 UPDATE + RowsAffected + 事务内入账 + 幂等键）；
 // 差别只在审计（remark 注明操作人）与「允许对已关闭订单补单」这一人工特权。
-func (r *repo) MarkPaidManualTx(orderNo string, adminID int64, tradeNo string) (applied bool, err error) {
+func (r *repo) MarkPaidManualTx(orderNo string, adminID int64, tradeNo string, hook PaidHook) (applied bool, err error) {
 	err = retryTx(func() error {
 		applied = false
-		return r.markPaidManualOnce(orderNo, adminID, tradeNo, &applied)
+		return r.markPaidManualOnce(orderNo, adminID, tradeNo, hook, &applied)
 	})
 	if err != nil {
 		return false, err
@@ -319,7 +343,7 @@ func (r *repo) MarkPaidManualTx(orderNo string, adminID int64, tradeNo string) (
 }
 
 // markPaidManualOnce 单次补单尝试（由 MarkPaidManualTx 在死锁/锁超时时重试）。
-func (r *repo) markPaidManualOnce(orderNo string, adminID int64, tradeNo string, applied *bool) error {
+func (r *repo) markPaidManualOnce(orderNo string, adminID int64, tradeNo string, hook PaidHook, applied *bool) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		var o PayOrder
 		if e := tx.Where("order_no = ?", orderNo).Clauses(lockingClause).First(&o).Error; e != nil {
@@ -351,6 +375,13 @@ func (r *repo) markPaidManualOnce(orderNo string, adminID int64, tradeNo string,
 			"手动补单（操作人 admin:"+itoa(adminID)+"）")
 		if e != nil {
 			return e
+		}
+		// 补单同样发放权益（M4-VIP-01）：管理员「人工确认收款」之后，用户买到的会员必须到手，
+		// 否则补单只入账不发权益，用户看到的仍是「钱入了但会员没开」。
+		if hook != nil {
+			if e := hook(tx, orderNo, o.UserID); e != nil {
+				return e
+			}
 		}
 		*applied = true
 		return nil
