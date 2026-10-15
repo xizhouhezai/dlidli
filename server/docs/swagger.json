@@ -26,7 +26,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -54,7 +54,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveAdminReq"
+                            "$ref": "#/definitions/admin.SaveAdminReq"
                         }
                     }
                 ],
@@ -62,7 +62,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -99,7 +99,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveAdminReq"
+                            "$ref": "#/definitions/admin.SaveAdminReq"
                         }
                     }
                 ],
@@ -107,7 +107,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -138,7 +138,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -175,7 +175,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.ResetPwdReq"
+                            "$ref": "#/definitions/admin.ResetPwdReq"
                         }
                     }
                 ],
@@ -183,7 +183,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -228,7 +228,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -296,7 +296,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -376,7 +376,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -404,7 +404,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_banner.SaveReq"
+                            "$ref": "#/definitions/banner.SaveReq"
                         }
                     }
                 ],
@@ -412,7 +412,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -449,7 +449,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_banner.SaveReq"
+                            "$ref": "#/definitions/banner.SaveReq"
                         }
                     }
                 ],
@@ -457,7 +457,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -488,7 +488,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -512,7 +512,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -540,7 +540,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_module_video.SaveCategoryReq"
+                            "$ref": "#/definitions/video.SaveCategoryReq"
                         }
                     }
                 ],
@@ -548,7 +548,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -585,7 +585,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_module_video.SaveCategoryReq"
+                            "$ref": "#/definitions/video.SaveCategoryReq"
                         }
                     }
                 ],
@@ -593,7 +593,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -624,7 +624,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -648,7 +648,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -676,7 +676,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveConfigReq"
+                            "$ref": "#/definitions/admin.SaveConfigReq"
                         }
                     }
                 ],
@@ -684,7 +684,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -721,7 +721,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveConfigReq"
+                            "$ref": "#/definitions/admin.SaveConfigReq"
                         }
                     }
                 ],
@@ -729,7 +729,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -760,7 +760,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -800,7 +800,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -828,7 +828,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_live.devRechargeReq"
+                            "$ref": "#/definitions/live.devRechargeReq"
                         }
                     }
                 ],
@@ -836,7 +836,7 @@
                     "200": {
                         "description": "91023 金额不合法",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -860,7 +860,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -888,7 +888,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveDictReq"
+                            "$ref": "#/definitions/admin.SaveDictReq"
                         }
                     }
                 ],
@@ -896,7 +896,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -933,7 +933,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveDictReq"
+                            "$ref": "#/definitions/admin.SaveDictReq"
                         }
                     }
                 ],
@@ -941,7 +941,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -972,7 +972,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -996,7 +996,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1024,7 +1024,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_abtest.SaveReq"
+                            "$ref": "#/definitions/abtest.SaveReq"
                         }
                     }
                 ],
@@ -1032,7 +1032,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1069,7 +1069,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_abtest.SaveReq"
+                            "$ref": "#/definitions/abtest.SaveReq"
                         }
                     }
                 ],
@@ -1077,7 +1077,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1108,7 +1108,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1148,7 +1148,133 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/live/audit/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "机审关闭时返回 91027（enabled=false），便于巡查台区分「机审在跑但全绿」与「机审根本没开」；\n这条区分是必要的：截帧失败/无法判定走 fail-open（degraded=true 且不切断），\n若不暴露开关状态，静默全绿与正常全绿在外部不可分辨（plan §2D.2 待替换点）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播巡查"
+                ],
+                "summary": "截帧机审运行态（是否启用 + 当前配置）",
+                "responses": {
+                    "200": {
+                        "description": "91027 截帧机审未启用",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/live/rooms": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播巡查"
+                ],
+                "summary": "直播中房间巡查列表（含在线人数与最近截帧判定）",
+                "responses": {
+                    "200": {
+                        "description": "403 无 live:audit 权限",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/live/rooms/{id}/cut": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播巡查"
+                ],
+                "summary": "手动切断直播（人工巡查）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "切断原因",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/live.cutReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91007 房间不存在 / 91028 房间已被封禁",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/live/rooms/{id}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "直播巡查"
+                ],
+                "summary": "恢复直播（解封，人工巡查）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "房间ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "91007 房间不存在 / 91029 房间未被封禁",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1173,7 +1299,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.LoginReq"
+                            "$ref": "#/definitions/admin.LoginReq"
                         }
                     }
                 ],
@@ -1181,7 +1307,7 @@
                     "200": {
                         "description": "data: {token, username, role}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1205,7 +1331,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1229,7 +1355,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1257,7 +1383,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SavePermissionReq"
+                            "$ref": "#/definitions/admin.SavePermissionReq"
                         }
                     }
                 ],
@@ -1265,7 +1391,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1302,7 +1428,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SavePermissionReq"
+                            "$ref": "#/definitions/admin.SavePermissionReq"
                         }
                     }
                 ],
@@ -1310,7 +1436,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1341,7 +1467,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1385,7 +1511,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1454,7 +1580,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_report.HandleReq"
+                            "$ref": "#/definitions/report.HandleReq"
                         }
                     }
                 ],
@@ -1462,7 +1588,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1486,7 +1612,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1514,7 +1640,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveRoleReq"
+                            "$ref": "#/definitions/admin.SaveRoleReq"
                         }
                     }
                 ],
@@ -1522,7 +1648,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1559,7 +1685,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.SaveRoleReq"
+                            "$ref": "#/definitions/admin.SaveRoleReq"
                         }
                     }
                 ],
@@ -1567,7 +1693,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1598,7 +1724,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1622,7 +1748,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1650,7 +1776,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.AddWordReq"
+                            "$ref": "#/definitions/admin.AddWordReq"
                         }
                     }
                 ],
@@ -1658,7 +1784,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1691,7 +1817,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1729,7 +1855,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1804,7 +1930,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.PunishReq"
+                            "$ref": "#/definitions/admin.PunishReq"
                         }
                     }
                 ],
@@ -1812,7 +1938,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1868,7 +1994,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1936,7 +2062,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -1969,7 +2095,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2006,7 +2132,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_admin.ReviewReq"
+                            "$ref": "#/definitions/admin.ReviewReq"
                         }
                     }
                 ],
@@ -2014,7 +2140,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2059,7 +2185,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2092,7 +2218,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2111,7 +2237,7 @@
                     "200": {
                         "description": "data: {captcha_id, image_base64}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2144,7 +2270,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2177,7 +2303,7 @@
                     "200": {
                         "description": "data: {access_token, refresh_token, user}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2210,7 +2336,7 @@
                     "200": {
                         "description": "data: {access_token, refresh_token, user}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2243,7 +2369,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2276,7 +2402,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2309,7 +2435,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2342,7 +2468,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2375,7 +2501,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2394,7 +2520,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2432,7 +2558,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2451,7 +2577,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2479,7 +2605,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2507,7 +2633,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_collection.CreateReq"
+                            "$ref": "#/definitions/collection.CreateReq"
                         }
                     }
                 ],
@@ -2515,7 +2641,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2543,7 +2669,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2574,7 +2700,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2616,7 +2742,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2656,7 +2782,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2689,7 +2815,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2722,7 +2848,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2750,7 +2876,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2774,7 +2900,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2812,7 +2938,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2850,7 +2976,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2888,7 +3014,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2926,7 +3052,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -2964,7 +3090,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3002,7 +3128,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3034,7 +3160,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3072,7 +3198,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3096,7 +3222,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3120,7 +3246,7 @@
                     "200": {
                         "description": "91001 未入白名单 / 91002 未实名 / 91003 粉丝不足 / 91004 已有房间",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3141,7 +3267,7 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                    "$ref": "#/definitions/response.Body"
                                 },
                                 {
                                     "type": "object",
@@ -3149,7 +3275,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/internal_module_live.GiftInfo"
+                                                "$ref": "#/definitions/live.GiftInfo"
                                             }
                                         }
                                     }
@@ -3180,13 +3306,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                    "$ref": "#/definitions/response.Body"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_module_live.MelonBalance"
+                                            "$ref": "#/definitions/live.MelonBalance"
                                         }
                                     }
                                 }
@@ -3217,7 +3343,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_live.updateRoomReq"
+                            "$ref": "#/definitions/live.updateRoomReq"
                         }
                     }
                 ],
@@ -3225,7 +3351,7 @@
                     "200": {
                         "description": "91012 分区不存在 / 91014 标题非法 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3249,7 +3375,7 @@
                     "200": {
                         "description": "91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3273,7 +3399,7 @@
                     "200": {
                         "description": "91005 房间已开播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3297,7 +3423,7 @@
                     "200": {
                         "description": "91006 房间未在直播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3321,7 +3447,7 @@
                     "200": {
                         "description": "91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3362,13 +3488,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                    "$ref": "#/definitions/response.Body"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_module_live.RoomListResult"
+                                            "$ref": "#/definitions/live.RoomListResult"
                                         }
                                     }
                                 }
@@ -3400,7 +3526,7 @@
                     "200": {
                         "description": "91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3433,7 +3559,7 @@
                     "200": {
                         "description": "91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3473,7 +3599,7 @@
                     "200": {
                         "description": "91008 非主播 / 91010 不能对自己 / 10005 用户不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3511,7 +3637,7 @@
                     "200": {
                         "description": "91008 非主播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3544,7 +3670,7 @@
                     "200": {
                         "description": "91006 未开播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3577,7 +3703,7 @@
                     "200": {
                         "description": "91006 未开播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3617,7 +3743,7 @@
                         "name": "body",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/internal_module_live.sendGiftReq"
+                            "$ref": "#/definitions/live.sendGiftReq"
                         }
                     }
                 ],
@@ -3625,7 +3751,7 @@
                     "200": {
                         "description": "91007 房间不存在 / 91019 礼物不存在 / 91020 房间未开播 / 91021 余额不足 / 91022 数量不合法",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3658,7 +3784,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3693,13 +3819,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                    "$ref": "#/definitions/response.Body"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_module_live.RoomInfo"
+                                            "$ref": "#/definitions/live.RoomInfo"
                                         }
                                     }
                                 }
@@ -3736,7 +3862,7 @@
                     "200": {
                         "description": "91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3777,7 +3903,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_live.muteReq"
+                            "$ref": "#/definitions/live.muteReq"
                         }
                     }
                 ],
@@ -3785,7 +3911,7 @@
                     "200": {
                         "description": "91009 非主播/房管 / 91013 时长非法 / 91010 不能禁言主播",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3823,7 +3949,7 @@
                     "200": {
                         "description": "91009 非主播/房管",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3860,7 +3986,7 @@
                     "200": {
                         "description": "91006 未开播 / 91007 房间不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3889,7 +4015,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_live.PublishAuthReq"
+                            "$ref": "#/definitions/live.PublishAuthReq"
                         }
                     }
                 ],
@@ -3899,7 +4025,7 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                    "$ref": "#/definitions/response.Body"
                                 },
                                 {
                                     "type": "object",
@@ -3915,7 +4041,7 @@
                     "403": {
                         "description": "91024 token 无效 / 91025 密钥错误 / 91006 未开播 / 91007 房间不存在 / 91026 流名不合法",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -3944,7 +4070,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_live.PublishAuthReq"
+                            "$ref": "#/definitions/live.PublishAuthReq"
                         }
                     }
                 ],
@@ -3954,7 +4080,7 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                                    "$ref": "#/definitions/response.Body"
                                 },
                                 {
                                     "type": "object",
@@ -3970,7 +4096,7 @@
                     "403": {
                         "description": "91024 token 无效",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4000,7 +4126,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_im.SendReq"
+                            "$ref": "#/definitions/im.SendReq"
                         }
                     }
                 ],
@@ -4008,7 +4134,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4032,7 +4158,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4056,7 +4182,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4122,7 +4248,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4146,7 +4272,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4170,7 +4296,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4194,7 +4320,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4248,7 +4374,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4278,7 +4404,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_report.SubmitReq"
+                            "$ref": "#/definitions/report.SubmitReq"
                         }
                     }
                 ],
@@ -4286,7 +4412,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4326,7 +4452,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4359,7 +4485,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4392,7 +4518,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4425,7 +4551,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4453,7 +4579,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4481,7 +4607,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4509,7 +4635,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4537,7 +4663,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4564,7 +4690,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4597,7 +4723,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4630,7 +4756,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4673,7 +4799,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4697,7 +4823,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4725,7 +4851,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_account.UpdateProfileReq"
+                            "$ref": "#/definitions/account.UpdateProfileReq"
                         }
                     }
                 ],
@@ -4733,7 +4859,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4769,7 +4895,7 @@
                     "200": {
                         "description": "data: {avatar}",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4807,7 +4933,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4831,7 +4957,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4856,7 +4982,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4892,7 +5018,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4923,7 +5049,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4947,7 +5073,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -4985,7 +5111,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5009,7 +5135,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5045,7 +5171,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5069,7 +5195,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5105,7 +5231,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5150,7 +5276,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5178,7 +5304,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_video.SubmitReq"
+                            "$ref": "#/definitions/video.SubmitReq"
                         }
                     }
                 ],
@@ -5186,7 +5312,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5222,7 +5348,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5246,7 +5372,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5285,7 +5411,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5309,7 +5435,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5337,7 +5463,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5368,7 +5494,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5401,7 +5527,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5429,7 +5555,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5464,7 +5590,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_module_interaction.AddCommentReq"
+                            "$ref": "#/definitions/interaction.AddCommentReq"
                         }
                     }
                 ],
@@ -5472,7 +5598,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5506,7 +5632,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5549,7 +5675,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5573,7 +5699,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5609,7 +5735,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5642,7 +5768,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5682,7 +5808,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5715,7 +5841,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5743,7 +5869,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5771,7 +5897,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5802,7 +5928,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5830,7 +5956,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5863,7 +5989,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5897,7 +6023,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5930,7 +6056,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5958,7 +6084,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5986,7 +6112,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dlidli_server_internal_pkg_response.Body"
+                            "$ref": "#/definitions/response.Body"
                         }
                     }
                 }
@@ -5994,47 +6120,7 @@
         }
     },
     "definitions": {
-        "github_com_dlidli_server_internal_module_video.SaveCategoryReq": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "maxLength": 32
-                },
-                "parent_id": {
-                    "type": "integer"
-                },
-                "sort": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
-                }
-            }
-        },
-        "github_com_dlidli_server_internal_pkg_response.Body": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {},
-                "message": {
-                    "type": "string"
-                },
-                "trace_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_module_abtest.SaveReq": {
+        "abtest.SaveReq": {
             "type": "object",
             "required": [
                 "name",
@@ -6077,7 +6163,7 @@
                 }
             }
         },
-        "internal_module_account.UpdateProfileReq": {
+        "account.UpdateProfileReq": {
             "type": "object",
             "properties": {
                 "gender": {
@@ -6091,7 +6177,7 @@
                 }
             }
         },
-        "internal_module_admin.AddWordReq": {
+        "admin.AddWordReq": {
             "type": "object",
             "required": [
                 "word"
@@ -6103,7 +6189,7 @@
                 }
             }
         },
-        "internal_module_admin.LoginReq": {
+        "admin.LoginReq": {
             "type": "object",
             "required": [
                 "password",
@@ -6118,7 +6204,7 @@
                 }
             }
         },
-        "internal_module_admin.PunishReq": {
+        "admin.PunishReq": {
             "type": "object",
             "required": [
                 "action"
@@ -6147,7 +6233,7 @@
                 }
             }
         },
-        "internal_module_admin.ResetPwdReq": {
+        "admin.ResetPwdReq": {
             "type": "object",
             "required": [
                 "password"
@@ -6160,7 +6246,7 @@
                 }
             }
         },
-        "internal_module_admin.ReviewReq": {
+        "admin.ReviewReq": {
             "type": "object",
             "properties": {
                 "approve": {
@@ -6171,7 +6257,7 @@
                 }
             }
         },
-        "internal_module_admin.SaveAdminReq": {
+        "admin.SaveAdminReq": {
             "type": "object",
             "required": [
                 "username"
@@ -6198,7 +6284,7 @@
                 }
             }
         },
-        "internal_module_admin.SaveConfigReq": {
+        "admin.SaveConfigReq": {
             "type": "object",
             "required": [
                 "config_key"
@@ -6222,7 +6308,7 @@
                 }
             }
         },
-        "internal_module_admin.SaveDictReq": {
+        "admin.SaveDictReq": {
             "type": "object",
             "required": [
                 "dict_type",
@@ -6251,7 +6337,7 @@
                 }
             }
         },
-        "internal_module_admin.SavePermissionReq": {
+        "admin.SavePermissionReq": {
             "type": "object",
             "required": [
                 "name"
@@ -6289,7 +6375,7 @@
                 }
             }
         },
-        "internal_module_admin.SaveRoleReq": {
+        "admin.SaveRoleReq": {
             "type": "object",
             "required": [
                 "name"
@@ -6315,7 +6401,7 @@
                 }
             }
         },
-        "internal_module_banner.SaveReq": {
+        "banner.SaveReq": {
             "type": "object",
             "properties": {
                 "bvid": {
@@ -6342,7 +6428,7 @@
                 }
             }
         },
-        "internal_module_collection.CreateReq": {
+        "collection.CreateReq": {
             "type": "object",
             "required": [
                 "title"
@@ -6362,7 +6448,7 @@
                 }
             }
         },
-        "internal_module_im.SendReq": {
+        "im.SendReq": {
             "type": "object",
             "required": [
                 "content",
@@ -6385,7 +6471,7 @@
                 }
             }
         },
-        "internal_module_interaction.AddCommentReq": {
+        "interaction.AddCommentReq": {
             "type": "object",
             "required": [
                 "content"
@@ -6403,7 +6489,7 @@
                 }
             }
         },
-        "internal_module_live.AdminBrief": {
+        "live.AdminBrief": {
             "type": "object",
             "properties": {
                 "appointed_at": {
@@ -6420,25 +6506,25 @@
                 }
             }
         },
-        "internal_module_live.AdminListResult": {
+        "live.AdminListResult": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_module_live.AdminBrief"
+                        "$ref": "#/definitions/live.AdminBrief"
                     }
                 }
             }
         },
-        "internal_module_live.ApplyResult": {
+        "live.ApplyResult": {
             "type": "object",
             "properties": {
                 "push_url": {
                     "type": "string"
                 },
                 "room": {
-                    "$ref": "#/definitions/internal_module_live.RoomInfo"
+                    "$ref": "#/definitions/live.RoomInfo"
                 },
                 "stream_key": {
                     "description": "明文密钥仅申请/重置时返回",
@@ -6446,7 +6532,47 @@
                 }
             }
         },
-        "internal_module_live.DanmakuInfo": {
+        "live.AuditStatus": {
+            "type": "object",
+            "properties": {
+                "black_yavg_max": {
+                    "type": "number"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "flat_range_max": {
+                    "type": "number"
+                },
+                "frame_dir": {
+                    "type": "string"
+                },
+                "frame_interval_seconds": {
+                    "type": "integer"
+                },
+                "srs_api_base": {
+                    "type": "string"
+                }
+            }
+        },
+        "live.CutResult": {
+            "type": "object",
+            "properties": {
+                "cut_mode": {
+                    "description": "1 srs_api / 2 degraded",
+                    "type": "integer"
+                },
+                "kicked": {
+                    "description": "SRS 侧是否确已踢掉推流",
+                    "type": "boolean"
+                },
+                "violation_id": {
+                    "description": "违规流水 id",
+                    "type": "integer"
+                }
+            }
+        },
+        "live.DanmakuInfo": {
             "type": "object",
             "properties": {
                 "avatar": {
@@ -6468,7 +6594,7 @@
                 }
             }
         },
-        "internal_module_live.GiftFrame": {
+        "live.GiftFrame": {
             "type": "object",
             "properties": {
                 "count": {
@@ -6504,7 +6630,7 @@
                 }
             }
         },
-        "internal_module_live.GiftInfo": {
+        "live.GiftInfo": {
             "type": "object",
             "properties": {
                 "effect": {
@@ -6527,13 +6653,13 @@
                 }
             }
         },
-        "internal_module_live.HistoryResult": {
+        "live.HistoryResult": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_module_live.DanmakuInfo"
+                        "$ref": "#/definitions/live.DanmakuInfo"
                     }
                 },
                 "online": {
@@ -6544,7 +6670,7 @@
                 }
             }
         },
-        "internal_module_live.MelonBalance": {
+        "live.MelonBalance": {
             "type": "object",
             "properties": {
                 "balance": {
@@ -6552,7 +6678,7 @@
                 }
             }
         },
-        "internal_module_live.MuteBrief": {
+        "live.MuteBrief": {
             "type": "object",
             "properties": {
                 "avatar": {
@@ -6576,18 +6702,102 @@
                 }
             }
         },
-        "internal_module_live.MuteListResult": {
+        "live.MuteListResult": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_module_live.MuteBrief"
+                        "$ref": "#/definitions/live.MuteBrief"
                     }
                 }
             }
         },
-        "internal_module_live.PlayURLs": {
+        "live.PatrolAuditBrief": {
+            "type": "object",
+            "properties": {
+                "cost_ms": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "degraded": {
+                    "type": "boolean"
+                },
+                "height": {
+                    "type": "integer"
+                },
+                "hit_words": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image_key": {
+                    "type": "string"
+                },
+                "pass": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "type": "integer"
+                }
+            }
+        },
+        "live.PatrolRoom": {
+            "type": "object",
+            "properties": {
+                "anchor_id": {
+                    "description": "字符串避免 JS 精度丢失（与 RoomInfo 同口径）",
+                    "type": "string"
+                },
+                "ban_reason": {
+                    "type": "string"
+                },
+                "ban_status": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_audit": {
+                    "description": "最近一次截帧机审判定摘要（无记录时为 null）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/live.PatrolAuditBrief"
+                        }
+                    ]
+                },
+                "online": {
+                    "type": "integer"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "live.PatrolRoomListResult": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/live.PatrolRoom"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "live.PlayURLs": {
             "type": "object",
             "properties": {
                 "flv": {
@@ -6598,7 +6808,7 @@
                 }
             }
         },
-        "internal_module_live.PublishAuthReq": {
+        "live.PublishAuthReq": {
             "type": "object",
             "properties": {
                 "action": {
@@ -6623,7 +6833,7 @@
                 }
             }
         },
-        "internal_module_live.RechargeResult": {
+        "live.RechargeResult": {
             "type": "object",
             "properties": {
                 "balance": {
@@ -6637,7 +6847,7 @@
                 }
             }
         },
-        "internal_module_live.RoomInfo": {
+        "live.RoomInfo": {
             "type": "object",
             "properties": {
                 "anchor_id": {
@@ -6663,7 +6873,7 @@
                     "description": "拉流地址（公开、不含密钥，M4-LIV-01 D4）",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/internal_module_live.PlayURLs"
+                            "$ref": "#/definitions/live.PlayURLs"
                         }
                     ]
                 },
@@ -6678,13 +6888,13 @@
                 }
             }
         },
-        "internal_module_live.RoomListResult": {
+        "live.RoomListResult": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_module_live.RoomInfo"
+                        "$ref": "#/definitions/live.RoomInfo"
                     }
                 },
                 "total": {
@@ -6692,18 +6902,26 @@
                 }
             }
         },
-        "internal_module_live.SendGiftResult": {
+        "live.SendGiftResult": {
             "type": "object",
             "properties": {
                 "balance": {
                     "type": "integer"
                 },
                 "gift_log": {
-                    "$ref": "#/definitions/internal_module_live.GiftFrame"
+                    "$ref": "#/definitions/live.GiftFrame"
                 }
             }
         },
-        "internal_module_live.devRechargeReq": {
+        "live.cutReq": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "live.devRechargeReq": {
             "type": "object",
             "required": [
                 "delta",
@@ -6718,7 +6936,7 @@
                 }
             }
         },
-        "internal_module_live.muteReq": {
+        "live.muteReq": {
             "type": "object",
             "required": [
                 "minutes"
@@ -6733,7 +6951,7 @@
                 }
             }
         },
-        "internal_module_live.sendGiftReq": {
+        "live.sendGiftReq": {
             "type": "object",
             "properties": {
                 "count": {
@@ -6741,7 +6959,7 @@
                 }
             }
         },
-        "internal_module_live.updateRoomReq": {
+        "live.updateRoomReq": {
             "type": "object",
             "required": [
                 "category_id",
@@ -6759,7 +6977,7 @@
                 }
             }
         },
-        "internal_module_report.HandleReq": {
+        "report.HandleReq": {
             "type": "object",
             "required": [
                 "action"
@@ -6793,7 +7011,7 @@
                 }
             }
         },
-        "internal_module_report.SubmitReq": {
+        "report.SubmitReq": {
             "type": "object",
             "required": [
                 "reason_type",
@@ -6832,7 +7050,22 @@
                 }
             }
         },
-        "internal_module_video.PartSubmit": {
+        "response.Body": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "video.PartSubmit": {
             "type": "object",
             "required": [
                 "file_id"
@@ -6847,7 +7080,32 @@
                 }
             }
         },
-        "internal_module_video.SubmitReq": {
+        "video.SaveCategoryReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "parent_id": {
+                    "type": "integer"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                }
+            }
+        },
+        "video.SubmitReq": {
             "type": "object",
             "required": [
                 "category_id",
@@ -6883,7 +7141,7 @@
                     "description": "多P投稿（PRD VID-05）：每项对应一个分P（file_id + 分P标题）；空则单P兼容现状",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_module_video.PartSubmit"
+                        "$ref": "#/definitions/video.PartSubmit"
                     }
                 },
                 "tags": {

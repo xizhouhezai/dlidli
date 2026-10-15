@@ -36,6 +36,21 @@ type Live struct {
 	// CallbackToken SRS http_hooks 共享 token（?token= 或 X-Live-Callback-Token）。
 	// 为空时回调一律拒绝（fail-closed）：宁可推不了流，也不能让伪造回调改房间状态。
 	CallbackToken string
+	Audit         LiveAudit // 截帧机审与快速切断（M4-LIV-05，spec §5E / plan §2D）
+}
+
+// LiveAudit 直播截帧机审配置（M4-LIV-05）。
+//
+// dev 默认 Enabled=false：机审会周期拉起 ffmpeg 进程，默认关闭避免影响其它测试；
+// 上线/联调时用 DLIDLI_LIVE_AUDIT_ENABLED=true 或改 dev.yaml 打开。
+type LiveAudit struct {
+	Enabled              bool    // 截帧机审总开关（dev 默认 false）
+	FrameIntervalSeconds int     // 截帧周期秒（spec §3 硬要求：默认 10s）
+	FlvTimeoutSeconds    int     // 单房间截帧超时秒（ffmpeg 挂死兜底）
+	SrsAPIBase           string  // SRS HTTP API 基址（查流/踢流），如 http://127.0.0.1:1985
+	FrameDir             string  // 截帧图落盘目录（合规存档，spec §4 ≥60 天）
+	BlackYAvgMax         float64 // 黑屏判据：灰度均值 ≤ 此值视为黑屏（plan §2D.5 实测标定）
+	FlatRangeMax         float64 // 纯色遮挡判据：YMAX-YMIN ≤ 此值视为动态范围坍缩
 }
 
 type App struct {
@@ -160,6 +175,26 @@ func Load(path string) (*Config, error) {
 	if cfg.Live.StreamApp == "" {
 		cfg.Live.StreamApp = "live" // 与 SRS conf 的 app 名对齐（部署侧可用 DLIDLI_LIVE_STREAMAPP 覆盖）
 	}
+	// 截帧机审（M4-LIV-05）：周期/超时给零值兜底（配置写 0 或负数时回落默认，避免 ticker panic）
+	audit := &cfg.Live.Audit
+	if audit.FrameIntervalSeconds <= 0 {
+		audit.FrameIntervalSeconds = 10
+	}
+	if audit.FlvTimeoutSeconds <= 0 {
+		audit.FlvTimeoutSeconds = 15
+	}
+	if audit.SrsAPIBase == "" {
+		audit.SrsAPIBase = "http://127.0.0.1:1985"
+	}
+	if audit.FrameDir == "" {
+		audit.FrameDir = "./uploads/live-frames"
+	}
+	if audit.BlackYAvgMax <= 0 {
+		audit.BlackYAvgMax = 24
+	}
+	if audit.FlatRangeMax <= 0 {
+		audit.FlatRangeMax = 12
+	}
 	if err := validateProd(&cfg); err != nil {
 		return nil, err
 	}
@@ -207,6 +242,14 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("live.playdomain", "")
 	v.SetDefault("live.streamapp", "live")
 	v.SetDefault("live.callbacktoken", "")
+	// 截帧机审（M4-LIV-05）：默认关闭，周期 10s（spec §3），阈值取自 plan §2D.5 实测标定
+	v.SetDefault("live.audit.enabled", false)
+	v.SetDefault("live.audit.frameintervalseconds", 10)
+	v.SetDefault("live.audit.flvtimeoutseconds", 15)
+	v.SetDefault("live.audit.srsapibase", "http://127.0.0.1:1985")
+	v.SetDefault("live.audit.framedir", "./uploads/live-frames")
+	v.SetDefault("live.audit.blackyavgmax", 24.0)
+	v.SetDefault("live.audit.flatrangemax", 12.0)
 }
 
 // validateProd 拦截 prod 环境的危险缺省：密钥/DSN 必须显式注入，禁止占位值上线。

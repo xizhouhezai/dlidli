@@ -1,13 +1,14 @@
 # plan：直播
 
 > 对应规格：[spec](/specs/live/spec) ｜ 技术基线：[总体架构](/architecture/overview) · [视频处理流水线](/architecture/video-pipeline)
-> 实施状态：V3.3（2026-10-13 LIV-04 细化）；M4-LIV-02/03/06 已交付、M4-LIV-04 已实现。
+> 实施状态：V3.4（2026-10-15 LIV-05 细化）；M4-LIV-01/02/03/04/06 已交付、M4-LIV-05 已实现。
 >
 > 变更记录：
 > - 2026-08-21 随 spec 迁移为 SDD，技术预研。
 > - 2026-10-13 补 M4-LIV-02 技术决策：房间表结构（§2.1）、WS 通道与 danmaku hub 关系（§2.2）、在线人数实现（§2.4）、开播密钥（§2.5）、API 布局（§3）。
 > - 2026-10-13 补 M4-LIV-03 技术决策：live hub 形态与连接治理（§2B.1）、弹幕持久化口径（§2B.2）、频控参数（§2B.3）、WS 端点布局（§3B）。
 > - 2026-10-13 补 M4-LIV-04 技术决策：资产强一致实现（§2C.1）、充值幂等与 PAY-01 替换点（§2C.2）、礼物/分成表结构（§2C.3）、WS 特效帧（§2C.4）。
+> - 2026-10-15 补 M4-LIV-05 技术决策（§2D）：截帧选型与 Worker 调度（§2D.1）、机审复用 contentmod 与 fail-open 口径（§2D.2）、快速切断的确定性与降级（§2D.3）、表结构与巡查接口（§2D.4）、阈值实测标定（§2D.5）。
 
 ## 1. 方案概览
 
@@ -156,3 +157,69 @@
 
 - live hub 新增消息类型 `gift`（`GiftFrame`：log_id/sender_id/nickname/gift_name/count/effect/level），`BroadcastGift` 走既有房间广播（复用 LIV-03 hub，单连接顶替/慢消费者丢帧语义不变）。
 - 前端（LIV-06 页面挂靠）：`GiftPanel.vue`（礼物列表/余额/连击/赠送，91021 引导提示）+ `GiftEffects.vue`（普通礼物弹幕区连击浮层、高级礼物全屏 CSS 动画——粒子上浮 + 礼物名浮现，4s 退场，不引动画库）。`useLiveDanmaku` 增加 `gift` 帧分发（`giftEvents`）。
+
+## 2D. M4-LIV-05 技术决策（2026-10-15）
+
+对应 spec §5E。四项决策逐条给出选型、理由与否决备选。
+
+### 2D.1 截帧选型与 Worker 调度
+
+**决策：HTTP-FLV + 后端进程内 `time.Ticker` Worker，每周期对该房间截 1 帧。**
+
+- 截帧命令：`ffmpeg -y -loglevel error -i <flv url> -frames:v 1 -f image2 <out>.png`（单帧、单进程、无中间文件）。`-frames:v 1` 在收到首个可解码视频帧后即退出，不需要 `-t`。
+- **源选 HTTP-FLV 而非 HLS**：FLV 是 SRS 实时转封装（`http_remux`），首帧到达即可截；HLS 依赖切片落盘（`hls_fragment` 秒级），截帧至少多等一个切片周期，且新开播房间在首个切片产出前没有 m3u8。
+- **源不选 SRS 截图 API**：SRS 5 的 HTTP API 只有 streams/clients/versions 这类运维端点，**没有截图端点**（已实测 `GET /api/v1/versions` 与 `/api/v1/clients` 的形态）。截帧必须后端调 ffmpeg。
+- **调度**：与 `internal/module/video/transcoder.go` 同风格——`StartLiveAuditWorker(ctx)` 内 `for { select { case <-ctx.Done(): return; case <-ticker.C: ... } }`，在 `router.go` 的 DB/Redis 就绪分支启动。**不引入 Redis 队列 / MQ / 独立 worker 进程**（YAGNI：单机单实例、房间数少，进程内定时器足够；横向扩展时改为「按房间分片 + 分布式锁」是后续项，登记在 §4 风险表）。
+- **每周期遍历 `status=1` 的房间**，逐房间**串行**截帧（避免一瞬间起 N 个 ffmpeg 进程打满 CPU）；单房间超时用 `context.WithTimeout` 兜底（默认 15s），进程被 `exec.CommandContext` 连带杀掉。
+- 开关 `live.audit.enabled` **dev 默认 false**；周期 `live.audit.frameIntervalSeconds` 默认 10（spec §3 硬要求）。
+- 备选（否决）：A) 独立 cmd/worker 进程——本卡只解决「有没有」，拆分是部署演进项；B) SRS 侧 `exec` 旁路脚本截帧——把业务判定逻辑放进媒体服务器，违反分层且不可测。
+
+### 2D.2 截帧机审：复用 contentmod + 本地画面规则 + fail-open
+
+**决策：机审走 `pkg/contentmod`；本卡为其新增图片入口 `CheckImage`，先只实现无外部依赖的本地画面规则。**
+
+- **复用既有接口**（需求原文：复用 `pkg/contentmod` 的既有接口）：`CheckText` 已是视频机审的通用入口；图片检测按包内既有 TODO 的口径「增加 external 实现并保持接口不变」扩展为 `CheckImage(scene, imagePath) Result`。
+- **本地画面规则的实现方式（实测修正）**：**不用 ffprobe**，改用 Go 标准库 `image.Decode` + BT.601 加权自行统计 `YAVG`/`YMIN`/`YMAX`（按步长抽样到约 65536 点，复杂度与分辨率解耦）。
+  - 原因（2026-10-15 实测）：计划初稿写的 `ffprobe -f lavfi -i "movie=<路径>,signalstats"` 在 Windows 上**不可用**——`movie=C:/…`、`movie='C:/…'`、`movie=C\:/…` 三种写法全部报 `Failed to avformat_open_input 'C'`（lavfi 滤镜图把 `:` 当选项分隔符，盘符必被吃掉），只有「工作目录 + 相对文件名」能成功；而 `-i x.png -vf signalstats` 也不行（ffprobe 无 `-vf`）。照抄会导致**恒返回 degraded，即「黑帧永不命中」的静默假通过**。
+  - 纯 Go 实现顺带去掉一个外部进程依赖，并让 `CheckImage` 可在测试里用内存构造的图直接覆盖。
+- **阈值走配置**（`live.audit.blackYAvgMax` / `live.audit.flatRangeMax`，默认值见 §2D.5 实测标定），避免把魔法数写进代码。
+- **外部图审 API 是替换点（写明）**：`contentmod.CheckImage` 当前只做本地规则；接入外部内容安全服务时在同一函数内增加 external 分支（包内既有 TODO 的既定做法），调用方（`live` 审计服务）不改。
+- **fail-open 决策（与项目「Redis 故障放行」口径一致）**：机审链路异常（ffmpeg 不可用 / 图片读不到 / 尺寸异常 / 规则执行 panic）时 **不切断**，只记 `degraded=true` 的截帧记录。理由：直播可用性是 P2 功能的前提，自动化误切（把正常直播切掉）的代价远高于漏判（漏判由**人工巡查**这条腿兜住，spec §3 边界原文即是「截帧机审 + 人工巡查」两条腿）。**这是待替换点**：接入外部图审后，「无法判定」不应再等同于「通过」——应改为按比例告警/转人工队列；本卡在 plan 与 tasks 中登记该替换点。
+- 备选（否决）：A) fail-closed（机审不可用即切断）——机审不可用时会把全部直播切断，线上事故；B) 机审异常静默丢弃——不可审计。本卡选「记录降级事实 + 不切断」。
+
+### 2D.3 快速切断的确定性（SRS API + 降级登记）
+
+**决策：优先走 SRS API 踢流（确定性主通道），不可达时降级为「仅改房间封禁状态 + 流水标记 degraded」。**
+
+- 踢流链路（**字段名以 2026-10-15 真实推流实测为准，勿照抄旧描述**）：`GET /api/v1/streams/` 找到 `name` 匹配 `room_<id>` 且 `publish.active=true` 的流 → 取 `publish.cid` → `DELETE /api/v1/clients/<cid>`。
+  - 实测纠正：`publish.active` / `publish.cid` **只出现在 `/api/v1/streams/`**；`/api/v1/clients/` 里 `publish` 是**布尔** `true`，且其 `stream` 字段是**内部 sid（`vid-…`）而非流名**，流名也在 `name`。按 `/clients/` 解析会取不到 cid。
+  - 两个端点都**必须带尾斜杠**（无斜杠 302 重定向）；`DELETE /api/v1/clients/<id>` 成功返回 `{"code":0}`，**目标不存在返回 `{"code":2049}`（视为成功，幂等）**。
+- **踢流的确切性**：SRS 断开推流后会触发 `on_unpublish` → 后端既有 `StreamStop` 把房间置 status=2（已下播），这一条已经在 LIV-01 验证过（`{"stopped":true}`）。所以「踢流 → 房间状态」是有回调保证的因果链，不需要轮询确认。
+- **降级（SRS API 不可达）**：直接改房间封禁状态 + 落 `cut_mode=degraded` 的违规流水。**不静默**：接口响应与流水都带降级标记，管理端可见。
+- **封禁语义**：`live_room.ban_status`（0 正常 / 1 封禁）+ `ban_reason` / `ban_by` / `ban_at`。**刻意不复用 `status` 枚举**：`status` 是场地生命周期（0 空闲/1 直播中/2 已下播），封禁是合规处置，两者正交；复用会让「封禁中的房间」污染既有 `idx_status` 列表查询与开播校验的语义。
+- **封禁与开播的关系**：`AuthorizePublish`（on_publish 鉴权）增加封禁判定——被封禁房间即使密钥正确也拒绝推流（否则主播一踢就再推，切断形同虚设）。这是本卡对 LIV-01 契约的一处扩展。
+
+### 2D.4 表结构与巡查接口（迁移 0037）
+
+三张表（全 InnoDB / utf8mb4，字段命名对齐既有 live 表）：
+
+- `live_frame_audit`：`room_id`、`anchor_id`、`image_key`（存储键，可空）、`width`/`height`、`pass`、`hit_words`（命中原因）、`degraded`、`cost_ms`、`created_at`。索引 `idx_room_time`（房间 + 时间，巡查按房间看最近判定）。**每周期每房间一行**——这是「判定发生过」的审计凭据（spec §5E.5 要求，保留期 ≥60 天由配置声明）。
+- `live_violation_log`：`room_id`、`anchor_id`、`source`（1 机审 / 2 人工巡查）、`reason`、`cut_mode`（1 srs_api / 2 degraded）、`frame_audit_id`（可空，人工巡查无来源帧）、`cut_by`（0=系统，>0=admin_user.id）、`created_at`。索引 `idx_room_time`、`idx_source`。
+- `live_room` 增列：`ban_status`、`ban_reason`、`ban_by`、`ban_at`（`ALTER TABLE`，与 0034 同表）。
+
+**巡查接口**（挂 `v1.Group("/admin", AdminAuth, RequirePerm("live:audit"))`，写法对齐既有 `RegisterDevRoutes`）：
+
+| 方法/路径 | 说明 |
+| --- | --- |
+| GET `/admin/live/rooms` | 直播中房间列表（含在线人数 + 最近一次截帧判定摘要） |
+| POST `/admin/live/rooms/:id/cut` | 手动切断（body: `reason`），走 §2D.3 同一处置链，source=2 |
+| POST `/admin/live/rooms/:id/restore` | 解封（`ban_status=0`） |
+
+**权限点 `live:audit` 落库**：`admin_permission` 表由 `rbac_model.go` 的 `builtinPerms` 在启动时 seed（`seedRBAC` 用 `clause.OnConflict DoUpdates` 幂等），新增权限点条目 + 内置角色（`review_lead`/`moderator`）归属即可生效；**仅加路由不加权限点会让所有非 super 管理员 403**，故两者必须同改。
+
+### 2D.5 实测标定（2026-10-15，见 `.dev-logs/liv05/`）
+
+- 截帧源与命令形态、单帧耗时、产出尺寸：见 `.dev-logs/liv05/recon/`。
+- 黑帧/纯色阈值标定（`YAVG` / `YMIN`-`YMAX` 差值）：见 `.dev-logs/liv05/recon/thresholds.md`；配置默认值取自该实测量化区间。
+
+
