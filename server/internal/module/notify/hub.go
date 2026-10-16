@@ -2,11 +2,10 @@ package notify
 
 import (
 	"encoding/json"
-	"net/http"
-	"strings"
 	"sync"
 	"time"
 
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -39,24 +38,15 @@ type wsNotify struct {
 }
 
 // NewHub 构建通知 Hub（Origin 白名单防跨站 WS 劫持）。
-func NewHub(allowOrigins []string, log *zap.Logger) *Hub {
-	allow := make(map[string]bool, len(allowOrigins))
-	for _, o := range allowOrigins {
-		allow[strings.TrimRight(o, "/")] = true
-	}
+func NewHub(origin wsorigin.Config, log *zap.Logger) *Hub {
 	return &Hub{
 		users: make(map[int64]*userRoom),
 		log:   log,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			CheckOrigin: func(r *http.Request) bool {
-				o := r.Header.Get("Origin")
-				if o == "" {
-					return true
-				}
-				return allow[strings.TrimRight(o, "/")]
-			},
+			// Origin 校验策略见 pkg/wsorigin（四 hub 共用，防语义漂移）
+			CheckOrigin: wsorigin.New(origin, log),
 		},
 	}
 }

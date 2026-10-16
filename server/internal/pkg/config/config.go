@@ -137,6 +137,11 @@ type App struct {
 	Env          string // dev / test / staging / prod
 	Port         int
 	AllowOrigins []string
+	// AllowNativeClients 开启后，WS 握手在「Origin 不在白名单」时若请求携带
+	// 经 JWT 校验有效的 access token 则放行（供鸿蒙等 native 客户端使用：
+	// ArkTS WebSocket 自生成 `http://<host>` 一类浏览器不会产生的 Origin）。
+	// 默认 false —— 漏配按拒绝处理（fail closed），不会静默放宽浏览器防护。
+	AllowNativeClients bool
 	// InviteCodeRequired 内测开关：开启后新注册（短信自动注册/邮箱注册）须携带一次性邀请码（ACC-44）
 	InviteCodeRequired bool
 	// AutoApprove 仅限开发环境：稿件提交后自动过审（审核工作台 M1-ADM 上线前的联调便利）
@@ -356,6 +361,7 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("app.port", 0)
 	v.SetDefault("app.autoapprove", false)
 	v.SetDefault("app.alloworigins", []string{})
+	v.SetDefault("app.allownativeclients", false)
 	v.SetDefault("log.level", "")
 	v.SetDefault("mysql.dsn", "")
 	v.SetDefault("mysql.maxopenconns", 0)

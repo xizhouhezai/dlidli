@@ -21,6 +21,8 @@ tmp_*
 server/tmp_*
 # Go 构建缓存（沙箱会话 GOCACHE 指入工作区时产生）
 .gocache/
+# 同上，带后缀的会话级构建缓存/产物目录（GOCACHE 落不进 .gocache 时的替代路径）
+.gocache-dsh/
 # npm 缓存（沙箱会话把 npm cache 指入工作区时产生）
 .npm-cache/
 # 沙箱会话的运行时工作目录（推流/切片/证据等，脚本自建）

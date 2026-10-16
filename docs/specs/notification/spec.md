@@ -6,6 +6,9 @@
 >
 > 变更记录：
 > - 2026-08-21 自 PRD `notification.md`（V1.0 草案）迁移为 SDD；补录 MSG-20（离线推送，原 §2.3 未编号条目）
+> - 2026-10-16 新增 §2.4 与 MSG-21~24：WS 握手 Origin 口径与 native 客户端例外
+>   （`app.allowNativeClients`，默认 fail closed）。原因：鸿蒙 ArkTS WebSocket 自生成
+>   `http://<host>` 来源被纯白名单拒绝，导致实时通道全程降级轮询
 
 ## 1. 背景与用户故事
 
@@ -42,6 +45,36 @@
 | ID | 需求 | 验收标准（EARS） | 优先级 |
 | --- | --- | --- | --- |
 | MSG-20 | 离线推送（迁移补录） | **WHERE** 用户离线且绑定 App **THE SYSTEM SHALL** 经厂商通道推送，运营推送每日 ≤ 3 条；特别关注实时推送、普通关注每日聚合 | P2（V3） |
+
+### 2.4 WebSocket 握手 Origin 口径（2026-10-16 补录）
+
+> 本节的 WS 通道指 `notification` 域两个实时端点：`/notifications/ws`（MSG-13 通知）与
+> `/messages/ws`（MSG-13 私信）。同口径亦适用于 `danmaku` 与 `live` 域的 WS 端点。
+
+**背景**：浏览器同源策略不约束 WebSocket，故服务端必须校验 `Origin` 防跨站 WS 劫持（CSWSH）。
+但移动端/native 客户端（鸿蒙 ArkTS）会**自生成** `Origin`（形如 `http://<host>`、不带端口，
+`connect()` 的同名 header 覆盖不掉），按纯白名单判定必然被拒 → 端侧降级为轮询。
+
+| ID | 需求 | 验收标准（EARS） | 优先级 |
+| --- | --- | --- | --- |
+| MSG-21 | WS 握手来源校验 | **WHEN** WS 握手携带 `Origin` **THE SYSTEM SHALL** 仅放行白名单（`app.allowOrigins`）内的来源；**WHEN** 请求完全不带 `Origin` 头（非浏览器客户端）**THE SYSTEM SHALL** 放行 | P1 |
+| MSG-22 | native 客户端来源例外 | **WHERE** `app.allowNativeClients` 开启 **AND** `Origin` 不在白名单 **AND** 请求携带经 JWT 校验有效的 access token（`?token=` 或 `Authorization: Bearer`）**THEN THE SYSTEM SHALL** 放行该次握手；**IF** token 缺失或无效 **THEN THE SYSTEM SHALL** 拒绝（403） | P1 |
+| MSG-23 | 例外默认关闭（fail closed） | **WHERE** `app.allowNativeClients` 为 `false`（默认）**THE SYSTEM SHALL** 对非白名单 `Origin` 一律拒绝——**即使**请求携带有效 token | P1 |
+| MSG-24 | 游客 native 连接的边界 | **WHERE** 请求未携带有效 token（游客）**AND** `Origin` 不在白名单 **THEN THE SYSTEM SHALL** 拒绝该次握手；即允许游客只读的 WS 端点，其 native 客户端仍须让来源命中白名单 | P1 |
+
+**安全性约束（实现不得违反）**
+
+- 例外判据必须是**显式凭据**，**不得**按来源形态（`file://`、无端口 `http://<host>` 等）裸放行。
+- 本仓库凭据**只走 Bearer / query token，不使用 Cookie 会话**（`Set-Cookie`/`document.cookie` 零使用）。
+  这是本例外不扩大浏览器攻击面的前提：浏览器不会自动携带该凭据，恶意页面拿不到 token；
+  若将来引入 Cookie 鉴权，**必须重新评估本节**（届时 CSWSH 前提成立，例外需另加约束）。
+- 四个 WS hub（danmaku/notify/im/live）**必须共用同一实现**，防止策略语义漂移。
+- **未登录（游客）连接不受例外覆盖**：例外判据是有效 token，游客没有 token，
+  故其 `Origin` 仍须命中白名单。对允许游客只读的弹幕 WS，这一点必须在部署时知悉
+  （见 MSG-24 与 [deployment §5.6](/project/deployment)）。
+- 鸿蒙 ArkTS 自生成 `Origin` 的默认形态是 `http://<host>`（**http 前缀、不带端口**），
+  与 `https://<域名>` 白名单条目**不相等**；运维不得假定「App 同源即命中」，
+  须以真实握手日志（`WS Origin`）为准。
 
 ## 3. 边界与异常
 

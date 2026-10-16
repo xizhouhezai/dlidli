@@ -4,13 +4,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"go.uber.org/zap"
 )
 
 // TestHubPushRemoveRace 回归：Push 迭代用户房间与 remove（delete+close(send)）
 // 并发不得产生 map 竞态或 send on closed channel（用 go test -race 验证）。
 func TestHubPushRemoveRace(t *testing.T) {
-	h := NewHub(nil, zap.NewNop())
+	h := NewHub(wsorigin.Config{}, zap.NewNop())
 	const n = 200
 	clients := make([]*client, n)
 	h.mu.Lock()
@@ -41,7 +42,7 @@ func TestHubPushRemoveRace(t *testing.T) {
 
 // TestHubPushOfflineNoop 无在线连接时 Push 不应 panic/阻塞（no-op）。
 func TestHubPushOfflineNoop(t *testing.T) {
-	h := NewHub(nil, zap.NewNop())
+	h := NewHub(wsorigin.Config{}, zap.NewNop())
 	h.Push(999, Item{ID: "1"})
 	if len(h.users) != 0 {
 		t.Fatalf("离线推送不应创建房间, got %d", len(h.users))
