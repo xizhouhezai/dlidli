@@ -113,6 +113,13 @@ func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver,
 	if err != nil || left > 0 {
 		return
 	}
+	// 草稿态不推进（M4-LIV-14 直播回放）：回放稿件建成即为**草稿**，发布与否由主播决定
+	// （spec LIV-14「主播可选发布」）。若在这里一律推到待审/已发布，
+	// 「未发布只有主播可见」当场失效——稿件的可见性由 status 决定，绝不能由转码完成时间决定。
+	if v, err := s.repo.FindVideoByID(job.VideoID); err == nil && v != nil && v.Status == StatusDraft {
+		log.Info("草稿稿件转码完成，状态保持草稿（待作者发布）")
+		return
+	}
 	fields := map[string]any{"status": StatusReviewing}
 	if s.cfg.App.AutoApprove {
 		fields["status"] = StatusPublished

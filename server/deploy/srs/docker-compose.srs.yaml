@@ -24,6 +24,11 @@ services:
       - ./srs.conf:/usr/local/srs/conf/srs.conf:ro
       # HLS 切片与 FLV 缓存落命名卷（容器 /data/streams）
       - srs-data:/data
+      # DVR 录制（M4-LIV-14）：**bind mount 而非命名卷** —— 后端跑在宿主上，
+      # 只能从宿主可见的目录读取录制文件（命名卷仅容器可达，宿主得逐次 docker cp）。
+      # 两侧必须指向同一目录：容器 /data/dvr ←→ 宿主 server/deploy/srs/dvr
+      # （后端 configs/dev.yaml 的 live.replay.dvrDir 指同一处）。
+      - ./dvr:/data/dvr
     # 必须显式指定配置：SRS 镜像默认 CMD 是 `./objs/srs -c conf/docker.conf`，只挂载 srs.conf 而不覆盖
     # command 时 SRS 仍读镜像内置 docker.conf（HTTP 端口 8080 而非 8180）→「配置挂载了却没生效」，
     # 表现为宿主 8180 无服务、拉流失败（2026-10-13 实测踩到）

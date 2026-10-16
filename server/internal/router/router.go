@@ -278,6 +278,9 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 			})
 		liveSvc.SetHub(liveHub)
 		liveSvc.SetLiveDeps(&live.LiveDeps{Account: accountSvc, RDB: res.Redis})
+		// 直播回放（M4-LIV-14，spec LIV-14 / plan liv14）：把 SRS DVR 录制落盘文件
+		// 在下播时登记为回放素材，经 video 域转码流水线生成**草稿**稿件（主播可选发布）。
+		liveSvc.SetReplayDeps(&live.LiveReplayDeps{Video: videoSvc, Store: res.Storage})
 		live.NewHandler(liveSvc).WithHub(liveHub).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
 		// 礼物系统（M4-LIV-04）：金瓜子资产强一致（事务+行锁）、赠送与分成、WS 特效帧；
@@ -296,6 +299,13 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 			liveSvc.StartAuditWorker(context.Background())
 		} else {
 			log.Info("截帧机审未启用（live.audit.enabled=false，spec §5E.1 dev 默认关闭）")
+		}
+		// 回放保留期清理（M4-LIV-14，spec §4「直播内容存档 ≥60 天」）：
+		// 只在回放启用时启动 —— 关闭时既无录制也无清理对象。
+		if cfg.Live.Replay.Enabled {
+			liveSvc.StartReplayCleaner(context.Background())
+		} else {
+			log.Info("直播回放未启用（live.replay.enabled=false，dev 默认关闭，M4-LIV-14）")
 		}
 		live.NewPatrolHandler(liveSvc).RegisterPatrolRoutes(
 			v1.Group("/admin", middleware.AdminAuth(cfg.JWT.Secret), permGift("live:audit")))

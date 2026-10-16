@@ -93,7 +93,29 @@ type Live struct {
 	// CallbackToken SRS http_hooks 共享 token（?token= 或 X-Live-Callback-Token）。
 	// 为空时回调一律拒绝（fail-closed）：宁可推不了流，也不能让伪造回调改房间状态。
 	CallbackToken string
-	Audit         LiveAudit // 截帧机审与快速切断（M4-LIV-05，spec §5E / plan §2D）
+	Audit         LiveAudit   // 截帧机审与快速切断（M4-LIV-05，spec §5E / plan §2D）
+	Replay        LiveReplay  // 直播回放（M4-LIV-14，spec LIV-14 / plan liv14）
+}
+
+// LiveReplay 直播回放配置（M4-LIV-14）。
+//
+// 两个开关分开，是因为它们控制的是**两件成本不同的事**（plan liv14 §3.6）：
+//   - Enabled（录制）：SRS DVR 落盘，成本是磁盘 —— 关掉它就不产生任何录制文件；
+//   - AutoGenerate（自动生成）：下播后转码 + 建稿，成本是 CPU + 稿件列表噪声。
+//
+// dev 两者默认 false：录制会按分钟产生几十 MB 的文件，每次联调都留一堆大文件。
+// 验收/联调时用环境变量或 dev.yaml 打开（本卡验收即如此实测）。
+type LiveReplay struct {
+	Enabled bool // 回放总开关（关=不登记素材、不清理）
+	// AutoGenerate 下播后自动转码生成回放稿件。关=只登记素材（运维可事后手动补生成）。
+	AutoGenerate     bool
+	DvrDir           string // SRS DVR 落盘目录（宿主路径），如 ./deploy/srs/dvr
+	MaxDurationHours int    // 单场录制时长上限（小时）：超过则拒绝并登记，不做无界转码（plan liv14 D2）
+	RetentionDays    int    // 录制文件保留天数（spec §4 合规 ≥60 天）
+	CleanIntervalSec int    // 保留期清理任务周期（秒）
+	CategoryID       int64  // 回放稿件落的分区（0=取第一个启用分区）
+	// Copyright 回放稿件版权标记：1 自制（直播是主播自制内容）
+	Copyright int8
 }
 
 // LiveAudit 直播截帧机审配置（M4-LIV-05）。
@@ -252,6 +274,24 @@ func Load(path string) (*Config, error) {
 	if audit.FlatRangeMax <= 0 {
 		audit.FlatRangeMax = 12
 	}
+	// 直播回放（M4-LIV-14）：周期/保留期给零值兜底（写 0 或负数时回落默认，避免 ticker panic）。
+	// 注意 Enabled/AutoGenerate 是布尔，无「零值兜底」—— false 就是它们有意义的默认值（dev 默认关）。
+	replay := &cfg.Live.Replay
+	if replay.DvrDir == "" {
+		replay.DvrDir = "./deploy/srs/dvr"
+	}
+	if replay.MaxDurationHours <= 0 {
+		replay.MaxDurationHours = 4
+	}
+	if replay.RetentionDays <= 0 {
+		replay.RetentionDays = 60 // spec §4 合规下限：≥60 天，不得配更小
+	}
+	if replay.CleanIntervalSec <= 0 {
+		replay.CleanIntervalSec = 3600
+	}
+	if replay.Copyright != 1 && replay.Copyright != 2 {
+		replay.Copyright = 1
+	}
 	// 支付域（M4-PAY-01）：超时/阈值/上限给零值兜底；mock 密钥 dev 缺省（prod 由 validateProd 强制注入）
 	pay := &cfg.Pay
 	if pay.OrderTimeoutMinutes <= 0 {
@@ -356,6 +396,16 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("live.audit.framedir", "./uploads/live-frames")
 	v.SetDefault("live.audit.blackyavgmax", 24.0)
 	v.SetDefault("live.audit.flatrangemax", 12.0)
+	// 直播回放（M4-LIV-14）：dev 录制与自动生成均默认关闭（见 LiveReplay 注释）；
+	// 保留期默认 60 天（spec §4 合规下限）。
+	v.SetDefault("live.replay.enabled", false)
+	v.SetDefault("live.replay.autogenerate", false)
+	v.SetDefault("live.replay.dvrdir", "./deploy/srs/dvr")
+	v.SetDefault("live.replay.maxdurationhours", 4)
+	v.SetDefault("live.replay.retentiondays", 60)
+	v.SetDefault("live.replay.cleanintervalsec", 3600)
+	v.SetDefault("live.replay.categoryid", 0)
+	v.SetDefault("live.replay.copyright", 1)
 	// 支付域（M4-PAY-01）
 	v.SetDefault("pay.ordertimeoutminutes", 15)
 	v.SetDefault("pay.stuckhours", 24)

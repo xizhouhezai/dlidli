@@ -90,6 +90,28 @@ live:
     blackYAvgMax: 24 # 灰度均值 ≤ 24 判为黑屏
     flatRangeMax: 12 # YMAX-YMIN ≤ 12 判为纯色遮挡
 
+  # 直播回放（M4-LIV-14，spec LIV-14 / plan liv14）。
+  # **两个开关默认关闭**：录制按分钟产生几十 MB 文件，自动生成还会占转码 CPU 并往稿件列表塞草稿，
+  # 每次联调都开着会污染其它测试（与 live.audit.enabled / vip.renewEnabled 同一口径）。
+  # 验收/联调时打开：DLIDLI_LIVE_REPLAY_ENABLED=true DLIDLI_LIVE_REPLAY_AUTOGENERATE=true
+  # 错误码：91031 回放未启用 / 91032 回放不存在或不属于您 / 91033 重复发布 / 91034 超时长上限。
+  replay:
+    enabled: false # 回放总开关（SRS DVR 录制 + 素材登记 + 保留期清理）
+    autoGenerate: false # 下播后自动转码生成草稿稿件；关=仅登记素材，可事后手动补生成
+    # SRS DVR 落盘目录（宿主路径）—— 必须与 deploy/srs/docker-compose.srs.yaml 的
+    # `./dvr:/data/dvr` bind mount 指向同一份宿主目录，否则后端找不到录制文件。
+    dvrDir: ./deploy/srs/dvr
+    # 单场直播录制时长上限（小时）：超限则拒绝生成并登记原因。
+    # 依据：整段直播是**一次性转码源**，4 小时 1080p 直播的 FLV 约 10-25GB，
+    # 超过后单机转码的时延与磁盘占用都不可控（plan liv14 D2）。
+    maxDurationHours: 4
+    # 录制文件保留天数（spec §4 合规：直播内容存档 ≥60 天，不得配更小）。
+    # 清理任务删除的是**录制文件**；稿件与登记行保留以维追溯（plan liv14 §3.5）。
+    retentionDays: 60
+    cleanIntervalSeconds: 3600 # 保留期清理扫描周期（秒）
+    categoryID: 0 # 回放稿件分区；0 = 取第一个启用分区（回放是自动产生的，不能因未选分区而失败）
+    copyright: 1 # 1 自制（直播是主播自制内容）
+
 # 支付域（M4-PAY-01，spec §6 / plan §2E）。
 # 资质现实：真实支付宝/微信需要支付通道资质，当前不具备 —— 只有 mock 渠道可跑通全链路，
 # alipay/wechat 为换入点（调用返回 92004「渠道未实现」，接入步骤见 internal/module/pay/alipay.go）。

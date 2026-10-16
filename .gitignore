@@ -26,6 +26,10 @@ server/tmp_*
 # 沙箱会话的运行时工作目录（推流/切片/证据等，脚本自建）
 .liv01-run/
 .pay02run/
+# 直播回放（M4-LIV-14）会话运行时目录：本地 MySQL/Redis 数据、DVR 录制、上传产物
+.liv14-run/
+# SRS DVR 运行时录制的原始文件（*.flv 体积大且属运行时产物；目录本身由 README/.gitkeep 保住）
+server/deploy/srs/dvr/**/*.flv
 
 # 会话归档解包与本地环境探测产物（含安装包，不入库）
 .session-extract/
