@@ -460,6 +460,8 @@ pnpm h5:build                       # H5：产出 apps/h5/dist/build/h5，按普
 - [ ] SRS 直播服务器已起（`server/deploy/srs/`），1935/8180 对目标网络放通、1985 仅内网
 - [ ] `srs.conf` 的 `http_hooks` token 与后端 `live.callbackToken` 一致，且**未沿用 dev 默认值**（两个位置都要改：SRS 侧是字面值，见 §5.5 坑 2）
 - [ ] SRS 启动命令带 `-c conf/srs.conf`（不带则读镜像内置 conf，配置不生效，见 §5.5 自检）
+- [ ] `app.allowOrigins` 已替换为**全部**正式前端来源（逐个列出，不含通配）；跨源 App 场景按 §5.6 决定是否开启 `app.allowNativeClients`
+- [ ] 上线后在后端日志核对没有非预期的 `WS Origin 拒绝`（§5.6）
 
 ### 5.5 SRS 直播服务器（M4-LIV-01）
 
@@ -578,6 +580,83 @@ SRS 会**直接拒绝推流**。
 已验证：`srs.conf` 指令结构（对照 SRS 5 官方配置示例与文档）、端口 1935/8180/1985
 本机空闲（`netstat` 实测无监听）、与后端回调契约的路径/token 一致性。
 未验证：容器启动、RTMP 实际收流、HLS/FLV 实际播放、回调实际抵达、端到端延迟。
+
+---
+
+### 5.6 WebSocket Origin 策略
+
+四个实时通道（弹幕 / 通知 / 私信 / 直播弹幕）在握手时都校验 `Origin`，
+实现统一在 `server/internal/pkg/wsorigin`，由 `router.go` 注入同一份配置。
+
+| 通道 | 端点 |
+| --- | --- |
+| 弹幕 | `GET /api/v1/videos/{bvid}/danmaku/ws` |
+| 通知 | `GET /api/v1/notifications/ws` |
+| 私信 | `GET /api/v1/messages/ws` |
+| 直播弹幕 | `GET /api/v1/live/rooms/{id}/ws` |
+
+#### 判定顺序
+
+1. **无 `Origin` 头** → 放行。原生客户端 / 脚本 / 服务端本就不发该头。
+2. **`Origin` 命中 `app.allowOrigins`** → 放行（浏览器端正常路径）。
+3. **`Origin` 未命中，且 `app.allowNativeClients` 已开启，且请求携带经 JWT 校验有效的
+   access token**（`?token=` 或 `Authorization: Bearer`）→ 放行。用于鸿蒙等 native 客户端。
+4. 其余 → 拒绝（握手 403）。
+
+放行/拒绝都会写日志，便于运维核对来自动判断走了哪条分支：
+`WS Origin 放行（native 客户端：有效 token）` / `WS Origin 拒绝`。
+
+#### 为什么 `allowNativeClients` 不会让浏览器端更不安全
+
+跨站 WS 劫持（CSWSH）成立的前提是：**浏览器会自动为恶意页面附上受害站点的凭据**。
+本仓库的 WS 凭据只有 Bearer / query token（**全仓无 Cookie 鉴权**，
+`Set-Cookie` / `document.cookie` 零命中），token 存在 `localStorage`（Web）与
+偏好存储（鸿蒙），**不由浏览器环境自动携带**。因此：
+
+- 恶意页面既无法让浏览器附上受害者的 token，也就拿不到方案 3 才有的放行；
+- 而**已经持有** token 的攻击者，本就能在浏览器之外直接调用 API —— 放行它并不新增攻击面；
+- 浏览器**强制设置** `Origin`，页面脚本无法伪造该头，所以「命中白名单即放行」这一条
+  依然把浏览器来源限制在运维显式列出的域名内。
+
+换言之：白名单继续负责「哪些**浏览器来源**可信」，`allowNativeClients` 负责
+「**非浏览器来源**是否可信」——后者以**显式凭据**为判据，而不是按来源形态裸放行
+（`file://` / `http://<host>` 在无有效 token 时一律 403）。
+
+#### 上线运维步骤（prod）
+
+1. 把 `server/configs/prod.yaml` 的 `https://dlidli.example.com # TODO: 替换为正式域名`
+   替换为**全部**正式前端来源，逐个列出（Web 用户站、管理后台、H5 站点），不要用通配：
+   ```yaml
+   allowOrigins:
+     - https://www.<正式域名>
+     - https://admin.<正式域名>
+     - https://m.<正式域名>
+   ```
+   **漏配的后果**：该来源的浏览器端实时通道会被 403 拒绝（页面会降级轮询）。
+2. **鸿蒙 App 不能假定「同源即命中」**：ArkTS 自生成 `Origin` 的默认形态是
+   `http://<host>`——**http 前缀且不带端口**（见 `apps/harmony/.../DanmakuSocket.ets` 的实测注释）。
+   若 App 连 `wss://<正式域名>` 而白名单只写了 `https://<正式域名>`，**精确匹配仍会失败**。
+   上线时按第 4 步抓一次真实握手日志核对；必要时补一条 `http://<正式域名>` 条目，
+   或直接开启 `allowNativeClients`（二选一即可）。
+3. 若 App 走**独立 API 域名**（跨源）且无法写进白名单：把 `allowNativeClients` 置为 `true`。
+   此时 App 的 WS 必须携带有效 token（鸿蒙端 `DanmakuSocket` 已自动带 `?token=`）。
+4. 灰度核对：连接后在后端日志检索 `WS Origin`，确认没有预期之外的 `WS Origin 拒绝`。
+
+> **默认值语义**：`allowNativeClients` 默认 `false`（fail closed）。
+> 关闭时，非白名单 `Origin` **一律 403——即使携带有效 token**，
+> 即行为与升级前完全一致，漏配不会静默放宽浏览器防护。
+>
+> **游客连接的边界**：例外判据是 token，因此**未登录的 native 连接不被该例外覆盖**。
+> 弹幕 WS（`/videos/{bvid}/danmaku/ws`）允许游客只读，故若希望**游客**也能用 App 实时通道，
+> 仍须让 App 的来源命中 `allowOrigins`（即上面第 2 步）。
+
+#### 各环境现状
+
+| 环境 | `allowOrigins` | `allowNativeClients` |
+| --- | --- | --- |
+| dev | 5173/5174/5175/5176 + `http://127.0.0.1`、`http://10.0.2.2`、`http://localhost` | `true` |
+| staging | 5173/5174/5175/5176（只列真实前端来源） | `true` |
+| prod | `https://dlidli.example.com`（TODO，待替换） | `false`（按需开启，见上文第 3 步） |
 
 ---
 

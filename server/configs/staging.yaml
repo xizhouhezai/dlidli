@@ -10,6 +10,12 @@ app:
     - http://localhost:5173
     - http://localhost:5174
     - http://localhost:5175
+    - http://localhost:5176
+    # 注意：staging 与 prod 同口径，**只列真实前端来源**，不添加 dev 那三条
+    # 无条件主机白名单（`http://localhost` 等）——那些是 dev 的本地便利项。
+    # native 客户端（鸿蒙等）走下方 allowNativeClients 的 token 例外，
+    # 见 configs/dev.yaml 同名注释与 docs/project/deployment.md「WS Origin 策略」。
+  allowNativeClients: true
 
 log:
   level: info

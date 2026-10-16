@@ -9,6 +9,7 @@ import (
 	"github.com/dlidli/server/internal/module/account"
 	"github.com/dlidli/server/internal/pkg/config"
 	"github.com/dlidli/server/internal/pkg/snowflake"
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -53,7 +54,7 @@ func vipTestSvc(t *testing.T, db *gorm.DB, vip VipBadgeProvider) *Service {
 	cfg := &config.Config{}
 	acct := account.NewService(account.NewRepo(db), nil, cfg, zap.NewNop(), nil)
 	repo := NewRepo(db)
-	hub := NewHub(nil, zap.NewNop())
+	hub := NewHub(wsorigin.Config{}, zap.NewNop())
 	svc := &Service{
 		repo:   repo,
 		online: NewOnline(nil, repo, zap.NewNop()),

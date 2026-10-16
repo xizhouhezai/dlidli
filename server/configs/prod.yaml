@@ -8,6 +8,26 @@ app:
   autoApprove: false # 生产必须走人工审核
   allowOrigins:
     - https://dlidli.example.com # TODO: 替换为正式域名
+    # 上线运维步骤（必须做，否则正式域名的 Web 端弹幕 WS 会被拒）：
+    #   1. 把上面这行替换为**全部**正式前端来源，逐个列出、不要用通配：
+    #      Web 用户站、管理后台（若与管理后台同域名则只列一次）、H5 站点；
+    #      形如 https://www.<域名> / https://admin.<域名> / https://m.<域名>。
+    #   2. **鸿蒙 App 不能假定「同源即命中」**：ArkTS 自生成 Origin 的默认形态是
+    #      `http://<host>`（**http 前缀**，不带端口，见 apps/harmony 的 DanmakuSocket 注释）。
+    #      若 App 连 `wss://<域名>` 而白名单只写了 `https://<域名>`，**精确匹配仍会失败**。
+    #      上线时按下方第 4 步抓一次真实握手日志核对，必要时补 `http://<域名>` 条目，
+    #      或直接开启 allowNativeClients（见下）——两者选一即可。
+    #   3. 若 App 走独立 API 域名（跨源），把该 API 来源也加进白名单；仍不足时
+    #      再开启 allowNativeClients（见下）。
+    #   4. 灰度核对：连接后检索后端日志 `WS Origin`，确认无预期之外的「拒绝」。
+  # native 客户端例外（默认关闭，fail closed）。开启后：Origin 不在 allowOrigins 时，
+  # 请求须携带**经 JWT 校验有效的** access token 才放行（?token= 或 Authorization 头）。
+  # 何时需要：App 的 WS 与 Web 不同源，且无法把 App 自生成来源写进白名单时。
+  # 注意：判据是 token，因此**未登录（游客）的 native 连接不受此例外覆盖** ——
+  # 游客要能连，仍须其来源命中 allowOrigins（弹幕 WS 允许游客只读）。
+  # 浏览器防护不受影响：Origin 由浏览器强制设置，恶意页面既改不了它也拿不到受害者 token；
+  # 本仓库无 Cookie 鉴权，故不存在「浏览器自动携带凭据」的跨站劫持面。
+  allowNativeClients: false
 
 log:
   level: info

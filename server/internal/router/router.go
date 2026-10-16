@@ -37,6 +37,7 @@ import (
 	"github.com/dlidli/server/internal/pkg/metrics"
 	"github.com/dlidli/server/internal/pkg/response"
 	"github.com/dlidli/server/internal/pkg/tracing"
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -125,6 +126,15 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 
 	optionalAuthMW := middleware.OptionalAuth(cfg.JWT.Secret)
 
+	// WS Origin 校验策略（四个 hub 共用一份）：浏览器白名单来自 app.allowOrigins，
+	// native 例外（携带有效 token 放行非白名单 Origin）由 app.allowNativeClients 控制，
+	// 默认关闭。策略实现在 pkg/wsorigin，四个 hub 传同一 Config 以杜绝语义漂移。
+	wsOrigin := wsorigin.Config{
+		AllowOrigins:       cfg.App.AllowOrigins,
+		JWTSecret:          cfg.JWT.Secret,
+		AllowNativeClients: cfg.App.AllowNativeClients,
+	}
+
 	// 需登录路由组：鉴权 + 写接口限流（合并为单一中间件，保证限流先于业务执行；
 	// 仅统计 POST/PUT/PATCH/DELETE，依赖 Redis 不可用时放行）
 	rateLimiter := middleware.NewRateLimiter(res.Redis, cfg.RateLimit.PerMinute, log)
@@ -175,12 +185,12 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 			videoSvc.StartTranscodeWorkers(context.Background(), res.Storage)
 		}
 
-		danmakuHub := danmaku.NewHub(cfg.App.AllowOrigins, log)
+		danmakuHub := danmaku.NewHub(wsOrigin, log)
 		danmakuSvc := danmaku.NewService(danmaku.NewRepo(res.DB), videoSvc, accountSvc, growthSvc, res.Redis, danmakuHub, cfg.JWT.Secret, log)
 		danmaku.NewHandler(danmakuSvc).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
 		// 通知实时推送 Hub（M2-MSG-02 comet）：按用户房间推送，Origin 白名单防跨站
-		notifyHub := notify.NewHub(cfg.App.AllowOrigins, log)
+		notifyHub := notify.NewHub(wsOrigin, log)
 		notifySvc := notify.NewService(notify.NewRepo(res.DB), accountSvc, log)
 		notifySvc.SetHub(notifyHub)
 		notify.NewHandler(notifySvc).RegisterRoutes(v1, authedRateLimited)
@@ -243,7 +253,7 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		collection.NewHandler(collectionSvc).RegisterRoutes(v1, authedRateLimited)
 
 		// 私信 IM（M3-IM）：会话/消息 + 发送限制 + 机审 + WS 实时推送
-		imHub := im.NewHub(cfg.App.AllowOrigins, log)
+		imHub := im.NewHub(wsOrigin, log)
 		imSvc := im.NewService(im.NewRepo(res.DB), accountSvc, relationSvc, imHub, log)
 		im.NewHandler(imSvc).RegisterRoutes(v1, authedRateLimited)
 
@@ -266,7 +276,7 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		liveSvc := live.NewService(liveRepo, liveOnline, cfg, log)
 		// 直播弹幕（M4-LIV-03）：独立 live hub（不复用 danmaku hub，plan live §2A.2），
 		// 弹幕校验链与在线计数回调经 SetDeps 注入（live 不反向构造 account）
-		liveHub := live.NewHub(cfg.App.AllowOrigins, log)
+		liveHub := live.NewHub(wsOrigin, log)
 		// SendDanmaku 签名为 (uid, roomID)，hub 回调按 (roomID, uid) 传入——此处适配
 		liveHub.SetDeps(
 			func(ctx context.Context, roomID, uid int64, content string) error {

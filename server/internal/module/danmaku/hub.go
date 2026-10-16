@@ -2,13 +2,12 @@ package danmaku
 
 import (
 	"encoding/json"
-	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/dlidli/server/internal/middleware"
 	"github.com/dlidli/server/internal/pkg/response"
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -43,25 +42,16 @@ type client struct {
 	uid  int64 // 已登录用户 ID（游客 0，仅读）
 }
 
-func NewHub(allowOrigins []string, log *zap.Logger) *Hub {
-	allow := make(map[string]bool, len(allowOrigins))
-	for _, o := range allowOrigins {
-		allow[strings.TrimRight(o, "/")] = true
-	}
+func NewHub(origin wsorigin.Config, log *zap.Logger) *Hub {
 	return &Hub{
 		rooms: make(map[int64]*room),
 		log:   log,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			// 校验 Origin 在白名单内（无 Origin 头放行，非浏览器客户端）；防跨站 WS 劫持
-			CheckOrigin: func(r *http.Request) bool {
-				o := r.Header.Get("Origin")
-				if o == "" {
-					return true
-				}
-				return allow[strings.TrimRight(o, "/")]
-			},
+			// Origin 校验策略：四个 hub 共用 pkg/wsorigin 单一实现（防语义漂移），
+			// 浏览器白名单防护不变，native 例外须显式开启且携带有效 token。
+			CheckOrigin: wsorigin.New(origin, log),
 		},
 	}
 }
