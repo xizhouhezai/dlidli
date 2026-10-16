@@ -118,6 +118,11 @@ var (
 	ErrLiveRoomBanned     = New(91028, "直播间已被封禁")
 	ErrLiveRoomNotBanned  = New(91029, "直播间未被封禁")
 	ErrLiveNoActiveStream = New(91030, "直播间当前无推流")
+	// 直播回放（M4-LIV-14，spec LIV-14 / plan liv14 §3.6）
+	ErrLiveReplayDisabled = New(91031, "直播回放未启用")
+	ErrLiveReplayNotFound = New(91032, "回放不存在或不属于您")
+	ErrLiveReplayNotDraft = New(91033, "回放已发布，请勿重复发布")
+	ErrLiveReplayTooLong  = New(91034, "直播时长超出回放上限，未生成回放")
 )
 
 // 支付错误码（92001+，商业化段支付子段，M4-PAY-01，spec §6.8 / plan §2E.9）

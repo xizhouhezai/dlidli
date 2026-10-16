@@ -65,6 +65,13 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup, auth, optionalAuth gin.Han
 		// 历史拉取与弹幕发送不再走 HTTP（上行在 WS 内，见 hub readLoop）。
 		g.GET("/rooms/:id/ws", auth, h.ws)
 		g.GET("/rooms/:id/danmaku/history", auth, h.history)
+
+		// 直播回放（M4-LIV-14，spec LIV-14）：主播可选发布自己的回放稿件。
+		// 未发布（草稿）时稿件对他人不可见 —— 可见性由 video.status 保证
+		// （草稿不进公开列表/搜索），这三个接口只是「发布/删除」的动作入口。
+		g.GET("/replays/mine", auth, h.myReplays)
+		g.POST("/replays/:videoId/publish", auth, h.publishReplay)
+		g.DELETE("/replays/:videoId", auth, h.deleteReplay)
 	}
 }
 
@@ -591,4 +598,67 @@ func failCallback(c *gin.Context, err error) {
 	}
 	_ = c.Error(err)
 	c.JSON(status, response.Body{Code: code, Message: msg, Data: nil, TraceID: c.GetString(response.CtxTraceID)})
+}
+
+// ---- 直播回放（M4-LIV-14）----
+
+// @Summary  我的回放列表（含草稿，供主播选择发布）
+// @Tags     直播
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body{data=[]live.ReplayItem}
+// @Failure  200 {object} response.Body "91031 回放未启用 / 91007 房间不存在"
+// @Router   /live/replays/mine [get]
+func (h *Handler) myReplays(c *gin.Context) {
+	uid := c.GetInt64(middleware.CtxUserID)
+	list, err := h.svc.MyReplays(c.Request.Context(), uid, 50)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, list)
+}
+
+// @Summary  发布我的回放（草稿 → 已发布，spec LIV-14「主播可选发布」）
+// @Tags     直播
+// @Produce  json
+// @Security BearerAuth
+// @Param    videoId path int true "回放稿件 ID"
+// @Success  200 {object} response.Body
+// @Failure  200 {object} response.Body "91031 未启用 / 91032 回放不存在或不属于您"
+// @Router   /live/replays/{videoId}/publish [post]
+func (h *Handler) publishReplay(c *gin.Context) {
+	uid := c.GetInt64(middleware.CtxUserID)
+	videoID, err := strconv.ParseInt(c.Param("videoId"), 10, 64)
+	if err != nil || videoID <= 0 {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	if err := h.svc.PublishReplay(c.Request.Context(), uid, videoID); err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"published": true, "video_id": videoID})
+}
+
+// @Summary  删除我的回放（软删；录制登记保留以维追溯）
+// @Tags     直播
+// @Produce  json
+// @Security BearerAuth
+// @Param    videoId path int true "回放稿件 ID"
+// @Success  200 {object} response.Body
+// @Failure  200 {object} response.Body "91031 未启用 / 91032 回放不存在或不属于您"
+// @Router   /live/replays/{videoId} [delete]
+func (h *Handler) deleteReplay(c *gin.Context) {
+	uid := c.GetInt64(middleware.CtxUserID)
+	videoID, err := strconv.ParseInt(c.Param("videoId"), 10, 64)
+	if err != nil || videoID <= 0 {
+		response.Fail(c, errcode.ErrInvalidParams)
+		return
+	}
+	if err := h.svc.DeleteReplay(c.Request.Context(), uid, videoID); err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, gin.H{"deleted": true, "video_id": videoID})
 }

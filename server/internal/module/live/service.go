@@ -30,6 +30,9 @@ type Service struct {
 	log    *zap.Logger
 	deps   *LiveDeps // 弹幕通道跨域依赖（M4-LIV-03，SetLiveDeps 注入）
 	hub    *Hub      // 弹幕广播中心（SetHub 注入，避免 Service→Hub→Service 构造环）
+	// replayDeps 回放跨域依赖（M4-LIV-14，SetReplayDeps 注入）：
+	// live 不反向构造 video 内部结构，只经最小接口调用（与 deps 同思路）。
+	replayDeps *LiveReplayDeps
 }
 
 func NewService(repo *Repo, online *Online, cfg *config.Config, log *zap.Logger) *Service {
@@ -205,6 +208,9 @@ func (s *Service) Stop(ctx context.Context, uid int64) (*RoomInfo, error) {
 
 // stopRoom 下播落库（status 1→2、ended_at、在线清零、清弹幕历史）。
 // 调用方保证 room.Status == RoomStatusLive；主播下播与 SRS on_unpublish 回调共用本路径。
+//
+// 回放登记（M4-LIV-14）刻意放在**最后且不参与错误返回**：spec LIV-14 要求
+// 录制缺失/损坏/转码失败都不影响下播——房间状态先落库，回放生成失败只记流水。
 func (s *Service) stopRoom(ctx context.Context, room *LiveRoom) (*RoomInfo, error) {
 	now := time.Now()
 	if err := s.repo.UpdateRoomFields(room.ID, map[string]any{
@@ -219,6 +225,8 @@ func (s *Service) stopRoom(ctx context.Context, room *LiveRoom) (*RoomInfo, erro
 		return nil, err
 	}
 	room.Status, room.EndedAt = RoomStatusEnded, &now
+	// 场次已落库 → 触发回放素材登记（开关关闭时空操作；内部错误不改变下播结果）
+	s.OnSessionEnded(ctx, room)
 	return s.roomInfo(ctx, room)
 }
 
