@@ -1,6 +1,7 @@
 package charge
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -416,7 +417,17 @@ type payoutReq struct {
 func (h *Handler) adminPayout(c *gin.Context) {
 	var req payoutReq
 	_ = c.ShouldBindJSON(&req)
-	v, err := h.svc.AdminPayout(c.Param("withdrawNo"), req.Fail, req.Remark)
+	// 操作人写在打款流水 remark：表无独立操作人列（不为一行审计新增迁移），
+	// 但「谁触发了出款」必须可追——双闸只防重复，不回答责任人。
+	remark := req.Remark
+	if admin := c.GetInt64(middleware.CtxAdminID); admin > 0 {
+		if remark == "" {
+			remark = fmt.Sprintf("admin:%d", admin)
+		} else {
+			remark = fmt.Sprintf("admin:%d %s", admin, remark)
+		}
+	}
+	v, err := h.svc.AdminPayout(c.Param("withdrawNo"), req.Fail, remark)
 	if err != nil {
 		response.Fail(c, err)
 		return

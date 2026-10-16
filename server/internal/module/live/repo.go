@@ -2,6 +2,7 @@ package live
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/dlidli/server/internal/module/account"
@@ -133,6 +134,58 @@ func (r *Repo) ListViolationsByRoom(roomID int64, limit int) ([]LiveViolationLog
 	var list []LiveViolationLog
 	err := r.db.Where("room_id = ?", roomID).Order("id DESC").Limit(limit).Find(&list).Error
 	return list, err
+}
+
+// ViolationRecord 违规流水行 + 操作人用户名（管理端「违规记录」展示用）。
+//
+// 单独 DTO 而非直接序列化 LiveViolationLog：表里只存 cut_by（管理员 ID），
+// 而「谁切断的」正是巡台要看的字段 —— ID 对人不可读，故在查询里 JOIN 出用户名。
+type ViolationRecord struct {
+	ID        int64  `json:"id"`
+	RoomID    int64  `json:"room_id"`
+	AnchorID  string `json:"anchor_id"`
+	Source    int8   `json:"source"`
+	Reason    string `json:"reason"`
+	CutMode   int8   `json:"cut_mode"`
+	CutBy     string `json:"cut_by"`
+	Operator  string `json:"operator"` // 管理员用户名；人工切断必有，机审为空
+	CreatedAt string `json:"created_at"`
+}
+
+// ListViolations 全站违规流水（倒序分页，roomID>0 时按房间过滤）。
+func (r *Repo) ListViolations(roomID int64, page, size int) ([]ViolationRecord, int64, error) {
+	q := r.db.Model(&LiveViolationLog{})
+	if roomID > 0 {
+		q = q.Where("room_id = ?", roomID)
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var rows []struct {
+		LiveViolationLog
+		Username string
+	}
+	// LEFT JOIN：机审流水 cut_by=0 无对应管理员，不能因它丢行。
+	err := q.Select("live_violation_log.*, admin_user.username AS username").
+		Joins("LEFT JOIN admin_user ON admin_user.id = live_violation_log.cut_by").
+		Order("live_violation_log.id DESC").
+		Offset((page - 1) * size).Limit(size).Scan(&rows).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]ViolationRecord, 0, len(rows))
+	for i := range rows {
+		v := rows[i]
+		rec := ViolationRecord{
+			ID: v.ID, RoomID: v.RoomID, AnchorID: strconv.FormatInt(v.AnchorID, 10),
+			Source: v.Source, Reason: v.Reason, CutMode: v.CutMode,
+			CutBy: strconv.FormatInt(v.CutBy, 10), Operator: v.Username,
+			CreatedAt: v.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+		out = append(out, rec)
+	}
+	return out, total, nil
 }
 
 // ---- 白名单 ----
