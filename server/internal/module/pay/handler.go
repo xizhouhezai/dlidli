@@ -208,24 +208,42 @@ func (h *Handler) callback(c *gin.Context) {
 // @Tags     支付管理
 // @Produce  json
 // @Security BearerAuth
-// @Param    order_no query string false "订单号"
-// @Param    user_id  query int    false "用户ID"
-// @Param    channel  query string false "渠道"
-// @Param    status   query int    false "状态 0待支付 1已支付 2已关闭 3已退款"
-// @Param    page     query int    false "页码"
-// @Param    size     query int    false "每页条数"
+// @Param    order_no   query string false "订单号"
+// @Param    user_id    query int    false "用户ID"
+// @Param    channel    query string false "渠道"
+// @Param    status     query int    false "状态 0待支付 1已支付 2已关闭 3已退款"
+// @Param    min_amount query int    false "金额下限（分，含）"
+// @Param    max_amount query int    false "金额上限（分，含）"
+// @Param    start_date query string false "创建起始日 YYYY-MM-DD（含当日）"
+// @Param    end_date   query string false "创建结束日 YYYY-MM-DD（含当日）"
+// @Param    page       query int    false "页码"
+// @Param    size       query int    false "每页条数"
 // @Success  200 {object} response.Body "data: {list, total, page, size}"
 // @Failure  401 {object} response.Body "未携带/无效管理员令牌"
 // @Failure  403 {object} response.Body "缺少 pay:view 权限"
 // @Router   /admin/pay/orders [get]
-func (h *Handler) adminOrders(c *gin.Context) {
-	f := OrderFilter{
+// bindOrderFilter 把管理端订单查询的 query 参数绑成筛选条件。
+//
+// 独立成函数以便用例直接断言绑定结果（金额下限/上限与日期边界是本次新增字段，
+// 「SQL 写对了但 handler 忘了透传」是这类改动的典型失效模式）。
+func bindOrderFilter(c *gin.Context) OrderFilter {
+	return OrderFilter{
 		OrderNo: c.Query("order_no"),
 		UserID:  int64(qInt(c, "user_id")),
 		Channel: c.Query("channel"),
 		Page:    qInt(c, "page"),
 		Size:    qInt(c, "size"),
+		// 金额单位分、日期 YYYY-MM-DD：非法值直接判为「未筛选」，
+		// 与既有 status 的处理保持一致（避免把非法值当成「金额=0」这种有效条件）。
+		MinAmount: int64(qInt(c, "min_amount")),
+		MaxAmount: int64(qInt(c, "max_amount")),
+		StartDate: c.Query("start_date"),
+		EndDate:   c.Query("end_date"),
 	}
+}
+
+func (h *Handler) adminOrders(c *gin.Context) {
+	f := bindOrderFilter(c)
 	if s := c.Query("status"); s != "" {
 		v, err := strconv.ParseInt(s, 10, 8)
 		if err != nil {

@@ -122,30 +122,83 @@ func (r *repo) ListUserOrders(userID int64, page, size int) ([]PayOrder, int64, 
 }
 
 // OrderFilter 管理端订单查询条件（零值即不筛选）。
+//
+// 金额单位一律**分**（与 OrderView 同口径）：运维在页面上填的是元，
+// 换算必须在前端完成，后端收分 —— 后端若接受「元」会出现同一字段两种单位。
 type OrderFilter struct {
-	OrderNo string
-	UserID  int64
-	Channel string
-	Status  *int8
-	Page    int
-	Size    int
+	OrderNo   string
+	UserID    int64
+	Channel   string
+	Status    *int8
+	MinAmount int64  // 分，含
+	MaxAmount int64  // 分，含
+	StartDate string // YYYY-MM-DD，含当日
+	EndDate   string // YYYY-MM-DD，含当日
+	Page      int
+	Size      int
+}
+
+// whereCond 单条查询条件（SQL 片段 + 参数）。
+type whereCond struct {
+	SQL  string
+	Args []any
+}
+
+// orderConds 把订单筛选条件翻译成 WHERE 片段。
+//
+// 抽成**纯函数**（不碰 *gorm.DB）有两个理由：一是「筛选条件 → SQL」的映射是本字段的
+// 全部语义，值得被直接断言（见 order_filter_test.go，无需测试库即可跑）；二是金额与
+// 日期边界反复被误写（套 DATE() 会废掉索引、闭区间会把当日末笔漏掉），
+// 单独成函数后，这类回归由用例而非代码评审兜住。
+func orderConds(f OrderFilter) []whereCond {
+	conds := make([]whereCond, 0, 8)
+	if f.OrderNo != "" {
+		conds = append(conds, whereCond{"order_no = ?", []any{f.OrderNo}})
+	}
+	if f.UserID > 0 {
+		conds = append(conds, whereCond{"user_id = ?", []any{f.UserID}})
+	}
+	if f.Channel != "" {
+		conds = append(conds, whereCond{"channel = ?", []any{f.Channel}})
+	}
+	if f.Status != nil {
+		conds = append(conds, whereCond{"status = ?", []any{*f.Status}})
+	}
+	// 金额单位一律**分**（与 OrderView 同口径）：运维在页面上填的是元，
+	// 换算必须在前端完成；后端若也接受「元」，同一字段就有了两种单位。
+	if f.MinAmount > 0 {
+		conds = append(conds, whereCond{"amount >= ?", []any{f.MinAmount}})
+	}
+	if f.MaxAmount > 0 {
+		conds = append(conds, whereCond{"amount <= ?", []any{f.MaxAmount}})
+	}
+	// 日期边界用半开区间：`created_at >= start 00:00:00` 且 `< end+1天 00:00:00`。
+	// 不写 `DATE(created_at) = ?`：那会让索引失效（订单表按时间检索是高频道），
+	// 也漏掉当日带时分秒的行 —— 闭区间是这里最容易写错的地方，故由用例锁定。
+	if f.StartDate != "" {
+		conds = append(conds, whereCond{"created_at >= ?", []any{f.StartDate + " 00:00:00"}})
+	}
+	if f.EndDate != "" {
+		conds = append(conds, whereCond{
+			// 用字符串日期直接加一天会依赖本地时区解析，故交给 MySQL 的 DATE_ADD。
+			"created_at < DATE_ADD(?, INTERVAL 1 DAY)", []any{f.EndDate + " 00:00:00"},
+		})
+	}
+	return conds
+}
+
+// orderQuery 组装管理端订单查询条件。
+func (r *repo) orderQuery(f OrderFilter) *gorm.DB {
+	q := r.db.Model(&PayOrder{})
+	for _, c := range orderConds(f) {
+		q = q.Where(c.SQL, c.Args...)
+	}
+	return q
 }
 
 // ListOrders 管理端订单查询。
 func (r *repo) ListOrders(f OrderFilter) ([]PayOrder, int64, error) {
-	q := r.db.Model(&PayOrder{})
-	if f.OrderNo != "" {
-		q = q.Where("order_no = ?", f.OrderNo)
-	}
-	if f.UserID > 0 {
-		q = q.Where("user_id = ?", f.UserID)
-	}
-	if f.Channel != "" {
-		q = q.Where("channel = ?", f.Channel)
-	}
-	if f.Status != nil {
-		q = q.Where("status = ?", *f.Status)
-	}
+	q := r.orderQuery(f)
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
