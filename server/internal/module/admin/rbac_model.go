@@ -112,7 +112,7 @@ var builtinPermissions = []Permission{
 	// 会员与套餐（M4-VIP-01，spec §2.7）：套餐配置 / 会员查询 / 手工补发硬币。
 	// 与支付权限同理属财务相关：改价直接影响收入、补发硬币等价于凭空发币，
 	// 故默认只授予 super，不分配给运营/审核默认角色。
-	{Code: "vip:view", Name: "会员与套餐", Type: "menu", Path: "/vip-members", Icon: "i-mingcute-crown-line", Sort: 18},
+	{Code: "vip:view", Name: "会员与套餐", Type: "menu", Path: "/vip-members", Icon: "i-mingcute-vip-1-line", Sort: 18},
 	{Code: "vip:plan", Name: "套餐配置（改价/上下架）", Type: "button", Parent: "vip:view"},
 	{Code: "vip:grant", Name: "手工补发会员硬币", Type: "button", Parent: "vip:view"},
 	// 充电与创作者结算（M4-PAY-02，spec CHG-01/02/03 + CRT-32）。

@@ -7,6 +7,10 @@ import { createDanmakuApi } from './apis/danmaku'
 import { createLiveApi } from './apis/live'
 import { createInteractionApi } from './apis/interaction'
 import { createAdminApi } from './apis/admin'
+import { createAdminLiveApi } from './apis/adminLive'
+import { createAdminPayApi } from './apis/adminPay'
+import { createAdminVipApi } from './apis/adminVip'
+import { createAdminChargeApi } from './apis/adminCharge'
 import { createRelationApi } from './apis/relation'
 import { createDynamicApi } from './apis/dynamic'
 import { createSearchApi } from './apis/search'
@@ -88,6 +92,28 @@ export type { GrowthSummary, GrowthTask, AssetLogItem } from './apis/growth'
 export type { SubmitReportReq, ReportTargetType, ReportReasonType } from './apis/report'
 export type { CreatorOverview, CreatorVideoStat, TrendPoint, SettlementItem } from './apis/creator'
 export type { CollectionCard, CollectionDetail } from './apis/collection'
+export type {
+  AdminLiveRoom,
+  AdminLiveAuditBrief,
+  AdminLiveCutResult,
+  AdminLiveViolation,
+  AdminLiveAuditStatus,
+} from './apis/adminLive'
+export type {
+  AdminPayOrder,
+  AdminPayReconDaily,
+  AdminPayReconIssue,
+  AdminPayReconResult,
+  AdminPayCallbackOutcome,
+  AdminPayOrderQuery,
+} from './apis/adminPay'
+export type { AdminVipPlan, AdminVipPlanPayload, AdminVipMember } from './apis/adminVip'
+export type {
+  AdminChargeItem,
+  AdminSettlementItem,
+  AdminWithdrawItem,
+  AdminSettleResult,
+} from './apis/adminCharge'
 export type { ConversationItem, MessageItem } from './apis/messages'
 
 /**
@@ -106,6 +132,14 @@ export function createApiClient(cfg: ClientConfig = {}) {
     live: createLiveApi(http),
     interaction: createInteractionApi(http),
     admin: createAdminApi(http),
+    /** 管理端：直播巡查（/admin/live），权限点 live:audit */
+    adminLive: createAdminLiveApi(http),
+    /** 管理端：支付订单与对账（/admin/pay），权限点 pay:view/order/recon */
+    adminPay: createAdminPayApi(http),
+    /** 管理端：会员与套餐（/admin/vip），权限点 vip:view/plan/grant */
+    adminVip: createAdminVipApi(http),
+    /** 管理端：充电结算与提现（/admin/charge），权限点 charge:view/audit/payout/settle */
+    adminCharge: createAdminChargeApi(http),
     relation: createRelationApi(http),
     dynamic: createDynamicApi(http),
     search: createSearchApi(http),

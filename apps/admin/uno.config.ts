@@ -42,6 +42,11 @@ export default defineConfig({
     'i-mingcute-photo-album-line',
     'i-mingcute-play-circle-line',
     'i-mingcute-flask-line',
+    // 直播巡查 / 支付对账 / 会员套餐 / 充电结算（本卡新增，与 builtinPermissions 对齐）
+    'i-mingcute-video-line',
+    'i-mingcute-wallet-3-line',
+    'i-mingcute-vip-1-line',
+    'i-mingcute-lightning-line',
   ],
   theme: {
     colors: {

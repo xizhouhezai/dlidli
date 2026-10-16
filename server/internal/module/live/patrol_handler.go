@@ -9,6 +9,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// qInt 查询参数整数（非法或缺失返回 0，由调用方兜默认值）。
+func qInt(c *gin.Context, key string) int {
+	v, err := strconv.Atoi(c.Query(key))
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
 // 人工巡查（M4-LIV-05，spec §5E.4）：管理端可查直播中房间、手动切断、恢复。
 //
 // 鉴权链与既有后台接口一致（AdminAuth + RequirePerm("live:audit")，写法对齐 gift_handler 的
@@ -24,9 +33,81 @@ func NewPatrolHandler(svc *Service) *PatrolHandler { return &PatrolHandler{svc: 
 func (h *PatrolHandler) RegisterPatrolRoutes(adminAuthed *gin.RouterGroup) {
 	g := adminAuthed.Group("/live")
 	g.GET("/rooms", h.liveRooms)
+	g.GET("/violations", h.violations)
 	g.POST("/rooms/:id/cut", h.cut)
 	g.POST("/rooms/:id/restore", h.restore)
 	g.GET("/audit/status", h.auditStatus)
+}
+
+// PatrolViolation 违规记录行（含操作人用户名与来源/切断方式文案）。
+type PatrolViolation struct {
+	ID        int64  `json:"id"`
+	RoomID    int64  `json:"room_id"`
+	AnchorID  string `json:"anchor_id"`
+	Source    int8   `json:"source"`
+	SourceTxt string `json:"source_text"`
+	Reason    string `json:"reason"`
+	CutMode   int8   `json:"cut_mode"`
+	CutModeTx string `json:"cut_mode_text"`
+	Operator  string `json:"operator"` // 人工切断的操作人；机审为空
+	CreatedAt string `json:"created_at"`
+}
+
+// @Summary  违规记录（人工切断 + 机审命中，含操作人）
+// @Tags     直播巡查
+// @Produce  json
+// @Security BearerAuth
+// @Param    room_id query int false "按房间过滤"
+// @Param    page    query int false "页码"
+// @Param    size    query int false "每页条数"
+// @Success  200 {object} response.Body "data: {list, total, page, size}"
+// @Router   /admin/live/violations [get]
+// @Description 巡查台的追责依据：只落库不断言「谁切断了什么」是不够的，
+// @Description 故此处 JOIN 出操作人用户名，并把 source/cut_mode 一并译成可读文案。
+func (h *PatrolHandler) violations(c *gin.Context) {
+	page, size := qInt(c, "page"), qInt(c, "size")
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 || size > 100 {
+		size = 20
+	}
+	roomID, _ := strconv.ParseInt(c.Query("room_id"), 10, 64)
+	list, total, err := h.svc.repo.ListViolations(roomID, page, size)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	out := make([]*PatrolViolation, 0, len(list))
+	for i := range list {
+		v := &list[i]
+		out = append(out, &PatrolViolation{
+			ID: v.ID, RoomID: v.RoomID, AnchorID: v.AnchorID, Source: v.Source,
+			SourceTxt: sourceText(v.Source), Reason: v.Reason,
+			CutMode: v.CutMode, CutModeTx: cutModeText(v.CutMode),
+			Operator: v.Operator, CreatedAt: v.CreatedAt,
+		})
+	}
+	response.OK(c, gin.H{"list": out, "total": total, "page": page, "size": size})
+}
+
+// sourceText 违规来源文案（1 机审 / 2 人工巡查）。
+func sourceText(s int8) string {
+	if s == ViolationSourceManual {
+		return "人工巡查"
+	}
+	return "机审"
+}
+
+// cutModeText 切断方式文案（1 srs_api / 2 degraded）。
+//
+// 2 必须显式暴露为「降级」而不是同义于成功：degraded 表示 SRS 未确认踢流，
+// 房间已被封禁但推流可能仍在，巡查需据此复检（spec §5E.4）。
+func cutModeText(m int8) string {
+	if m == CutModeDegraded {
+		return "降级（未确认踢流）"
+	}
+	return "SRS API"
 }
 
 // AuditStatus 截帧机审运行态（供巡查台判断机审是否真的在跑）。

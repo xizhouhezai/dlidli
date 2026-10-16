@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { readAdminToken } from '@/utils/token'
 import { permissionStore } from '@/stores/permission'
 
@@ -107,6 +108,30 @@ const router = createRouter({
           component: () => import('@/views/operation/ExperimentsView.vue'),
           meta: { title: 'A/B 实验', requiresAuth: true },
         },
+        {
+          path: 'live-patrol',
+          name: 'live-patrol',
+          component: () => import('@/views/live/LivePatrolView.vue'),
+          meta: { title: '直播巡查', requiresAuth: true },
+        },
+        {
+          path: 'pay-orders',
+          name: 'pay-orders',
+          component: () => import('@/views/pay/PayOrdersView.vue'),
+          meta: { title: '支付与对账', requiresAuth: true },
+        },
+        {
+          path: 'vip-members',
+          name: 'vip-members',
+          component: () => import('@/views/vip/VipMembersView.vue'),
+          meta: { title: '会员与套餐', requiresAuth: true },
+        },
+        {
+          path: 'charge-settlements',
+          name: 'charge-settlements',
+          component: () => import('@/views/charge/ChargeSettlementsView.vue'),
+          meta: { title: '充电与结算', requiresAuth: true },
+        },
       ],
     },
     // 后续：审计日志（M2-SYS-01）
@@ -124,6 +149,29 @@ router.beforeEach(async (to) => {
     } catch {
       // 令牌失效等：清理并回登录
       return { name: 'login' }
+    }
+  }
+  // 页面级权限：直连 URL 也必须被拦。
+  //
+  // 判据用「该路径是否出现在后端下发的菜单里」而不是在路由上另抄一份权限码：
+  // menus 是后端按当前账号权限**过滤后**的结果，是唯一权威；把权限码再写进
+  // meta 就有了两份清单，新增页面时漏改其中之一会表现为
+  // 「菜单不显示、但直连 URL 能进」—— 正是本卡要防的漏洞。
+  //
+  // 前提：受保护子路由与 builtinPermissions 的 menu path 一一对应
+  // （实测 19 个菜单 ↔ 19 个路由，仅差前导斜杠）。login 与根重定向不带
+  // requiresAuth，故不会被误拦。
+  //
+  // 两条边界都在这里处理掉：
+  //   · super 短路放行（其 menus 本就是全集，这里只是省一次集合查找）；
+  //   · **menus 为空**（账号未绑任何角色）时不得放行 —— 若用「menus 非空才校验」
+  //     的写法，这种账号反而能进任意页面，是比漏拦更隐蔽的漏洞。
+  //     `/dashboard` 恒放行，避免「无任何菜单 → 重定向到 dashboard → 又被拦」的死循环。
+  if (to.meta.requiresAuth && permissionStore.state.loaded && !permissionStore.state.isSuper) {
+    const menuPaths = new Set(permissionStore.state.menus.map((m) => m.path))
+    if (!menuPaths.has(to.path) && to.path !== '/dashboard') {
+      ElMessage.error('无权限访问该页面')
+      return { name: 'dashboard' }
     }
   }
 })
