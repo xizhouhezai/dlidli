@@ -133,3 +133,35 @@ type LiveViolationLog struct {
 }
 
 func (LiveViolationLog) TableName() string { return "live_violation_log" }
+
+// 回放素材处理状态（live_replay.status，迁移 0042）
+const (
+	ReplayStatusPending  = 0 // 已登记，待生成稿件
+	ReplayStatusDrafted  = 1 // 已生成草稿稿件（等待主播发布）
+	ReplayStatusFailed   = 2 // 生成失败（缺文件/损坏/转码建稿出错），原因见 fail_reason
+	ReplayStatusRejected = 3 // 超时长上限拒绝（plan liv14 D2），不生成稿件
+	ReplayStatusPurged   = 4 // 录制素材已按保留期清理（登记行保留以维追溯）
+)
+
+// LiveReplay 对应 live_replay 表（M4-LIV-14）：一场直播的回放素材登记与生成结果。
+//
+// 与 video 表的分工：**可见性/状态的权威在 video**（draft=0 / published=4），
+// 本表只记「素材从哪来、生成了哪个稿件、成败与原因」，不复制稿件状态（迁移 0042 注释）。
+type LiveReplay struct {
+	ID               int64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	RoomID           int64     `json:"room_id"`
+	AnchorID         int64     `json:"anchor_id"`
+	SessionStartedAt time.Time `json:"session_started_at"`
+	SessionEndedAt   time.Time `json:"session_ended_at"`
+	DvrKey           string    `json:"dvr_key"`    // 录制文件相对 dvrDir 的路径
+	SourceKey        string    `json:"source_key"` // 转码源（存储 key，videos/replay/.../*.mp4）
+	VideoID          int64     `json:"video_id"`   // 生成的稿件 id（0=未生成）
+	Duration         int       `json:"duration"`   // 录制时长（秒）
+	FileSize         int64     `json:"file_size"`
+	Status           int8      `json:"status"`
+	FailReason       string    `json:"fail_reason"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+func (LiveReplay) TableName() string { return "live_replay" }

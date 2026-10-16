@@ -1,0 +1,2 @@
+占位文件：本目录用于存放 SRS DVR 录制（SRS 侧路径 /data/dvr/live/，见 srs.conf 的
+dvr_path = /data/dvr/[app]/[stream].[timestamp].flv）。运行时产出的 *.flv 不入库。
