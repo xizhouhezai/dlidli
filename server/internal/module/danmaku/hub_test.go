@@ -4,13 +4,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"go.uber.org/zap"
 )
 
 // TestHubBroadcastRemoveRace 回归：Broadcast 迭代房间与 remove（delete+close(send)）
 // 并发不得产生 map 竞态或 send on closed channel。用 go test -race 验证。
 func TestHubBroadcastRemoveRace(t *testing.T) {
-	h := NewHub(nil, zap.NewNop())
+	h := NewHub(wsorigin.Config{}, zap.NewNop())
 	const n = 200
 	clients := make([]*client, n)
 	h.mu.Lock()

@@ -10,6 +10,18 @@ app:
     - http://localhost:5173
     - http://localhost:5174
     - http://localhost:5175 # apps/admin 管理后台
+    - http://localhost:5176 # apps/h5 移动端 H5
+    # 鸿蒙 App（ArkTS）开发/联调：@ohos.net.webSocket 自生成 Origin，默认形态为
+    # `http://<host>`（不带端口，connect() 的同名 header 覆盖不掉），API 26 起可用
+    # `supportOriginPort: true` 让它带端口。模拟器访问宿主机用 10.0.2.2/127.0.0.1。
+    - http://127.0.0.1
+    - http://10.0.2.2
+    - http://localhost
+  # 非浏览器客户端（鸿蒙 ArkTS / 原生 App）：Origin 不在白名单时，若请求携带
+  # 经 JWT 校验有效的 access token（?token= 或 Authorization 头）则放行该次 WS 握手。
+  # 浏览器白名单防护不受影响：浏览器强制设置 Origin，恶意页面拿不到受害者的 token。
+  # prod 是否开启见 configs/prod.yaml 的运维说明。
+  allowNativeClients: true
 
 log:
   level: debug

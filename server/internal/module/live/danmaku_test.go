@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dlidli/server/internal/pkg/errcode"
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"go.uber.org/zap"
 )
 
@@ -74,7 +75,7 @@ func TestDanmakuSendChain(t *testing.T) {
 	cleanup(t, db)
 
 	repo := NewRepo(db)
-	svc := &Service{repo: repo, online: NewOnline(nil, repo, zap.NewNop()), log: zap.NewNop(), hub: NewHub(nil, zap.NewNop())}
+	svc := &Service{repo: repo, online: NewOnline(nil, repo, zap.NewNop()), log: zap.NewNop(), hub: NewHub(wsorigin.Config{}, zap.NewNop())}
 	const anchor, viewer = 91000201, 91000202
 	seedUser(t, db, anchor, 100)
 	seedUser(t, db, viewer, 0)

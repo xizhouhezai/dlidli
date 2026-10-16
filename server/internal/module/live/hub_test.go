@@ -5,13 +5,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"go.uber.org/zap"
 )
 
 // TestHubBroadcastRemoveRace 回归：broadcast 迭代房间连接与 remove（delete+close(send)）
 // 并发不得产生 map 竞态或 send on closed channel（go test -race 验证）。
 func TestHubBroadcastRemoveRace(t *testing.T) {
-	h := NewHub(nil, zap.NewNop())
+	h := NewHub(wsorigin.Config{}, zap.NewNop())
 	const n = 200
 	clients := make([]*client, n)
 	h.mu.Lock()
@@ -44,7 +45,7 @@ func TestHubBroadcastRemoveRace(t *testing.T) {
 // TestHubKickReplacesOldClient 同 uid 旧连接被新连接顶替：旧连接不再收到广播，
 // 房间内该 uid 只剩一条连接。
 func TestHubKickReplacesOldClient(t *testing.T) {
-	h := NewHub(nil, zap.NewNop())
+	h := NewHub(wsorigin.Config{}, zap.NewNop())
 	h.mu.Lock()
 	r := &room{clients: make(map[*client]bool)}
 	h.rooms[7] = r
@@ -66,7 +67,7 @@ func TestHubKickReplacesOldClient(t *testing.T) {
 
 // TestHubOnlineLeaveCallback 断开回调只触发一次：被顶替连接的 remove 不重复扣计数。
 func TestHubOnlineLeaveCallback(t *testing.T) {
-	h := NewHub(nil, zap.NewNop())
+	h := NewHub(wsorigin.Config{}, zap.NewNop())
 	var calls int64
 	h.onlineLeave = func(ctx context.Context, roomID, uid int64, counted bool) {
 		if roomID == 3 && uid == 9 {
@@ -87,7 +88,7 @@ func TestHubOnlineLeaveCallback(t *testing.T) {
 
 // TestInRoomAndOnlineCount 房间集合判定与在线连接计数。
 func TestInRoomAndOnlineCount(t *testing.T) {
-	h := NewHub(nil, zap.NewNop())
+	h := NewHub(wsorigin.Config{}, zap.NewNop())
 	a := &client{hub: h, send: make(chan []byte, 1), uid: 1, roomID: 5}
 	b := &client{hub: h, send: make(chan []byte, 1), uid: 2, roomID: 5}
 	h.mu.Lock()

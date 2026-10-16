@@ -3,12 +3,12 @@ package live
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/dlidli/server/internal/pkg/wsorigin"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -99,25 +99,15 @@ type Hub struct {
 	upgrader websocket.Upgrader
 }
 
-func NewHub(allowOrigins []string, log *zap.Logger) *Hub {
-	allow := make(map[string]bool, len(allowOrigins))
-	for _, o := range allowOrigins {
-		allow[strings.TrimRight(o, "/")] = true
-	}
+func NewHub(origin wsorigin.Config, log *zap.Logger) *Hub {
 	return &Hub{
 		rooms: make(map[int64]*room),
 		log:   log,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			// 校验 Origin 在白名单内（无 Origin 头放行，非浏览器客户端）；防跨站 WS 劫持
-			CheckOrigin: func(r *http.Request) bool {
-				o := r.Header.Get("Origin")
-				if o == "" {
-					return true
-				}
-				return allow[strings.TrimRight(o, "/")]
-			},
+			// Origin 校验策略见 pkg/wsorigin（四 hub 共用，防语义漂移）
+			CheckOrigin: wsorigin.New(origin, log),
 		},
 	}
 }
