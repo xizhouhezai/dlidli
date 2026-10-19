@@ -60,6 +60,9 @@ var (
 	ErrFileHashMismatch   = New(30004, "文件校验失败，请重新上传")
 	ErrFileTypeNotAllowed = New(30005, "不支持的视频格式")
 	ErrFileTooLarge       = New(30006, "文件超过大小限制")
+	// ErrVideoTooLong 投稿时长超限（roadmap 缓解措施「限制内测投稿时长 ≤ 30min」）：
+	// 在投稿阶段同步拒绝，不排转码任务——避免用户传完、排完队才在转码阶段失败。
+	ErrVideoTooLong = New(30007, "视频时长超过投稿上限")
 )
 
 // 弹幕错误码（4xxxx）

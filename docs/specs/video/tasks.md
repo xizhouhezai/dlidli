@@ -12,6 +12,17 @@
   - 覆盖：VID-02、VID-07、VID-20、状态机（spec §2.3）
 - [x] M1-VID-03 后端：转码任务队列（本地无 Kafka：DB 任务表 + FOR UPDATE SKIP LOCKED 认领 + 失败重试 2 次；部署环境可平滑换 Kafka） `2026-07-29`
   - 覆盖：VID-10
+  - **2026-10-19 加严（转码积压治理）**：原实现只有"行锁认领"，缺**租约回收**、**失败退避**与**可观测口径**，
+    且注释声称的独立 `cmd/worker` 入口并不存在——水平扩容一旦真做，崩溃实例留下的 `status=1`
+    会永久占位（进程越多越严重），坏文件还会被多实例反复抢成热循环。本卡补齐：
+    ① 认领加条件 `UPDATE` 校验 `RowsAffected` + `lease_until` 租约 + 续租 + 过期回收；
+    ② `maxRetries` + 指数退避 `retryBackoff` + 终态死信（`finished_at`）；
+    ③ 积压指标（复用 prometheus）与 `GET /admin/videos/transcode/queue` 快照；
+    ④ 独立入口 `cmd/worker`（与内嵌模式共用同一认领语义）；
+    ⑤ 投稿时长 ≤30min（`maxDurationSeconds`，投稿阶段 30007 拒绝）。
+    实测：3 进程×2 协程消费 24 任务**每个任务恰好处理一次**（DB 逐条核对：无重复产物、无僵尸 running）；
+    积压 `pending 10→0`；坏任务进终态且不影响其他任务；挂死任务被 `jobTimeout` 兜底；
+    1900s 素材投稿被拒。证据：`.dev-logs/transcode-scale/`。决策见 [plan §2/§5.1](/specs/video/plan)
 - [x] M1-VID-04 Worker：FFmpeg HLS 转码（360P/720P）+ 抽帧封面 + ffprobe 时长（dev 内嵌进程 Worker，状态机：转码中→待审/发布） `2026-07-29`
   - 覆盖：VID-10、VID-11、VID-03
 - [x] M1-VID-05 后端：播放地址签名下发接口（playsign 包 HMAC-SHA256 签名路径+过期；video 详情/审核预览下发 `?e=&s=` 签名 URL（TTL 6h）；PlaySignGuard 中间件校验 /static 下 videos 播放入口（.m3u8/.mp4），.ts分片/封面/头像放行；E2E：签名访问200/无签403/篡改403/播放readyState4） `2026-07-31`

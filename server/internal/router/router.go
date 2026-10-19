@@ -171,6 +171,8 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		uploadSvc.StartCleanupWorker(context.Background(), 30*time.Minute)
 
 		videoSvc := video.NewService(video.NewRepo(res.DB), uploadSvc, accountSvc, growthSvc, res.Redis, cfg, log)
+		// 存储注入：投稿时长探测（≤30min 限制）需要把 store_key 解析成磁盘路径。
+		videoSvc.SetStorage(res.Storage)
 		// 清晰度档位配置（M4-VIP-02）：装配时加载一次快照；配置缺失/读表失败不阻断启动
 		// （判定侧对空快照一律放行，等于升级前行为，不会让全站不可播）。
 		if set, err := videoSvc.LoadTiers(); err != nil {
@@ -180,10 +182,15 @@ func New(cfg *config.Config, log *zap.Logger, res *infra.Resources) *gin.Engine 
 		}
 		video.NewHandler(videoSvc, res.Storage).RegisterRoutes(v1, authedRateLimited, optionalAuthMW)
 
-		// dev 内嵌转码 Worker（部署环境由独立 cmd/worker 承担）
-		if cfg.Transcode.Enabled {
+		// 内嵌转码 Worker（dev 便利）。部署环境应设 transcode.embedInAPI=false，
+		// 改由独立 cmd/worker 承担——API 重启会打断转码并放大僵尸任务。
+		// 两种模式可同时跑：认领是原子的（见 repo.ClaimJob），不会重复处理同一任务。
+		if cfg.Transcode.Enabled && cfg.Transcode.EmbedInAPI {
 			videoSvc.StartTranscodeWorkers(context.Background(), res.Storage)
 		}
+		// 队列指标周期刷新（转码积压治理）：即使任务异常堆积/无人消费，
+		// dlidli_transcode_queue_depth / oldest_pending_seconds 也能真实反映。
+		videoSvc.StartQueueMetricsRefresher(context.Background(), 15*time.Second)
 
 		danmakuHub := danmaku.NewHub(wsOrigin, log)
 		danmakuSvc := danmaku.NewService(danmaku.NewRepo(res.DB), videoSvc, accountSvc, growthSvc, res.Redis, danmakuHub, cfg.JWT.Secret, log)
