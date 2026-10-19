@@ -143,7 +143,8 @@ export default defineConfig({
           items: [
             { text: 'spec 需求', link: '/specs/harmony/spec' },
             { text: 'plan 方案', link: '/specs/harmony/plan' },
-            { text: 'tasks 任务', link: '/specs/harmony/tasks' }
+            { text: 'tasks 任务', link: '/specs/harmony/tasks' },
+            { text: '真机验收手册', link: '/specs/harmony/device-acceptance' }
           ]
         },
         {

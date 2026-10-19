@@ -3,6 +3,7 @@
 > 对应规格：[spec](/specs/harmony/spec) ｜ 技术基线：[后端架构](/architecture/backend) · [数据模型](/architecture/data-model) · [前端架构](/architecture/frontend)
 > plan 只写模块级方案与差异；全局分层/规范/部署以架构文档为准。
 > 选型 ADR：[ADR-M4-APP-01 鸿蒙端技术选型](/architecture/adr-m4-app-01-harmony)
+> 真机验收：[真机验收手册](/specs/harmony/device-acceptance)——§6 各条「须真机确认」项的可执行步骤、观测点、判定阈值与记录表均在该手册（17 项，逐条编号 AC-01~AC-17）
 
 ## 1. 方案概览
 
@@ -160,13 +161,13 @@ apps/harmony/
 
 ## 6. 风险与待定项
 
-- [x] **AVPlayer 播后端 HLS 兼容性（2026-09-22 已验，M4-HMY-06）**：模拟器（API 26 `Pura X View`）上**真实解码出画**，`initialized → prepared → playing` 链路完整，720P/360P 两档 HLS 与签名 URL 组合均可用——**系统 AVPlayer 直接吃 ffmpeg 产出的 m3u8/ts，无需自带解封装**。**注意口径**：模拟器视频硬解受限，播放类结论一律不作「鸿蒙不支持」判定，**起播（约 12s）与换源（约 3.5s）耗时、长期播卡顿率仍待真机复验**（spec §4 的 P90 < 1.5s 亦须真机测）。
+- [x] **AVPlayer 播后端 HLS 兼容性（2026-09-22 已验，M4-HMY-06）**：模拟器（API 26 `Pura X View`）上**真实解码出画**，`initialized → prepared → playing` 链路完整，720P/360P 两档 HLS 与签名 URL 组合均可用——**系统 AVPlayer 直接吃 ffmpeg 产出的 m3u8/ts，无需自带解封装**。**注意口径**：模拟器视频硬解受限，播放类结论一律不作「鸿蒙不支持」判定，**起播（约 12s）与换源（约 3.5s）耗时、长期播卡顿率仍待真机复验**（spec §4 的 P90 < 1.5s 亦须真机测）。**真机执行见 [device-acceptance AC-02/AC-04](/specs/harmony/device-acceptance)，待真机执行**
 - [x] **签名 URL 的请求头约束（2026-09-22 已验，M4-HMY-06）**：AVPlayer 以 `?e=&s=` 签名 URL 直接拉取 `.m3u8` 与 `.ts` 分片**无需附加任何自定义请求头**（Referer/UA 均不必），故 `PlaySignGuard` 现有边界（`.m3u8` 需签名、`.ts` 放行）对端侧已够用，本期零后端改动成立。续签走「重取详情换新签名地址」而非复用旧地址，签名解析收敛在 `media/PlaySign.ets`。
 - [x] **模拟器可用性（2026-09-21：已澄清，非宿主故障）**：早前 3 次尝试均在**冷启窗口期内**操作——`hidumper` 窗口数恒 0、`snapshot_display` 恒返回同一张 47KB 全黑帧、`aa start` 报 `10106102 … device screen is locked … developer mode`，并遇 2 次 VM 退出，一度误判为宿主 OpenGL/WGL 故障（`qemu.log` 的 `gl error 502` / `wglMakeCurrent` 失败属启动期现象）。**当晚重试完全可用**：未签名 HAP 安装、启动、渲染、切页签均正常。
   - **操作口径**：先确认 SystemUI 就绪（`com.ohos.sceneboard` 进 FOREGROUND / `hidumper -s WindowManagerService` 窗口数 > 0）再安装与启动；不在启动窗口期反复 `snapshot_display`。命令速查见 [tasks M4-HMY-01](/specs/harmony/tasks)。
   - **附带结论**：模拟器为 **API 26 / guest `7.0.0.106(SP1DEVC00E999R4P11)` / abi `x86_64`**；**未签名 HAP 可直接 `hdc install` 成功**——本机本地验证**无需配置 `signingConfigs`**，可砍掉签名前置。
   - **沉浸光感是否生效（2026-09-22 已验，见下条「沉浸光感落地」）**：当时判「浅色纯色底无可比对参照」只说对了一半——**材质确实生效了**（`supported=true`、应用级开关 `state=ENABLE`、全局档 `level=EXQUISITE`），但**纯色底上玻璃本来就看不出**，真因在背景而非能力。
-- [ ] **弹幕 Canvas 性能上限：帧率已测，阈值与内存待真机（2026-10-08 部分收口）**：同屏弹幕满载下的帧率已测——**播放页恒锁在片源帧率上**（片源 30fps → p50 帧间隔恒为 32.00ms），**同屏 45 条与灌满 1000 条、弹幕开与关，帧率都无差异**，即该窗口内 Canvas 逐帧重绘不是瓶颈（活动条数受 `MAX_ACTIVE=240` 与轨道数封顶）。**仍未收口的两项**：① **spec §4 的「≥55fps」本轮无法验证**——示例片源本身只有 30fps，要验该阈值须用 ≥60fps 片源；② **内存与长时稳定性未测**（采样窗口为秒级）。两项均归真机。方法见下条「材质叠加帧率实测」。
+- [ ] **弹幕 Canvas 性能上限：帧率已测，阈值与内存待真机（2026-10-08 部分收口）**：同屏弹幕满载下的帧率已测——**播放页恒锁在片源帧率上**（片源 30fps → p50 帧间隔恒为 32.00ms），**同屏 45 条与灌满 1000 条、弹幕开与关，帧率都无差异**，即该窗口内 Canvas 逐帧重绘不是瓶颈（活动条数受 `MAX_ACTIVE=240` 与轨道数封顶）。**仍未收口的两项**：① **spec §4 的「≥55fps」本轮无法验证**——示例片源本身只有 30fps，要验该阈值须用 ≥60fps 片源；② **内存与长时稳定性未测**（采样窗口为秒级）。两项均归真机。方法见下条「材质叠加帧率实测」。**真机执行见 [device-acceptance AC-03/AC-15](/specs/harmony/device-acceptance)，待真机执行**
 - [ ] **弹幕 WS 的 Origin 白名单（2026-09-22 实测，归线上配置）**：ArkTS 的 WebSocket **自生成 Origin**（默认 `http://<host>`，不带端口；API 26 起 `supportOriginPort` 可带上），而服务端 `CheckOrigin` 对 `allow_origins` 做**精确匹配**——dev 白名单（`http://localhost:5173~5175`）不含端侧来源，故直连 `ws://10.0.2.2:8000` 握手 403，端侧只能降级为 15s 分段轮询。**dev 联调可临时同源绕过（做法见 [tasks M4-HMY-07](/specs/harmony/tasks)），生产必须让服务端白名单纳入 App 的实际 Origin，或同源部署 `wss://<正式域名>`**；本期零后端改动，未动白名单。
 - [x] **状态管理版本（已解决，2026-09-21）**：壳层 `pages/Index.ets` 以 **ArkUI 状态管理 V2**（`@Entry @ComponentV2` / `@Local` / `@Param`）实写并通过 API 26 编译（`assembleHap` BUILD SUCCESSFUL），**定版 V2**，不再保留 V1 备选。
 - [x] **目标 API 版本选择（已解决，2026-09-21）**：DevEco 升级至 **26.0.0.821** 后内置 SDK 为 **HarmonyOS 26.0.0 / API 26**（version 26.0.0.105），模拟器镜像 **API 26 / 7.0.0.106**（`D:/Program Files/Huawei/sdk/system-image/HarmonyOS-7.0.0/phone_all_x86`）已就位，实例含 Mate 70 Pro / Mate 80 Pro Max / Pura 90 / Pura X View。**`compileSdkVersion` 与 `compatibleSdkVersion` 均取 26**，原"编译 24 / 运行时 23"的双口径已失效，历史结论仅备查。
@@ -183,14 +184,14 @@ apps/harmony/
   - **材质叠加帧率实测（2026-10-08，API 26 模拟器 `Pura X View`，应用零改动；方法与逐项数值见 [tasks M4-HMY-01](/specs/harmony/tasks)）**：
     - **方法**：`hitrace -t N -b 65536 -o <f> graphic ace animation` 抓帧，数应用进程的 `B|<pid>|H:OnVsyncEvent` 条数，**帧率 = (条数-1) ÷ 首末 `now` 纳秒差**。两条铁律：① 静止时该标记为 **0**（系统按需出帧），**不能用「固定窗口数帧数」**；② 模拟器上 `hidumper … fpsCount` 恒为 `Refresh Rate:60, Count:1`、`SP_daemon -f/-ohtestfps` 恒为 `fps=0`，**三者只有 hitrace 可用**。交叉印证取 RenderService 侧 `RSUniRenderThread::Render` 与 **`wouldDrawLargeAreaBlur`（材质模糊路径）**。
     - **结论（模拟器可得）**：**帧率测不出材质差**——首页滚动材质开/关均顶满 **60.6 / 61.1 fps**；播放页锁在片源 30fps（p50 = 32.00ms），弹幕开/关、45 条 vs 1000 条**都无差异**。**但开销真实存在**：同载荷下材质模糊路径绘制次数 **1664/720/608 对 528/336/432**（逐轮 3.15× / 2.14× / 1.41×），只是被 60Hz 上限下的余量吸收。
-    - **须真机确认（不得外推）**：① 模拟器为 **x86_64 软件渲染**（`hmos.emulator` / `abilist x86_64`，宿主 Intel Arc 转译），材质模糊的**绝对开销与掉帧风险**必测真机；② **功耗/发热在模拟器上不可得**——`SP_daemon -p` 报 `RK does not support power acquisition`、电池为虚拟值，**功耗结论必须真机测**；③ spec §4「同屏弹幕满载 ≥55fps」须用 ≥60fps 片源在真机验证；④ 长时（>5min）播放的稳定性与内存增长未测。
+    - **须真机确认（不得外推）**：① 模拟器为 **x86_64 软件渲染**（`hmos.emulator` / `abilist x86_64`，宿主 Intel Arc 转译），材质模糊的**绝对开销与掉帧风险**必测真机；② **功耗/发热在模拟器上不可得**——`SP_daemon -p` 报 `RK does not support power acquisition`、电池为虚拟值，**功耗结论必须真机测**；③ spec §4「同屏弹幕满载 ≥55fps」须用 ≥60fps 片源在真机验证；④ 长时（>5min）播放的稳定性与内存增长未测。**以上四项的真机执行见 [device-acceptance](/specs/harmony/device-acceptance)（AC-03 满载帧率 / AC-06 功耗 / AC-07 材质绝对开销 / AC-15 长时播放），待真机执行**
 - [x] **OpenAPI → ArkTS 类型生成（已解决，2026-09-21：判定为不可行，改为手写）**：实测 `server/docs/swagger.json`（swagger 2.0，64 个 path / 82 个响应）：**82 个响应 schema 无一例外全是 `$ref: #/definitions/github_com_dlidli_server_internal_pkg_response.Body`**，而该 `Body` 的 `data` 字段是空 schema `{}`（等价 `any`）；13 个 `definitions` 里只有**请求体**（且多为 admin 域）有结构。
   - **结论**：生成器无料可生——产出只有统一包裹与少量请求体，端侧真正需要的响应模型（稿件详情、弹幕分段、搜索结果…）一个都拿不到。**放弃生成路线，改为手写端侧模型 + 契约核对**。
   - **根因与不可解性**：根因在后端 handler 未标注具体响应类型，修它必须改后端，与本期「零后端改动」冲突。后续若要重开生成，需后端先为响应引入泛型 DTO 标注（如 `response.BodyOf[T]`），届时再评估。
   - **执行口径**：`model/` 目录为手写产出，M4-HMY-03 起按 OpenAPI 逐条核对字段名、类型与可空性，并在端侧联调时以后端真实响应为准。
 - [ ] **微信登录**：鸿蒙端无小程序载体，微信开放平台鸿蒙版 SDK 可用性待查证（本期不做）。
 - [ ] **CI 影响**：hvigor 构建需 DevEco 环境，CI 是否纳入鸿蒙构建待定（本期可先本地构建）。
-- [ ] **应用签名与上架**：本期口径为仅模拟器/真机本地验证，不提审；签名证书与资质材料待上架阶段再办。
+- [ ] **应用签名与上架**：本期口径为仅模拟器/真机本地验证，不提审；签名证书与资质材料待上架阶段再办。**注意**：`build-profile.json5` 的 `signingConfigs` 现为空数组——未签名 HAP 只能装模拟器，**真机验收前必须先配自动签名**（步骤见 [device-acceptance §2.2](/specs/harmony/device-acceptance)）。
 
 ### 6.1 投稿专项风险（M4 追加，2026-09-30 预研）
 
@@ -220,8 +221,8 @@ apps/harmony/
     - **附带坑**：`fileIo.copy(pickerUri, destPath)` 的目标**必须是沙箱真实路径**——传 `internal://cache/…` 形态（`request.uploadFile` 认、但文件系统 API 不认）会报 `401 The input parameter is invalid`；且 `fileIo.copy` 本身在文档 URI 上也会失败，需退回 **`fileIo.copyFile(fd, dest)`**（先 `openSync(uri, READ_ONLY)` 拿 fd）。实测 372MB 文件走该退路拷贝成功。
   - **代价与结论**：每次投稿多一次整文件拷贝（分片源就是这份副本，故 cache 剩余空间必须先校验），换来的是唯一被实测验证可用的投递形态。若日后要走 picker URI 直投，应改用 `request.agent`（错误信息指向它）而非 `request.uploadFile`。
   - **口径**：以上为模拟器所得；属**协议/API 行为**结论（与设备型号无关），可直接用于实现。
-- [ ] **后台传输的保活边界**：即便走 `request.uploadFile`，系统对后台任务仍有约束（长时任务需声明 `backgroundModes`，且可能受省电策略影响）。HMY-50 的"锁屏继续上传"需在真机上以"锁屏 + 切后台 5 分钟"实测确认，**模拟器结论不作数**。2026-10-08 补：模拟器已实测「**上传途中**锁屏后分片继续推进并完成、成品 sha256 校验 MATCH」（30 MB / 6 片），但**同尺寸对照中仍出现过切后台即被回收进程**的情形，且模拟器 `moveAbilityToBackground()` 可能直接返回 `16000065`；故保活不能只依赖"系统任务解耦"的观察，**HMY-51 必须显式申请长时任务**。
-- [ ] **端侧算大文件 SHA-256 的耗时**：8GB 文件全量哈希在端侧可能达数十秒。需实测并决定策略（如对 > 500MB 的文件改用"抽样哈希 + 尺寸"做弱秒传，或直接跳过秒传改由后端在合并时校验）。**后端 `file_hash` 是必填 `len=64`**，跳过秒传仍须算完哈希，故此耗时无法回避，只能优化或后端放宽。
+- [ ] **后台传输的保活边界**：即便走 `request.uploadFile`，系统对后台任务仍有约束（长时任务需声明 `backgroundModes`，且可能受省电策略影响）。HMY-50 的"锁屏继续上传"需在真机上以"锁屏 + 切后台 5 分钟"实测确认，**模拟器结论不作数**。2026-10-08 补：模拟器已实测「**上传途中**锁屏后分片继续推进并完成、成品 sha256 校验 MATCH」（30 MB / 6 片），但**同尺寸对照中仍出现过切后台即被回收进程**的情形，且模拟器 `moveAbilityToBackground()` 可能直接返回 `16000065`；故保活不能只依赖"系统任务解耦"的观察，**HMY-51 必须显式申请长时任务**（已完成：`backgroundModes: ["dataTransfer"]` + `KEEP_BACKGROUND_RUNNING`）。**真机执行见 [device-acceptance AC-10](/specs/harmony/device-acceptance)，待真机执行**。
+- [ ] **端侧算大文件 SHA-256 的耗时**：8GB 文件全量哈希在端侧可能达数十秒。需实测并决定策略（如对 > 500MB 的文件改用"抽样哈希 + 尺寸"做弱秒传，或直接跳过秒传改由后端在合并时校验）。**后端 `file_hash` 是必填 `len=64`**，跳过秒传仍须算完哈希，故此耗时无法回避，只能优化或后端放宽。**取数用的真机步骤见 [device-acceptance AC-12](/specs/harmony/device-acceptance)，待真机执行**。
 - [ ] **`uploads/` 与数据库的一致性运维**（承本仓 [部署文档 §4.8](/project/deployment)）：投稿功能上线后，端侧产生的媒体文件同样落在 `server/uploads/`（**不在 Docker 卷内、被 gitignore**），**该目录与数据库必须同周期备份**，否则重演 2026-09-30 的"文件在、元数据丢"事故。此项为运维约束，非端侧代码问题，但投稿上线前应在 [deployment](/project/deployment) 的检查清单中确认。
 - [x] **草稿的清理策略**：本地草稿（`preferences`）与服务端上传会话（Redis TTL 24h）生命周期不一致——草稿可能引用已被清理的上传会话。需定义：进入草稿时**先 `GET /upload/{id}` 校验会话是否仍有效**，失效则提示"上传已过期，需重新选择文件"。
   - **2026-10-09 由 M4-HMY-53 落地定论**（`store/UploadDraftStore.checkSessions`）。三条口径缺一不可：① **只校验「有 `uploadId` 但没有 `fileId`」的条目**——上传一收口后端 `Complete` 末尾即 `Del` 掉会话，拿收口后的 ID 去查**必然** 30001，那是「已完成」不是「失效」（秒传同理无会话）；② **只有 `code=30001` 判失效**，其余错误码不判；③ **网络类失败终止整轮校验**并提示「联网后可继续」——断网不等于过期，不能据此让用户重选全部文件。实测：`GET /upload/{id}` 有效时 `code=0 uploaded=[…]`、`TTL up:sess:* = 86400s`，`DEL` 掉该键后 **`code=30001`**（`Service.session()` 只看 `len(sess)==0`，不区分「过期」与「被删」，故删键与 24h 到期是同一条代码路径）。
@@ -260,7 +261,7 @@ apps/harmony/
 | ⑥ 投稿接口接受度 | 用上传得到的 `file_id` 调 `POST /api/v1/videos` | 通过，返回 `bvid DV2VivO0Xq7CC`（`status=2` 转码中，已下发签名流） |
 | ⑦ 真 UI 走查 | 「我的」→「投稿」→ 选片 → 开始上传 → 进度 → `file_id` | 阶段依次出现「正在校验文件 → 正在上传 → 正在合并文件 → 上传完成」 |
 
-**须真机确认（模拟器结论不作数）**：长时任务的实际保活边界（锁屏 + 切后台 5 分钟）、真机吞吐与弱网重试、大文件（GB 级）端侧哈希耗时与 cache 占用。模拟器为 x86_64 软件渲染，且 `moveAbilityToBackground()` 可能直接返回 `16000065`。
+**须真机确认（模拟器结论不作数）**：长时任务的实际保活边界（锁屏 + 切后台 5 分钟）、真机吞吐与弱网重试、大文件（GB 级）端侧哈希耗时与 cache 占用。模拟器为 x86_64 软件渲染，且 `moveAbilityToBackground()` 可能直接返回 `16000065`。**以上各项的真机执行见 [device-acceptance](/specs/harmony/device-acceptance)（AC-10/AC-11/AC-12/AC-13），待真机执行**。
 
 **管理后台/RBAC**：本卡仅端侧改动，不涉及。
 
@@ -294,7 +295,7 @@ apps/harmony/
 | ⑤ 取消保持原值 | 相册选择器按 BACK | 封面**保持原值**（原为「未设置封面」），无异常 |
 | ⑥ 表单字段落库 | 第二条投稿 `DV2Vj5fiQ9xIW` 的 `video` 行 + 中文标签字节 | `description=HMY52 desc 16:9 cover`、`copyright=2`（转载）、`tags=["E2E2"]`；首条的中文标签 `["E2E封面"]` 字节为 `E5B081E99DA2`（真 UTF-8，非 `??`） |
 
-**未覆盖 / 须真机确认**：真机（模拟器为 API 26 x86 软件渲染）；**相册选图的「选中→裁切」段未验**——模拟器图库为空（`所有图片` 无内容，`拍照` 无相机应用），只能验到「选择器可打开、取消不脏状态」；该路径与已验的截帧路径共用 `ImageCropper.fromUri`（同为 fd 解码），残余风险集中在 picker uri 的临时授权 `fileIo.openSync` 一段。多P / 草稿恢复属 M4-HMY-53，状态回看与驳回原因属 M4-HMY-54。
+**未覆盖 / 须真机确认**：真机（模拟器为 API 26 x86 软件渲染；**真机执行见 [device-acceptance AC-16](/specs/harmony/device-acceptance)，待真机执行**）；**相册选图的「选中→裁切」段未验**——模拟器图库为空（`所有图片` 无内容，`拍照` 无相机应用），只能验到「选择器可打开、取消不脏状态」；该路径与已验的截帧路径共用 `ImageCropper.fromUri`（同为 fd 解码），残余风险集中在 picker uri 的临时授权 `fileIo.openSync` 一段。多P / 草稿恢复属 M4-HMY-53，状态回看与驳回原因属 M4-HMY-54。
 
 ## 7. 视觉设计资源与规范依据
 **事实来源**：华为开发者联盟[设计中心](https://developer.huawei.com/consumer/cn/design/)与[设计资源库](https://developer.huawei.com/consumer/cn/design/resource/)。下表为**面向本模块可直接取用**的资源与规范，非全量搬运。
