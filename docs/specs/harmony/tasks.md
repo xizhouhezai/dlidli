@@ -3,17 +3,18 @@
 > 对应规格：[spec](/specs/harmony/spec) ｜ 方案：[plan](/specs/harmony/plan)
 > 任务编号：`{阶段}-{模块}-{序号}`（如 M4-HMY-03）；完成即勾选并追加完成日期；括号补注实现要点与验证结论；每条任务必须标注"覆盖"的需求 ID。
 > 口径：本期仅模拟器/真机本地验证，**不提交平台审核**（对齐 [M3-MP-03](/specs/engineering/tasks) 小程序的个人主体口径）。
+> 真机验收：各条「待真机」标注的**执行手册见 [device-acceptance](/specs/harmony/device-acceptance)**（17 项去重后编号 AC-01~AC-17，含前置/步骤/观测点/记录表/判定阈值）。**待真机执行，本仓尚无真机结论。**
 
 ## M4（W49+）观看端
 
 - [x] M4-HMY-01 预研：原生技术链路可行性（AVPlayer 播后端签名 m3u8；`@ohos.net.webSocket` 连弹幕 WS；`@ohos.net.http` 跑通登录与视频列表；ArkUI 状态管理 V2 写法；沉浸光感在 API 26 模拟器上的实际表现）（2026-10-08 完成）
   - 覆盖：—（工程；为 HMY-01/03/10/20/22 定实现方案）
-  - 前置：DevEco 26.0.0.821 + SDK API 26 + 模拟器镜像 API 26（`D:/Program Files/Huawei/sdk/system-image/HarmonyOS-7.0.0/phone_all_x86`）已就位，实例名 **`Pura X View`**（apiVersion 26.0.0 / guest 7.0.0.106）。模拟器视频硬解受限时播放结论记「待真机确认」，**不得据此判定鸿蒙不支持 HLS**
+  - 前置：DevEco 26.0.0.821 + SDK API 26 + 模拟器镜像 API 26（`D:/Program Files/Huawei/sdk/system-image/HarmonyOS-7.0.0/phone_all_x86`）已就位，实例名 **`Pura X View`**（apiVersion 26.0.0 / guest 7.0.0.106）。模拟器视频硬解受限时播放结论记「待真机确认」，**不得据此判定鸿蒙不支持 HLS**。**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-02/AC-04），待真机执行**
   - 连设备口径（2026-09-21 实测）：模拟器**不注册为 USB 目标**，只跑 `hdc list targets` 恒为 `[Empty]`；须先 `hdc tconn 127.0.0.1:5555`（模拟器监听 `127.0.0.1:5555`），连上后 `list targets -v` 由 `TCP Offline` 转 Online；未就绪时 shell/install 报 `[E001005] Device not found or connected`。另行拉起模拟器的命令行可从 DevEco `idea.log` 的 `LocalDeviceConnection - start hvd log` 抄取：`Emulator.exe -hvd "<实例名>" -path "D:/Program Files/Huawei/Emulator/deployed" -t <pipe> -imageRoot "D:/Program Files/Huawei/sdk"`；`hdc file recv` 的本地路径须写 Windows 反斜杠形式并在 Git Bash 下关掉路径转换，否则被当相对路径
   - **启动窗口期注意事项（2026-09-21 实测）**：模拟器冷启后需等 **SystemUI（`com.ohos.sceneboard` 进 FOREGROUND / 窗口数 > 0）** 才算就绪；就绪前 `hidumper -s WindowManagerService` 窗口数为 0、`snapshot_display` 恒返回同一张 47KB 全黑帧、`aa start` 报 `10106102 … device screen is locked … developer mode`——这些都是**未就绪的假象，不是宿主渲染故障**。当日早前 3 次尝试即在启动窗口期（2~4 分钟内）操作并遇 VM 退出，一度误判为宿主 OpenGL 不可用；当晚重试则**完全可用**（安装/启动/渲染/切页签均正常）。操作口径：先 `uptime` + `aa dump -a` 确认 sceneboard 就绪，再安装与启动；避免在启动窗口期反复 `snapshot_display`
   - 可用结论（同期实测）：模拟器运行时 **API 26 / guest `7.0.0.106(SP1DEVC00E999R4P11)` / abi `x86_64`**；**未签名 HAP 可直接 `hdc install` 成功**，本地验证无需配置 `signingConfigs`
   - 模拟器操作速查：安装 `hdc -t 127.0.0.1:5555 install -r <hap>`（`<hap>` 务必用**相对路径**：先 `cd` 到产物目录；Git Bash 下传 Windows 绝对路径会被 hdc 拼成 `<当前目录>/D:/...` 而报 `Error opening file`，安装失败后紧接着的 `aa start` 就报 `10104001`，极易误判成包名问题）；启动 `hdc -t … shell "aa start -a EntryAbility -b com.dlidli.app -m entry"`；点击用 `hdc -t … shell "uitest uiInput click <x> <y>"`（`uinput -T -m x y x y` 等长 trace 不触发点击）；取控件实际矩形用 `uitest dumpLayout -p /data/local/tmp/layout.json` 再 `hdc file recv`（本次即以它纠正了 1719→2064 的坐标误判）；截图 `snapshot_display -f <路径>` + `file recv`
-  - 视觉预研要点（降级为实测确认，设计侧结论已定稿见 [plan §2/§6](/specs/harmony/plan)）：① `uiMaterial.isImmersiveMaterialSupported()` 在 x86 模拟器返回什么；② `getMaterialInfo()`/`getGlobalMaterialLevel()` 的实际取值（x86 模拟器算力档位可能非高/中档，`style`/`colorInvert` 等可能不生效）；③ 在 `Navigation` 标题栏与 `Tabs` 底部标签栏上挂 `ImmersiveMaterial` 的实际观感与帧率开销；④ 结论若为模拟器不支持，**不得据此判定真机不支持**，记「待真机确认」
+  - 视觉预研要点（降级为实测确认，设计侧结论已定稿见 [plan §2/§6](/specs/harmony/plan)）：① `uiMaterial.isImmersiveMaterialSupported()` 在 x86 模拟器返回什么；② `getMaterialInfo()`/`getGlobalMaterialLevel()` 的实际取值（x86 模拟器算力档位可能非高/中档，`style`/`colorInvert` 等可能不生效）；③ 在 `Navigation` 标题栏与 `Tabs` 底部标签栏上挂 `ImmersiveMaterial` 的实际观感与帧率开销；④ 结论若为模拟器不支持，**不得据此判定真机不支持**，记「待真机确认」。**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-07 材质绝对开销），待真机执行**
   - **预研进度（2026-09-21 起，2026-09-22 补记）**：预研项中的**网络层已随 M4-HMY-03 实测覆盖**——`@ohos.net.http` 走通真实后端（首页分区列表 12 项）、超时/失败重试与 401 续期链路均已验，且模拟器可达宿主机（`10.0.2.2:8000`），结论见 M4-HMY-03；**AVPlayer HLS 播放已随 M4-HMY-06 实测覆盖**（后端签名 m3u8 真实解码出画 + 清晰度切换 + 签名临期换源续播 + 横屏全屏，结论见 M4-HMY-06）；**沉浸光感已随 M4-HMY-11 实测覆盖**（`supported=true`/`state=ENABLE`/`level=EXQUISITE`，结论见 M4-HMY-11 与 [plan §6](/specs/harmony/plan)）；**弹幕 WS 通道已随 M4-HMY-07 实测覆盖**（`@ohos.net.webSocket` 与 Go Hub 互通无碍，唯一阻塞是服务端 Origin 白名单未含客户端来源，端侧无从绕过；降级轮询链路与真实帧上屏均已验，结论见 M4-HMY-07）
   - **材质叠加的帧率/功耗实测（2026-10-08 完成，末项收口）**：见下条「材质帧率实测」；**至此预研五项全部收口**
   - **材质帧率实测（2026-10-08，API 26 模拟器 `Pura X View`，app 零改动）**
@@ -122,7 +123,7 @@
     - **图形验证码**：端侧 Canvas 重绘结果与 Redis 答案**逐字符一致**（屏上 `W42J` ↔ Redis `w42j`；`6VYH` ↔ `6vyh`）；按实测反馈放大到 **150×50**（与后端 SVG 同为 3:1 等比，字号 22→27.5），点击可换图
     - **密码登录**：验证码被后端接受——`/auth/login/password` 返回**「账号或密码错误」而非「验证码错误或已过期」**（服务端 `LoginByPassword` 首步即 `captcha.Verify`，该校验通过才可能落到密码比对），随后验证码字段自动清空并换新图
     - **401 静默续期 + 重放（补齐 M4-HMY-03 的未覆盖分支）**：停机后篡改偏好存储里的 `auth.access_token` 签名→重启，日志链路完整：`凭证已恢复，登录态=true` → `业务失败：/api/v1/users/me status=401 code=10003`（不重试）→ `凭证已写入偏好存储` → `访问令牌已静默续期`；页面仍呈现已登录（重放成功）。**轮换已闭环**：磁盘 access_token 由被篡改值换为新 JWT，refresh_token 由 `bc7c…` 轮换为 `9615…`，Redis 旧 `sess:bc7c…` 已删除、仅存 `sess:9615…`
-  - 未覆盖：资料/我的投稿/观看历史/收藏（归 M4-HMY-09）；全部结论均在 API 26 模拟器取得，**真机待验**
+  - 未覆盖：资料/我的投稿/观看历史/收藏（归 M4-HMY-09）；全部结论均在 API 26 模拟器取得，**真机待验**——**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-17），待真机执行**
 - [x] M4-HMY-05 发现：首页信息流（LazyForEach 分页 + 下拉刷新 + 触底加载）、分区导航与最新/最热、搜索（含排序筛选与历史同步）`2026-09-21`
   - 覆盖：HMY-40、HMY-41
   - 实现要点：
@@ -142,7 +143,7 @@
     - **首页信息流**：推荐首屏 20 条 + 触底续 6 条后呈现「没有更多了」；分区切换（动画 → 3 条，推荐页签隐去并自动落最新）；最新/最热切换（最热按播放量降序，26.6万 > 24.3万 > 22.8万 逐屏验证）；下拉刷新（日志 7 次 page-1 重载且列表回顶）；封面走 `10.0.2.2` 正常出图、时长角标 `04:11`/`1:02:05` 两种格式、meta 行 `1.2亿 · 生活UP主05 · 5小时前`（万/亿与相对时间均正确）
     - **默认封面接入（2026-09-30）**：空封面原先只画一块 `border_default` 底色占位，与 Web/H5/Admin 的品牌默认封面不一致。现改为 `Image($r('app.media.default_cover'))`——产物由 `scripts/svg2png.mjs` 与三端一并派生（同一次合成循环、同一份底板与标记贴法），落在 `entry/src/main/resources/base/media/default_cover.png`（鸿蒙资源名只允许小写字母/数字/下划线，故用下划线而非连字符），并同步进 `assets/brand/dist/` 归档清单。**验证结论**：四端 `default-cover.png` **md5 逐字节相同**（`B93C45D8…`，163475 字节）；模拟器实测首页「测试 05/25/20」三张空封面卡片已渲染品牌鲸+喷泉封面（原为灰块）；`hvigorw assembleHap` BUILD SUCCESSFUL
     - **搜索**：关键词 `测试` → 视频 tab 20 条 + 「共 26 条」→ 触底续 6 条 + 「没有更多了」；UP 主 tab 同样 20 + 6 且双 Tab 各 26 条；0 结果两种文案（视频/UP 主）与 tab 切换均正常；历史新增（`测试` → `UP主` 后 `UP主` 置顶）、单条删除、清空、**重启后历史仍在**（`aa force-stop` 后重进）；点卡片弹「播放页建设中，敬请期待」（播放页归 M4-HMY-06）
-  - 未覆盖：触底加载失败与刷新失败的**重试分支**未做停机实测（沿用 M4-HMY-03 已验证的 `ErrorStateView` 口径）；全部结论均在 API 26 模拟器取得，**真机待验**
+  - 未覆盖：触底加载失败与刷新失败的**重试分支**未做停机实测（沿用 M4-HMY-03 已验证的 `ErrorStateView` 口径）；全部结论均在 API 26 模拟器取得，**真机待验**——**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-13 弱网重试/AC-17），待真机执行**
 - [x] M4-HMY-06 播放页：AVPlayer HLS 播放、清晰度切换与倍速、进度记忆与跨端续播、有效播放上报、签名过期静默换签、触屏手势与横屏全屏、切后台处理（2026-09-22 完成）
   - 覆盖：HMY-10、HMY-11、HMY-12、HMY-13、HMY-14、HMY-15
   - 实现要点：
@@ -174,7 +175,7 @@
     - **切后台（HMY-15 后半）**：切后台后 Redis 进度冻结（两次采样均 129/241 不变），重启后停在原位**且不自动续播**
     - **签名静默续签（HMY-14）**：临时把续签阈值放大到 24h 强制触发，得到完整干净的一轮 `initialized → prepared → 换源后跳转到 → 跳转完成 → playing → 静默换源（playing=true）`，每次换源位置都保住、零 `5400102`（验完阈值已还原 5min）
     - **实测方法补充**：播放页**截图会取到旧帧**（两次间隔 2s 的快照完全一致），本任务改以 `uitest dumpLayout` 导出的控件树 + Redis 作为可判定 oracle；`uitest uiInput swipe` 的第 5 个参数是**速率**（200~40000）而非时长，要做「慢拖」须传 200
-  - 未覆盖：**换源瞬间画面会短暂空白**（同实例 reset，模拟器约 3.5s），双播放器无缝切换列为后续优化；弹幕与互动评论未接（**弹幕已于 2026-09-22 由 M4-HMY-07 补齐**，见该条；互动评论归 M4-HMY-08，页内以一行提示标注）；**起播（约 12s）与换源（约 3.5s）耗时、以及 HLS 硬解表现均为模拟器口径，真机待验**（模拟器视频硬解受限，播放类结论一律不据此判定「鸿蒙不支持」）
+  - 未覆盖：**换源瞬间画面会短暂空白**（同实例 reset，模拟器约 3.5s），双播放器无缝切换列为后续优化；弹幕与互动评论未接（**弹幕已于 2026-09-22 由 M4-HMY-07 补齐**，见该条；互动评论归 M4-HMY-08，页内以一行提示标注）；**起播（约 12s）与换源（约 3.5s）耗时、以及 HLS 硬解表现均为模拟器口径，真机待验**（模拟器视频硬解受限，播放类结论一律不据此判定「鸿蒙不支持」）——**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-02 起播 P90/AC-04 硬解与换源），待真机执行**
   - **交付后修复（2026-09-22，PATCH v0.48.1）**：验收反馈「白底画面下进度条看不清」，同时复现出两处起播缺陷。
     - ① **控件层无蒙层**：控制层是白字 + 半透明白轨，压在亮画面上整体消失（白底素材下进度条与时间戳几乎不可见）→ 顶栏/底栏各加一层渐变蒙层（`SCRIM_TOP` `#B3000000` 顶实→透、`SCRIM_BOTTOM` `#CC000000` 透→底实）。蒙层挂在控件容器自身，底部控件行落在渐变更实的一侧；实测白底帧下时间戳、已播（品牌粉）与未播（半透明白）轨道均可辨，蒙层不影响命中测试（倍速面板仍正常展开）
     - ② **等待 `prepared` 超时阈值偏紧**：`STATE_TIMEOUT_MS` 原为 15s，而模拟器冷启下 HLS 拉清单到 `prepared` 实测 **15.0~15.5s**（连续两次失败，`prepared` 恰在超时后 0.4~0.5s 到达），表现为起播直接判失败、状态机停在 `error` → 提到 **30s**（真机起播是秒级，该上限只在对端无响应时生效）。修后同一路径起播正常（`prepared` 14.9s → 续播 seek → `playing`）
@@ -211,7 +212,7 @@
     - **列表面板（HMY-24）**：共 4 条、最新在前、点「复制」出「已复制」toast
     - **WS（HMY-22）**：见上条 M4-HMY-01 结项（真实握手 + 帧上屏 + 本地过滤均已实测）；`degraded → 分段轮询` 兜底另在本次复跑中再次实测
     - 验证后状态复原：临时弹幕与屏蔽行已删（`BVSEED0001` 4 行、`video_stat.danmaku_cnt=4`、`danmaku_block` 0 行）、反向端口转发已撤、段缓存键 `dm:v:{vid}:0` 已清
-  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得）；**黑边分支的稳态真机场景未覆盖**——需画幅比宽于窗口的宽银幕片（本机内容全 16:9，故只以探针核验，见上）；列表「加载更多」未在 >50 条的稿上实测（种子仅 4 条）；发送频控/去重（40001/40004）的**服务端裁决文案**未在 UI 复现（端侧不做本地拦截，错误码翻译由 `ErrorMessages` 表覆盖）；暗色模式下的弹幕观感未核对
+  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得；**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-03 满载帧率/AC-08 暗色/AC-09 黑边），待真机执行**）；**黑边分支的稳态真机场景未覆盖**——需画幅比宽于窗口的宽银幕片（本机内容全 16:9，故只以探针核验，见上）；列表「加载更多」未在 >50 条的稿上实测（种子仅 4 条）；发送频控/去重（40001/40004）的**服务端裁决文案**未在 UI 复现（端侧不做本地拦截，错误码翻译由 `ErrorMessages` 表覆盖）；暗色模式下的弹幕观感未核对
 - [x] M4-HMY-08 互动与评论：点赞/投币/收藏/长按三连（幂等 + 原生动画）、评论一级与二级、分享走系统面板（2026-09-30 完成）
   - 覆盖：HMY-30、HMY-31、HMY-32
   - 状态：**代码已完成、ArkTS 编译零告警、接口层与模拟器端到端交互均已实测（2026-09-28 首轮 + 2026-09-30 复验），已勾选**
@@ -233,7 +234,7 @@
     - **收藏夹弹层渲染 `默认收藏夹[object Object]`**：`col.name + (col.is_default === 1 ? $r('...') : '')` 把 `$r()` 返回的 **Resource 对象**拼进字符串。改为名称与「（默认）」两个相邻 `Text`（不用字符串拼接）。复验：弹层显示 `默认收藏夹` + `（默认）`，全屏布局转储中**不含 `object Object`**
     - **评论点赞计数不刷新**：`ForEach` 的 key 生成器只用 `c.id`，而 `CommentItem` 是**普通 interface（非 `@Observed`）**——key 不变时 ArkUI 不重建子项，`like_cnt` 更新后视图保持旧值。key 改为 `${index}#${c.id}#${c.like_cnt}#${c.reply_cnt}`（楼中楼同法加 `like_cnt`）。复验：点赞后计数由 1→2 且图标转实心，与服务端 `comment.like_cnt` 一致
     - **一处误判已更正**：「2 条评论只渲染出 1 条」**不是丢项**——第二条根评论原本落在 y≈2240、而屏幕高 2232，属**视口截断**；下滑后两条根评论并列正常渲染。首轮的"丢项"结论作废（key 修复的真正收益是上一条的计数刷新）
-  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得）；评论的 @用户与表情（CMT-01 的 P1 部分）与举报（CMT-06）本期不做；暗色模式下互动栏/评论区的观感未核对
+  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得；**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-17/AC-08），待真机执行**）；评论的 @用户与表情（CMT-01 的 P1 部分）与举报（CMT-06）本期不做；暗色模式下互动栏/评论区的观感未核对
 - [x] M4-HMY-09 个人中心：资料与我的投稿、观看历史、收藏、未登录态入口、端侧偏好与进度缓存（2026-09-28 完成）
   - 覆盖：HMY-42、HMY-04
   - 实现要点
@@ -250,10 +251,10 @@
   - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL**（新增文件 ArkTS 零告警；仅 `media/VideoPlayer.ets` 4 条既有 `media` 能力告警）；`go test ./...` 全绿（本期零后端改动，回归确认）；接口契约以真实令牌对本地后端逐项核对（`/users/me` 含 `signature`/`level`；`/videos/mine` 与 `/users/me/favorites` 返回 `{list,total}`；`/videos/history` 只回 `{list}`）
   - **模拟器端到端走查（API 26 `Pura X View`，2026-09-28）**：未登录态（图标 + 文案 + 登录入口）→ 验证码登录（`13800000002`）→ 资料卡昵称/`Lv`/签名回落文案正确 → **投稿**空态（日志 `tab=mine 共 0 项 total=0`）→ **历史** 2 条真实记录且顺序与接口一致（日志 `tab=history 共 2 项 total=-1`，触底置「没有更多了」）→ **收藏** 3 条真实记录（日志 `tab=favorites 共 3 项 total=3`）→ 点卡片正确进入播放页（标题与 bvid 对上）→ 返回 → 退出登录确认框（系统玻璃观感）→ 确认后回落未登录态
   - **分页实测**：造 26 条观看历史（`BVSEED0001..0026`）后，接口 page1=20 / page2=6 正确；端侧日志 `tab=history 共 20 项 total=-1` 证实「不返回 total」一侧的满页 `hasMore` 判定生效
-  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得）；HMY-04 的三类端侧偏好键（`danmaku.settings`/`playback.local_progress`/`search.local_history`）已分别随 M4-HMY-07/06/05 落地实测，**本任务未新增偏好键**；个人信息编辑（改昵称/头像/签名）本期不做（Web 端已有）；暗色模式下的资料卡与列表观感未核对
+  - 未覆盖：**真机待验**（全部结论均在 API 26 模拟器取得；**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-17/AC-08），待真机执行**）；HMY-04 的三类端侧偏好键（`danmaku.settings`/`playback.local_progress`/`search.local_history`）已分别随 M4-HMY-07/06/05 落地实测，**本任务未新增偏好键**；个人信息编辑（改昵称/头像/签名）本期不做（Web 端已有）；暗色模式下的资料卡与列表观感未核对
 - [x] M4-HMY-10 端侧验收：核心链路走查（登录 → 找内容 → 播放 → 弹幕 → 互动 → 个人中心）+ 性能指标测量（冷启动、起播、弹幕帧率、崩溃率、包体积）（2026-10-08 完成）
   - 覆盖：[spec §4 成功指标](/specs/harmony/spec)
-  - **环境**：API 26 模拟器 `Pura X View`（`hdc -t 127.0.0.1:5555`，x86_64 软件渲染），宿主本地后端 `:8000`（模拟器内 `http://10.0.2.2:8000`，MySQL/Redis 均 up）；被测包 `entry-default-unsigned.hap`（1,545,391 B，sha256 `43EC2E4D…EB56`，2026-10-08 15:31 构建，`hdc install -r` 装入）。**所有数值一律标注环境**：模拟器可得 / 真机待验。
+  - **环境**：API 26 模拟器 `Pura X View`（`hdc -t 127.0.0.1:5555`，x86_64 软件渲染），宿主本地后端 `:8000`（模拟器内 `http://10.0.2.2:8000`，MySQL/Redis 均 up）；被测包 `entry-default-unsigned.hap`（1,545,391 B，sha256 `43EC2E4D…EB56`，2026-10-08 15:31 构建，`hdc install -r` 装入）。**所有数值一律标注环境**：模拟器可得 / 真机待验。**真机复测的执行手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-01~AC-17），待真机执行。**
   - **走查方法（可复现，UI 自动化注入 + 三重取证）**：
     - 操作注入：`hdc -t 127.0.0.1:5555 shell "uitest uiInput <click|longClick|drag|keyEvent|inputText> …"`（长按三连用 `longClick`，进度用 `drag`，中文输入用 `inputText`）
     - 控件定位：`uitest dumpLayout -p /data/local/tmp/layout.json` + `hdc file recv`，**递归遍历 `{attributes,children}` 树**取 `type/text/description/bounds`（顶层即 `attributes`+`children`，不能按数组解析；TextInput 的 `text` 常为空、须看 `hint`）；辅助脚本 `.dev-logs/m4hmy10/ui.ps1`（dump/click/swipe/drag/snap）与 `ui-click-text.ps1`（按文本命中后点其 bounds 中心）
@@ -267,8 +268,8 @@
     - **互动**（含长按）：**长按 1.5s 三连** → `三连完成：like=true coin=1 fav=true`，服务端 stat `like 1→2 / coin 0→1 / fav 2→3`，赞/币/藏三枚图标转实心（截图）；**点赞**再点回退（`like 2→1`，开关幂等）；**投币**再投被拦 `已经投过币啦`；**收藏**点击取消（`fav 3→2`）→ 再点弹层选「默认收藏夹（默认）」→ `fav 2→3`；**评论**发布 `M4HMY10cmt` → UI `4 条评论`→`5 条评论` 且列表首条即该评论，接口 `/comments` total 4→5
     - **个人中心**：资料卡（昵称 / `Lv1` / 签名回落「这个人很神秘，什么都没有写」）；**投稿**空态「还没有投稿，投稿请到 Web 端」；**历史** `列表加载完成：tab=history 共 1 项 total=-1`（卡片带观看进度 `12:22`）；**收藏** `tab=favorites 共 1 项 total=1`（即刚收藏稿件）；**退出登录** 确认框 → 回落游客态
   - **性能实测（方法与数值）**：
-    - **冷启动**（口径：`hilog` domain 0 的 `Ability onCreate` → domain `0xD11D` 的首页 `信息流加载完成`，脚本按 hilog 毫秒时间戳做差）`measure-coldstart.ps1 -Runs 6 -WaitSec 10`：`onCreate→contentLoaded` 286/343/339/296/359/383ms；**`onCreate→首页信息流就绪` 1231/1305/1330/1236/1286/1486ms（均值 ≈1312ms）**。模拟器可得，**真机待验**（spec 目标 <2s 为真机口径）
-    - **HLS 起播**（口径：`VideoPlayer` 的 `状态：initialized` → `状态：playing`，拆分 `init→prepared` 与 `prepared→playing`）首开（播放器/编解码冷启）`15.16s + 0.33s ≈ 15.5s`；同一稿件**连续 10 轮**（`measure-playstart.ps1 -Runs 10 -WaitSec 25`）：`init→prepared` 2407~2773ms、`prepared→playing` 706~1263ms、**合计 3113~4036ms，均值 3608ms，P90 = 3837ms**。**模拟器可得、真机待验**：spec 目标 P90 < 1.5s 在该环境下无法达成，且**不得据此判定「鸿蒙不支持」**（x86_64 无硬解直通，M4-HMY-06 已记 15.0~15.5s）
+    - **冷启动**（口径：`hilog` domain 0 的 `Ability onCreate` → domain `0xD11D` 的首页 `信息流加载完成`，脚本按 hilog 毫秒时间戳做差）`measure-coldstart.ps1 -Runs 6 -WaitSec 10`：`onCreate→contentLoaded` 286/343/339/296/359/383ms；**`onCreate→首页信息流就绪` 1231/1305/1330/1236/1286/1486ms（均值 ≈1312ms）**。模拟器可得，**真机待验**（spec 目标 <2s 为真机口径）——**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-01），待真机执行**
+    - **HLS 起播**（口径：`VideoPlayer` 的 `状态：initialized` → `状态：playing`，拆分 `init→prepared` 与 `prepared→playing`）首开（播放器/编解码冷启）`15.16s + 0.33s ≈ 15.5s`；同一稿件**连续 10 轮**（`measure-playstart.ps1 -Runs 10 -WaitSec 25`）：`init→prepared` 2407~2773ms、`prepared→playing` 706~1263ms、**合计 3113~4036ms，均值 3608ms，P90 = 3837ms**。**模拟器可得、真机待验**：spec 目标 P90 < 1.5s 在该环境下无法达成，且**不得据此判定「鸿蒙不支持」**（x86_64 无硬解直通，M4-HMY-06 已记 15.0~15.5s）——**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-02，含 P90 最近秩算法），待真机执行**
     - **弹幕渲染帧率**（方法同 M4-HMY-01：`hitrace -t 10 -b 65536 -o <f> graphic ace animation` 抓帧 → 数应用进程的 `B|<pid>|H:OnVsyncEvent`，取标记内 `now:` 纳秒，**帧率 = (条数-1) ÷ 首末差**；静止时该标记恒为 0，故不能用固定窗口数帧）：播放在 634→650s（弹幕密集段，**同屏 1~3 条**）→ **551 个标记 / 9.968s → 均值 55.18fps**，帧间隔 p50 16.00ms（≈62.5fps）、p90 32.00ms、**50 帧 >32ms（≈9% 掉帧）**。**不构成 spec §4「≥55fps」达标证据**：非「满载」（同屏 1~3 条；M4-HMY-01 已测 45 条与 1000 条无差异）、模拟器 x86_64 软件渲染、片源 30fps——该阈值须**真机 + ≥60fps 片源 + 满载弹幕**验证
     - **崩溃率**（判定口径：验收窗口内 `/data/log/faultlog/faultlogger` 新增条目）**0 条**：该目录内 `com.dlidli.app` 共 4 条 appfreeze，时间戳 10-07 12:03/12:06/12:14 与 10-08 10:01，**均早于本轮**；无 cppcrash；同期 `filemanager` 的 cppcrash 与本应用无关。样本 = 6 次冷启动 + 6 次进播放页，**0 崩溃 / 0 卡死**。属**窗口内样本**，非线上统计口径
     - **包体积**：`entry-default-unsigned.hap` **1,545,391 B = 1.47 MiB**（13 条目，**无原生 `.so`** 故无 ABI 分裂；`ets/modules.abc` 819KB + `ets/sourceMaps.map` 364KB（release 可去）+ 资源 ≈344KB）。**达标**：占 spec 目标 <30MB 的 **4.9%**
@@ -278,7 +279,7 @@
     - ③ **进度条点击跳转存在无效点击**（**未修，低优先级待复现**）：同一自动化坐标区间内 `click 868 1289` 不改变进度（进度停在 `676515ms`），而 `click 500 1289` 正常跳 `141000ms`；**拖动稳定生效**（本轮取数改用 `drag`，见 `seek2.ps1`）。暂判为「自动化注入与真实手指差异」未排除，**未修**
     - ④ **分段接口与列表接口的屏蔽过滤口径不一致**（**待议**）：同一账号 `/danmaku?segment=1` 返回 11 条（过滤 3 条含「哈哈」），而 `/danmaku/list` total 仍 24。列表是管理面板（每条带「屏蔽」入口），按 HMY-24 口径不算缺陷，但两处口径不一致已登记
     - ⑤ **残留测试数据**：服务端无「删弹幕」接口，本轮遗留**弹幕 1 条**（`M4HY10danmaku`，id `2108102926701432832`）与**投币 1 枚**（无取消接口）；屏蔽词 2 条、评论 1 条、收藏、点赞均已按接口复原，验收后 `video_stat = like 1 / coin 1 / fav 2 / danmaku 24 / comment 5`（`view` 由 9→10 为回放预期）。另观察：评论删除后 `video_stat.comment` 未回落（接口 total 4、stat 仍 5），属既有计数口径
-  - 未覆盖：**真机待验**（spec §4 五项的绝对数值、暗色模式、弱网重试、长时间播放的内存/稳定性）；本轮**未覆盖弹幕满载（同屏数十条）**的帧率与内存（须真机 + 高帧率片源）；后台/锁屏长时保活沿用 M4-HMY-50 结论（真机项）
+  - 未覆盖：**真机待验**（spec §4 五项的绝对数值、暗色模式、弱网重试、长时间播放的内存/稳定性）；本轮**未覆盖弹幕满载（同屏数十条）**的帧率与内存（须真机 + 高帧率片源）；后台/锁屏长时保活沿用 M4-HMY-50 结论（真机项）——**以上全部条目均已在 [device-acceptance](/specs/harmony/device-acceptance) 展开为 AC-01~AC-17，待真机执行**
 - [x] M4-HMY-11 视觉：沉浸光感落地——底栏改 HDS 悬浮玻璃胶囊、材质赋色改中性系统色、氛围背景组件与壳层透明化、卡片/胶囊接入系统材质（2026-09-22 完成）
   - 覆盖：HMY-05
   - 说明：视觉独立成条，**先于端侧验收交付**——观感要在验收走查前定版，否则验收完再返工
@@ -294,7 +295,7 @@
     - ① `AmbientBackdrop` 初版用 `Circle` 画光斑，形状组件默认填充盖住下层渐变 → 改 `Column` + `radialGradient`
     - ② `position({ y: -DliSize.TITLE_BAR_HEIGHT - 60 })` 触发 ArkTS `arkts-no-polymorphic-unops`（一元负号仅限字面量）→ 提为模块级 `const PRIMARY_BLOB_Y: number = 0 - DliSize.TITLE_BAR_HEIGHT - 60`
   - 验证结论：`hvigorw --no-daemon assembleHap` **BUILD SUCCESSFUL**（ArkTS 零告警）；`go test ./...` 全绿（本期零后端改动，回归确认）；模拟器逐页实测截图通过——首页（极淡品牌顶 + 悬浮玻璃胶囊选中态 + 中性卡片）、搜索历史、搜索结果（**玻璃胶囊身后红色海报清晰可辨**，是沉浸光感的关键证据）、我的（已登录/未登录）、登录页；壳层标题栏搜索胶囊点击切页签经 `uitest` 实测生效（无需 `HdsTabsController`），登录链路顺带复跑通过
-  - 未覆盖：暗色模式下的氛围底与材质观感未截图核对（模拟器 `param set persist.sys.color.mode` 报 errNum 1001、`settings` 二进制缺失，切不过去；两套 token 均已就位）；全部结论均在 API 26 模拟器取得，**真机待验**
+  - 未覆盖：暗色模式下的氛围底与材质观感未截图核对（模拟器 `param set persist.sys.color.mode` 报 errNum 1001、`settings` 二进制缺失，切不过去；两套 token 均已就位）；全部结论均在 API 26 模拟器取得，**真机待验**——**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-08 暗色/AC-07 材质开销），待真机执行**
 
 ## M4 追加（W49+）创作端
 
@@ -313,7 +314,7 @@
     - **B 路线**：`extraData` 传 `ArrayBuffer` + `Content-Type: application/octet-stream` 自切 5 MB 片 PUT（`expectDataType` 控制的是响应类型，取 `STRING` 以解析统一包裹）；9 MB 两片均 200、`complete` 返回 `file_id`、成品 sha256 宿主机复核 MATCH。代价是失去系统级后台传输、需自管切片/重试/进度。
     - **端到端硬判据**：A/B 两条路线的 `POST /upload/{id}/complete` 均返回 `file_id`，即**服务端把合并结果算出的 SHA-256 与端侧 `file_hash` 比对通过**。
   - 落地约束（已写入 plan §6.1，供 HMY-51 直接照做）：已验证可用的 `files[].uri` 是 `internal://cache/<相对 cacheDir 路径>`，**绝对 `file://` 形态报 `401 GetInternalPath failed`**；picker 返回的媒体库 URI 是否可直接投递**未测**（见 plan §6.1 待验项）；`config.index` 是 `files` 数组下标（单文件必须为 `0`），**不是分片序号**；分片必须**显式给 `begins`/`ends` 且用 `PUT`**；**切勿在循环里密集发起上传任务**（2026-10-07 实测 100 次齐发触发 `appfreeze THREAD_BLOCK_6S`），必须限并发（建议 ≤2）或严格串行——本轮全部链路串行、全程无冻结。
-  - 未覆盖：真机锁屏/长时任务保活边界、真机吞吐与弱网重试——均待真机；模拟器仅为 API 26 x86 环境。
+  - 未覆盖：真机锁屏/长时任务保活边界、真机吞吐与弱网重试——均待真机；模拟器仅为 API 26 x86 环境。**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-10 保活/AC-11 吞吐/AC-13 弱网），待真机执行**
 
 - [x] M4-HMY-51 投稿上传链路：选片、分片上传、断点续传、秒传、进度可见（2026-10-08）
   - 覆盖：HMY-50、HMY-54
@@ -336,7 +337,7 @@
     - **选片交接定论**：picker URI（`file://docs/…`）**直投被拒**（`401 … user file can only for request.agent.`），**拷进 cache 后投递被接受**（`rc=0`）——故拷贝是必做步骤（plan §6.1 首条待验项就此收口）
     - **投稿接口接受 `file_id`**：`POST /api/v1/videos` 通过，返回 `bvid DV2VivO0Xq7CC`（`status=2` 转码中，已下发签名流）
     - **真 UI 走查**：「我的」→「投稿」→ 选片 → 开始上传，阶段依次出现「正在校验文件 → 正在上传 → 正在合并文件 → 上传完成」并显示 `file_id`
-  - 未覆盖：**真机待验**——长时任务的实际保活边界（锁屏 + 切后台 5 分钟）、真机吞吐与弱网重试、GB 级文件端侧哈希耗时与 cache 占用。模拟器为 API 26 x86 环境，保活结论不作数
+  - 未覆盖：**真机待验**——长时任务的实际保活边界（锁屏 + 切后台 5 分钟）、真机吞吐与弱网重试、GB 级文件端侧哈希耗时与 cache 占用。模拟器为 API 26 x86 环境，保活结论不作数。**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-10/AC-11/AC-12/AC-13），待真机执行**
 
 - [x] M4-HMY-52 稿件信息与封面：标题/简介/分区/标签、封面选图或截帧 + 16:9 裁切
   - 覆盖：HMY-51
@@ -379,7 +380,7 @@
     - **封面只有一张**：后端 `SubmitReq` 只有一个 `cover` 字段，分P 无独立封面——端侧如实按「额外分P 沿用主视频封面」呈现，**不假装每P 可配封面**。这是接口的现实，已写进界面提示。
     - **草稿只存端侧**：未做云端草稿（全仓无该接口），与 plan §3「草稿只解决『填了一半退出』」口径一致。
     - **上传会话 24h 真实到期的长时验证未做**：以删键等价替代（依据见上），**未真等 24h**。
-    - 真机（API 26 x86 模拟器均未跑，更未上真机）。
+    - 真机（API 26 x86 模拟器均未跑，更未上真机）——**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-17 核心链路回归），待真机执行**。
   - 残留测试数据：`probe-parts.ps1` 造 8 条多P 测试稿（11~100 个分P）、`probe-title.ps1`/`probe-int8.ps1`/`probe-wrap.ps1` 造若干边界稿、端到端验收 2 条（`DV2VkaNSKZrBQ` 3 分P、单P 回归 1 条），均落在当日新建的临时账号名下。
 
 - [x] M4-HMY-54 提交与状态回看：提交投稿、我的投稿状态与驳回原因（2026-10-09 完成）
@@ -403,7 +404,7 @@
     - **无泄露回归**：首页公开列表与搜索接口 0 条带该字段；已发布态公开详情页不返回该字段。
     - **下拉刷新**：改库后下拉，卡片从「已驳回 + 原因区块」正确变为「已发布」且原因区块消失（`.dev-logs/hmy54/v9-refresh.jpeg`）。**注意**：`uitest uiInput drag` 需作用于 `Refresh` 区域（约 y=655–2148）内；起点落在区域外时手势不触发刷新（子会话曾因此误判为「刷新失效」）。
   - **方法学备注（踩坑）**：用 `docker exec mysql -e "update…中文…"` 注入测试数据会把中文**双重编码成 mojibake**（HEX 呈 `C3A5…` 而非 `E5B0…`），界面如实显示乱码——**这是注入侧编码问题、不是端侧缺陷**。正确做法：经 stdin 传 SQL 并带 `--default-character-set=utf8mb4`。测试库中的 mojibake 值已用正确 UTF-8 覆写。
-  - 未覆盖：**真机待验**（API 26 x86 模拟器结论）；`status=0 草稿 / 1 上传中 / 6 已锁定` 三态未逐一截图（0/1 在本期链路中不可自然产生，6 不在本任务范围，走通用兜底文案）；驳回原因的**多行长文本截断**（`maxLines(4)`）观感未逐长度核对。
+  - 未覆盖：**真机待验**（API 26 x86 模拟器结论；**验收手册见 [device-acceptance](/specs/harmony/device-acceptance)（AC-17/AC-08），待真机执行**）；`status=0 草稿 / 1 上传中 / 6 已锁定` 三态未逐一截图（0/1 在本期链路中不可自然产生，6 不在本任务范围，走通用兜底文案）；驳回原因的**多行长文本截断**（`maxLines(4)`）观感未逐长度核对。
   - 残留测试数据：测试稿 3 条（`DV2VkUdFnDaKG` / `DV2VkUdF8cwj2` / `DV2VkS2hKfT1s`，均为 `dli_05071407` 名下）；模拟器内的视频样本与 `hdc file send` 残留。
 
 ## 进度
