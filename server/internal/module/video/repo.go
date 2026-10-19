@@ -2,6 +2,7 @@ package video
 
 import (
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -262,43 +263,160 @@ func (r *Repo) FindVideoByID(id int64) (*Video, error) {
 	return &v, nil
 }
 
-// ClaimJob 认领一个待处理任务（FOR UPDATE SKIP LOCKED，多 Worker 安全）；无任务返回 (nil, nil)。
-func (r *Repo) ClaimJob() (*TranscodeJob, error) {
+// retryBackoff 第 n 次失败（n 从 1 起）后的退避时长：base * 2^(n-1)，上限 1 小时。
+// 退避不是"慢一点"，而是防止坏任务在被回收的瞬间被其他 Worker 再次抢走，
+// 把"多实例并发"变成"多个实例轮流撞同一个坏文件"的热循环（积压只增不减的主因之一）。
+func retryBackoff(base time.Duration, n int) time.Duration {
+	if n < 1 {
+		n = 1
+	}
+	if n > 6 { // 2^6=64 倍，封顶避免长尾
+		n = 6
+	}
+	d := base * time.Duration(1<<uint(n-1))
+	if d > time.Hour {
+		d = time.Hour
+	}
+	return d
+}
+
+// ClaimJob 原子认领一个可处理任务；无任务返回 (nil, nil)。
+//
+// 并发安全的三道保证（水平扩容的技术核心）：
+//  1. **行锁 + SKIP LOCKED**：事务内 SELECT ... FOR UPDATE SKIP LOCKED，两个 Worker 同时取时
+//     第二个直接跳过（不阻塞、不等待）；MySQL 8 原生支持。
+//  2. **条件 UPDATE 兜底**：认领写回带 status=0 条件并校验 RowsAffected，即使行锁语义被
+//     隔离级别削弱（例如外部把隔离级别调低），也只会有一条 UPDATE 生效。
+//  3. **租约过期回收**：WHERE 里额外放开「status=1 但 lease_until 已过期」的行，
+//     使崩溃进程留下的僵尸任务能回到队列，且回收同样经由行锁 + 条件 UPDATE 去重。
+//
+// workerID 由调用方提供（hostname/pid/协程号），落库后可直接回答"这个任务被谁在处理"。
+func (r *Repo) ClaimJob(workerID string, lease time.Duration) (*TranscodeJob, error) {
+	if lease <= 0 {
+		lease = 10 * time.Minute
+	}
 	var job TranscodeJob
 	err := r.db.Transaction(func(tx *gorm.DB) error {
+		now := time.Now()
+		claimable := "status = ? AND (next_retry_at IS NULL OR next_retry_at <= ?) OR (status = ? AND lease_until IS NOT NULL AND lease_until < ?)"
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
-			Where("status = ?", JobPending).Order("id").First(&job).Error; err != nil {
+			Where(claimable, JobPending, now, JobRunning, now).
+			Order("id").First(&job).Error; err != nil {
 			return err
 		}
-		return tx.Model(&TranscodeJob{}).Where("id = ?", job.ID).Update("status", JobRunning).Error
+		leaseUntil := now.Add(lease)
+		res := tx.Model(&TranscodeJob{}).
+			Where("id = ? AND status = ?", job.ID, job.Status).
+			Updates(map[string]any{
+				"status":        JobRunning,
+				"lease_until":   leaseUntil,
+				"worker_id":     workerID,
+				"started_at":    now,
+				"next_retry_at": nil,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected != 1 {
+			// 被别的 Worker 抢先（理论上 SKIP LOCKED 已挡住，这里是兜底）：
+			// 返回哨兵错误让调用方重试下一轮，绝不能把同一个任务处理两次。
+			return errClaimLost
+		}
+		job.Status = JobRunning
+		job.LeaseUntil = &leaseUntil
+		job.WorkerID = workerID
+		job.StartedAt = &now
+		return nil
 	})
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, errClaimLost) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	job.Status = JobRunning
 	return &job, nil
 }
 
-func (r *Repo) CompleteJob(id int64) error {
-	return r.db.Model(&TranscodeJob{}).Where("id = ?", id).
-		Updates(map[string]any{"status": JobSuccess, "error_msg": ""}).Error
+// ceilSecond 向上取整到秒。
+//
+// 为什么需要：next_retry_at 落的是 DATETIME(0)（秒级精度，MySQL 对小数部分是"四舍五入"，
+// 即 22.35s 会被存成 22s）。不向上取整的话，配置一个 <1.5s 的退避会被静默抹平——
+// 退避期形同不存在，坏任务照样被多实例反复抢。向上取整保证落库值**不早于**
+// 配置的退避时刻（代价是退避可能被延长不到 1 秒）。
+func ceilSecond(t time.Time) time.Time {
+	if trunc := t.Truncate(time.Second); trunc.Before(t) {
+		return trunc.Add(time.Second)
+	}
+	return t
 }
 
-// FailJob 失败处理：未超重试上限则重新入队。
-func (r *Repo) FailJob(job *TranscodeJob, msg string) error {
+// errClaimLost 认领时条件 UPDATE 未命中（任务已被他人认领），视为"队列暂时没有可认领任务"。
+var errClaimLost = errors.New("claim lost")
+
+// RenewLease 续租。返回 (false, nil) 表示租约已不属于自己（被别人回收），
+// 调用方必须立刻停止转码并丢弃产物，否则会与回收方重复处理同一任务。
+func (r *Repo) RenewLease(id int64, workerID string, lease time.Duration) (bool, error) {
+	res := r.db.Model(&TranscodeJob{}).
+		Where("id = ? AND status = ? AND worker_id = ?", id, JobRunning, workerID).
+		Update("lease_until", time.Now().Add(lease))
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected == 1, nil
+}
+
+// ReclaimExpired 把租约已过期且仍在"处理中"的任务放回队列（进程崩溃/被 kill 的兜底）。
+// 不单独维护后台清扫协程：认领语句本身就接纳过期租约（见 ClaimJob），
+// 这里的显式回收只用于统计"回收了多少次"，供指标/排障观察。
+func (r *Repo) ReclaimExpired() (int64, error) {
+	res := r.db.Model(&TranscodeJob{}).
+		Where("status = ? AND lease_until IS NOT NULL AND lease_until < ?", JobRunning, time.Now()).
+		Updates(map[string]any{"status": JobPending, "lease_until": nil, "worker_id": ""})
+	return res.RowsAffected, res.Error
+}
+
+// CompleteJob 成功终态：清租约、记终态时间。
+func (r *Repo) CompleteJob(id int64, workerID string) error {
+	now := time.Now()
+	return r.db.Model(&TranscodeJob{}).
+		Where("id = ? AND status = ? AND worker_id = ?", id, JobRunning, workerID).
+		Updates(map[string]any{
+			"status":      JobSuccess,
+			"error_msg":   "",
+			"lease_until": nil,
+			"finished_at": now,
+		}).Error
+}
+
+// FailJob 失败处理：未超重试上限则带退避重新入队，否则进终态 failed（死信）。
+// 返回是否已进入终态，供调用方区分"还会重试"与"这个任务到此为止"。
+func (r *Repo) FailJob(job *TranscodeJob, msg string, maxRetries int, backoffBase time.Duration) (bool, error) {
 	if len(msg) > 500 {
 		msg = msg[:500]
 	}
-	next := map[string]any{"error_msg": msg, "retry_cnt": job.RetryCnt + 1}
-	if job.RetryCnt < 2 {
-		next["status"] = JobPending
-	} else {
-		next["status"] = JobFailed
+	now := time.Now()
+	n := int(job.RetryCnt) + 1
+	next := map[string]any{
+		"error_msg":   msg,
+		"retry_cnt":   job.RetryCnt + 1,
+		"lease_until": nil,
+		"worker_id":   "",
 	}
-	return r.db.Model(&TranscodeJob{}).Where("id = ?", job.ID).Updates(next).Error
+	terminal := n > maxRetries
+	if terminal {
+		next["status"] = JobFailed
+		next["finished_at"] = now
+		next["next_retry_at"] = nil
+	} else {
+		backoff := retryBackoff(backoffBase, n)
+		next["status"] = JobPending
+		next["next_retry_at"] = ceilSecond(now.Add(backoff))
+	}
+	if err := r.db.Model(&TranscodeJob{}).Where("id = ?", job.ID).Updates(next).Error; err != nil {
+		return terminal, err
+	}
+	job.RetryCnt = job.RetryCnt + 1
+	return terminal, nil
 }
 
 // UnfinishedJobCount 稿件尚未完成（待处理/处理中）的任务数。

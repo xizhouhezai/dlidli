@@ -2,6 +2,7 @@ package video
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"math"
@@ -12,17 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dlidli/server/internal/pkg/metrics"
 	"github.com/dlidli/server/internal/pkg/qualitytier"
 	"github.com/dlidli/server/internal/pkg/storage"
 	"go.uber.org/zap"
 )
-
-const pollInterval = 3 * time.Second
-
-// transcodeJobTimeout 单个转码任务上限：ffmpeg/ffprobe 挂死时由 ctx 超时兜底，避免永久占用 Worker。
-// 4K 档位（M4-VIP-02）单机 CPU 转码远慢于 360/720，故放宽到 2 小时：
-// 仍是有界超时（不会永久占位），但给 4K 留出可完成的窗口（验收用短视频实测）。
-const transcodeJobTimeout = 2 * time.Hour
 
 // preset 单个档位的转码参数（取自 video_quality_tier 配置，见 tier.go）。
 type preset struct {
@@ -33,55 +28,25 @@ type preset struct {
 	aBits   string
 }
 
-// StartTranscodeWorkers 启动进程内转码 Worker（dev 便利；部署环境改由独立 cmd/worker 运行）。
-// 依赖本地存储（storage.PathResolver）；其他驱动下直接告警退出。
-func (s *Service) StartTranscodeWorkers(ctx context.Context, store storage.Storage) {
-	resolver, ok := store.(storage.PathResolver)
-	if !ok {
-		s.log.Warn("当前存储驱动不支持本地转码，Worker 未启动")
-		return
-	}
-	for i := 0; i < s.cfg.Transcode.Workers; i++ {
-		go s.workerLoop(ctx, resolver, i)
-	}
-	s.log.Info("转码 Worker 已启动", zap.Int("workers", s.cfg.Transcode.Workers))
-}
-
-func (s *Service) workerLoop(ctx context.Context, resolver storage.PathResolver, id int) {
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			for {
-				job, err := s.repo.ClaimJob()
-				if err != nil {
-					s.log.Error("认领转码任务失败", zap.Error(err))
-					break
-				}
-				if job == nil {
-					break // 队列空，等下个周期
-				}
-				s.processJob(ctx, resolver, job, id)
-			}
-		}
-	}
-}
-
-func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver, job *TranscodeJob, workerID int) {
-	// 单任务超时 + panic 自隔离：任一任务异常只回写失败状态，不能拖死 Worker 或击穿进程
-	ctx, cancel := context.WithTimeout(ctx, transcodeJobTimeout)
+// processJob 执行单个任务：单任务超时 + panic 自隔离 + 租约续期。
+// 任何异常只影响本任务（回写失败/重试/终态），不拖死 Worker，也不影响其他任务。
+//
+// 超时口径：cfg.Transcode.JobTimeout（默认 2h，给 4K 单机 CPU 转码留窗口）。
+// 超时后 ffmpeg 被 ctx 杀死 → 按失败处理 → 计入重试/死信，不会永久占用 Worker。
+func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver, job *TranscodeJob, id int, workerID string) {
+	ctx, cancel := context.WithTimeout(ctx, s.cfg.Transcode.JobTimeout)
 	defer cancel()
+	// 租约续期：任务跑得比 Lease 久时必须续租，否则会被其他 Worker 当成僵尸任务回收，
+	// 出现"两个 Worker 同时转同一个稿件"的重复处理（正是本卡要避免的）。
+	stopLease := s.startLeaseKeeper(ctx, cancel, job, workerID)
+	defer stopLease()
+
 	completed := false
 	defer func() {
 		if r := recover(); r != nil {
 			s.log.Error("转码任务 panic，已隔离", zap.Any("recover", r), zap.Int64("job_id", job.ID))
 			if !completed {
-				if err := s.repo.FailJob(job, fmt.Sprintf("worker panic: %v", r)); err != nil {
-					s.log.Error("panic 后回写失败状态出错", zap.Error(err), zap.Int64("job_id", job.ID))
-				}
+				s.failJob(job, fmt.Sprintf("worker panic: %v", r), workerID)
 			}
 		}
 	}()
@@ -89,23 +54,32 @@ func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver,
 		zap.Int64("job_id", job.ID),
 		zap.Int64("video_id", job.VideoID),
 		zap.Int16("quality", job.Quality),
-		zap.Int("worker", workerID),
+		zap.Int("worker", id),
+		zap.String("worker_id", workerID),
 	)
 	start := time.Now()
 
 	if err := s.doTranscode(ctx, resolver, job); err != nil {
-		log.Error("转码失败", zap.Error(err), zap.Int8("retry", job.RetryCnt))
-		if err := s.repo.FailJob(job, err.Error()); err != nil {
-			log.Error("回写失败状态出错", zap.Error(err))
+		// 区分两类"失败"：
+		//   - context.Canceled：租约被回收或进程关停。任务已归别人/即将重排，
+		//     **此时绝不能回写失败状态**，否则与接管方互相覆盖（重复处理的真实来源之一）。
+		//   - DeadlineExceeded：单任务超时兜底，按正常失败走重试/死信。
+		if errors.Is(ctx.Err(), context.Canceled) {
+			log.Warn("任务被取消（租约丢失或关停），不回写状态", zap.Error(err))
+			return
 		}
+		log.Error("转码失败", zap.Error(err), zap.Int8("retry", job.RetryCnt))
+		s.failJob(job, err.Error(), workerID)
 		return
 	}
 
-	if err := s.repo.CompleteJob(job.ID); err != nil {
+	if err := s.repo.CompleteJob(job.ID, workerID); err != nil {
 		log.Error("回写完成状态出错", zap.Error(err))
 		return
 	}
 	completed = true
+	metrics.ObserveTranscodeJob(time.Since(start).Seconds(), "success")
+	s.refreshQueueMetrics()
 	log.Info("转码完成", zap.Duration("cost", time.Since(start)))
 
 	// 全部档位完成 → 推进稿件状态机：转码中 → 待审核（dev autoApprove 直接发布）
@@ -136,6 +110,27 @@ func (s *Service) processJob(ctx context.Context, resolver storage.PathResolver,
 		if v, err := s.repo.FindVideoByID(job.VideoID); err == nil && v != nil {
 			s.firePublish(ctx, v.ID, v.UserID)
 		}
+	}
+}
+
+// failJob 回写失败并按重试上限决定"退避重排"还是"进终态"。
+// 终态 = 死信：坏文件不会无限重试，也不会永久占着 pending 把队列堵死。
+func (s *Service) failJob(job *TranscodeJob, msg, workerID string) {
+	terminal, err := s.repo.FailJob(job, msg, s.cfg.Transcode.MaxRetries, s.cfg.Transcode.RetryBackoff)
+	if err != nil {
+		s.log.Error("回写失败状态出错", zap.Error(err), zap.Int64("job_id", job.ID))
+		return
+	}
+	result := "retry"
+	if terminal {
+		result = "dead"
+	}
+	metrics.ObserveTranscodeJob(0, result)
+	s.refreshQueueMetrics()
+	if terminal {
+		s.log.Error("转码任务进入终态（已达重试上限）",
+			zap.Int64("job_id", job.ID), zap.String("worker_id", workerID),
+			zap.Int8("retry", job.RetryCnt), zap.String("error", msg))
 	}
 }
 

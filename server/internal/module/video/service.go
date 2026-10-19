@@ -113,6 +113,25 @@ type Service struct {
 	publishHook PublishHook
 	// searchHook 稿件检索索引变更回调（M2-SRH-02：upsert|delete），装配时注入
 	searchHook SearchHook
+	// resolver 本地存储路径解析（投稿时长探测、转码 Worker 读写源文件共用）。
+	// 装配时注入；为 nil 时投稿不探测时长（放行），确保纯 DB 环境下投稿仍可用。
+	resolver storage.PathResolver
+}
+
+// SetStorage 注入存储（router 装配时调用）。仅当存储驱动可解析本地路径时生效。
+func (s *Service) SetStorage(store storage.Storage) {
+	if r, ok := store.(storage.PathResolver); ok {
+		s.resolver = r
+	}
+}
+
+// localPathFor 把存储 key 解析成磁盘绝对路径；未注入存储时返回原 key。
+// 返回空串表示不可探测（调用方据此放行，不阻断投稿）。
+func (s *Service) localPathFor(key string) string {
+	if s.resolver == nil {
+		return ""
+	}
+	return s.resolver.LocalPath(key)
 }
 
 func NewService(repo *Repo, uploadSvc *upload.Service, accountSvc *account.Service, growthSvc *growth.Service, rdb *redis.Client, cfg *config.Config, log *zap.Logger) *Service {
@@ -221,6 +240,11 @@ func (s *Service) Submit(ctx context.Context, uid int64, req *SubmitReq) (*Detai
 	if err != nil {
 		return nil, err
 	}
+	// 投稿时长上限（roadmap 缓解措施 ≤30min）：在**建稿件前**用源文件真实时长拦截，
+	// 超限直接返回 30007，既不落库也不排转码任务（取舍见 duration_limit.go）。
+	if err := s.ensureWithinDurationLimit(ctx, s.localPathFor(file.StoreKey), "视频"); err != nil {
+		return nil, err
+	}
 
 	if ok, err := s.repo.CategoryExists(req.CategoryID); err != nil {
 		return nil, err
@@ -294,6 +318,11 @@ func (s *Service) Submit(ctx context.Context, uid int64, req *SubmitReq) (*Detai
 			}
 			pf, err := s.uploadSvc.GetUserFile(ctx, uid, pfID)
 			if err != nil {
+				return nil, err
+			}
+			// 多P：逐P校验（一个超长分P不能靠其他短分P混过上限）
+			if err := s.ensureWithinDurationLimit(ctx, s.localPathFor(pf.StoreKey),
+				fmt.Sprintf("分P%d", i+1)); err != nil {
 				return nil, err
 			}
 			parts = append(parts, VideoPart{PartIndex: int8(i + 1), Title: strings.TrimSpace(p.Title)})
