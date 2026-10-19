@@ -34,6 +34,8 @@
 
 **鸿蒙端下一步**：真机验收——模拟器（x86_64 软渲）无法外推的 17 处「待真机」项（材质开销绝对值、spec §4 成功指标数值、弱网重试、长时间播放内存/稳定性、锁屏长时保活、GB 级哈希耗时），以及**上线前置**的服务端弹幕 WS Origin 白名单确认（见 harmony tasks M4-HMY-10 缺陷登记）。
 
+> **验收手册已产出（2026-10-20）**：[真机验收手册](/specs/harmony/device-acceptance)。17 项去重编号 AC-01~AC-17，按可执行顺序分 6 组，每项含前置/步骤/观测点/记录表/判定阈值；另含环境准备（hdc 连接、签名安装、日志与性能取数）与缺陷记录格式。**本仓尚无真机结论，真机到位后照手册执行即可。**
+
 | 周 | 后端 | 前端 | 其他 |
 | --- | --- | --- | --- |
 | W1 | 工程脚手架、配置/日志/中间件框架 | Web 工程脚手架、api-client 骨架 | CI 流水线、docker-compose 环境 |
@@ -51,7 +53,7 @@
 | 风险 | 等级 | 影响 | 缓解措施 | 状态 |
 | --- | --- | --- | --- | --- |
 | 单人/小团队并行多端 | 中 | 进度失控 | 严格按优先级：Web → H5 → 小程序 → 鸿蒙（观看端→创作端）；鸿蒙 16 条已收口，后续端侧工作以真机验收与上架为主 | 执行中 |
-| 鸿蒙真机未验收 | 中 | 模拟器（x86_64 软渲）结论无法外推：性能绝对值/功耗/保活/弱网均待真机 | 上线前安排真机走查（清单见 harmony tasks 各「待真机」标注）；spec §4 阈值判定一律以真机为准 | 待排期 |
+| 鸿蒙真机未验收 | 中 | 模拟器（x86_64 软渲）结论无法外推：性能绝对值/功耗/保活/弱网均待真机 | **真机验收手册已产出（17 项待执行），真机到位即可开工**——[device-acceptance](/specs/harmony/device-acceptance)：17 处「待真机」标注去重为 **AC-01~AC-17**，按可执行顺序分 6 组（性能与帧率/功耗与发热/渲染与观感/保活与后台/弱网与稳定性/交互与兼容），每项含前置、可照做步骤（hdc/hvigorw 命令 + 按钮与界面路径）、观测点（日志关键字/系统面板/截图）、留空记录表、判定阈值（**数值一律标注 spec 节号**，spec 未定义的 9 项写「待定，需与产品确认」不臆造）。手册同时写明模拟器与真机的三处环境差异（`10.0.2.2` 映射、**未签名 HAP 只能装模拟器**需先配签名、`SP_daemon -p` 真机可用性待试）。spec §4 阈值判定仍一律以真机为准 | 待排期（手册已就绪） |
 | 弹幕 WS 实时通道不可用 | 高 | 鸿蒙端实时弹幕全程走轮询降级 | **缓解措施已落地（2026-10-16，`fix/ws-origin-native-clients`）**：根因确认为服务端 Origin 白名单未含 ArkTS WebSocket 自生成来源（`http://<host>` 不带端口）。修复＝四 hub（danmaku/notify/im/live）改用统一策略 `pkg/wsorigin`：新增 `app.allowNativeClients`，开启后**非白名单 Origin 携带经 JWT 校验有效的 access token 即放行**（以显式凭据为判据，而非按来源形态裸放行）；默认 `false`（fail closed）。实测 13/13 用例符合预期：白名单来源放行、非白名单无/假/错密钥 token 一律 403、ArkTS 形态带有效 token 放行、无 token 403、开关关闭时带有效 token 仍 403。**剩余**：真机（非模拟器）走查未做；prod 正式域名未定，`allowOrigins` 的 `TODO` 仍在（运维步骤已写入 `deployment.md` §5.6） | 已缓解（待真机复核） |
 | 转码性能不足导致积压 | 高 | 投稿体验差 | **缓解措施已落地（2026-10-19，`feat/transcode-horizontal-scale`）**：① **水平扩容 + 竞态安全**——认领取自 `repo.ClaimJob`（`FOR UPDATE SKIP LOCKED` + 条件 UPDATE 校验 RowsAffected + **任务租约** `lease_until`），新增独立入口 `cmd/worker`（可多进程部署，与 API 内嵌模式共用同一认领语义，可同时运行）；实测 3 进程×2 协程并发消费 20/24/30 个任务，**每个任务恰好处理一次**（DB 逐条核对：产物无重复、无僵尸 running、`worker_id` 分布跨 4~6 个持有者）。② **积压可观测**——复用既有 prometheus 基建（未引新库）：`dlidli_transcode_queue_depth{status}` / `oldest_pending_seconds` / `job_duration_seconds` / `reclaimed_total` / `lease_lost_total`，另出只读快照接口 `GET /api/v1/admin/videos/transcode/queue`（pending/running/最老等待/平均耗时/租约过期数）。③ **失败重试上限 + 死信**——`transcode.maxRetries`（默认 0）+ 指数退避 `retryBackoff`，超限进终态 `failed` 并记 `finished_at`，坏文件不再无限重试。④ **投稿时长 ≤30min**——`transcode.maxDurationSeconds`（默认 1800）在**投稿阶段**用 ffprobe 实测时长拦截（新错误码 30007），实测 31分40秒 素材被拒且不产生转码任务。闸门 `go vet`/在线 `go test` 全过、video 包 5 个新集成测试全过、`/metrics` 与接口实测。**剩余**：真实多机/K8s 部署形态未做（本卡只到"可水平扩容且竞态安全"，部署方式见 `deployment.md`）；本机 :8000 主 API 未就地重启（沙箱拒绝），已在 :8010 同源代码实例完成接口实测 | 已缓解（多机部署待需要时落地） |
 | 内容合规资质未就绪 | 高 | 无法公开上线 | M1 仅邀请制内测；并行推进备案与资质咨询 | 进行中 |
