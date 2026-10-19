@@ -95,16 +95,26 @@ const (
 )
 
 // TranscodeJob 对应 transcode_job 表（DB 任务队列，本地无 Kafka 的替代方案）。
+//
+// 认领语义（多 Worker 安全，见 repo.ClaimJob）：
+//   - status=0 且 (next_retry_at IS NULL 或已到期) → 可认领
+//   - 认领即写 status=1 + lease_until=now+Lease + worker_id，并由持有者周期续租
+//   - 租约过期（进程崩溃/被 kill）即视为可回收，其他 Worker 可直接重新认领
 type TranscodeJob struct {
-	ID        int64 `gorm:"primaryKey"`
-	VideoID   int64
-	PartIndex int8 // 分P（0=单P）
-	Quality   int16
-	Status    int8
-	RetryCnt  int8
-	ErrorMsg  string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          int64 `gorm:"primaryKey"`
+	VideoID     int64
+	PartIndex   int8 // 分P（0=单P）
+	Quality     int16
+	Status      int8
+	LeaseUntil  *time.Time // 租约到期时间；NULL=未被持有
+	NextRetryAt *time.Time // 退避后的下次可认领时间；NULL=立即可认领
+	WorkerID    string     // 持有者标识（hostname/pid/worker 号），排障用
+	RetryCnt    int8
+	ErrorMsg    string
+	StartedAt   *time.Time // 本次（重）认领的开始时间
+	FinishedAt  *time.Time // 终态时间（成功/死信），非终态为 NULL
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func (TranscodeJob) TableName() string { return "transcode_job" }

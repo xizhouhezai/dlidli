@@ -51,6 +51,24 @@ func (h *Handler) RegisterAdminRoutes(g *gin.RouterGroup, perm func(string) gin.
 	// 查询与改配置分两个权限点：能看到档位不等于能改「谁能看多清晰」。
 	g.GET("/quality-tiers", perm("video:view"), h.adminTiers)
 	g.PUT("/quality-tiers/:quality", perm("video:tier"), h.adminUpdateTier)
+	// 转码队列积压快照（转码积压治理卡）：只读，沿用 video:view。
+	// 只出接口，管理端页面由另一张卡负责；同时刷新 Prometheus 指标（见 QueueSnapshot）。
+	g.GET("/transcode/queue", perm("video:view"), h.adminTranscodeQueue)
+}
+
+// @Summary  转码队列积压快照
+// @Tags     视频
+// @Produce  json
+// @Security BearerAuth
+// @Success  200 {object} response.Body
+// @Router   /admin/videos/transcode/queue [get]
+func (h *Handler) adminTranscodeQueue(c *gin.Context) {
+	snap, err := h.svc.QueueSnapshot()
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, snap)
 }
 
 // @Summary  分区列表

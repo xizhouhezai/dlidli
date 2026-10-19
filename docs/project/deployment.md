@@ -660,6 +660,108 @@ SRS 会**直接拒绝推流**。
 
 ---
 
+## 5.7 独立转码 Worker 部署与扩容
+
+转码是 CPU 密集型离线任务，且**可以水平扩容**：队列在 MySQL 里，认领是原子的，
+所以扩容＝多起几个 `cmd/worker` 进程/实例，不需要任何协调组件。
+
+### 5.7.1 为什么要把 Worker 从 API 进程里拆出来
+
+`transcode.embedInAPI`（默认 `true`，dev 便利）会让 API 进程内嵌 Worker。生产不要这么用：
+
+- API 重启（发版、扩缩容、OOM）会**打断正在跑的转码**，留下未到期的租约；
+  虽然租约过期后任务会被其他实例回收，但重启越频繁，被浪费的 CPU 与等待时间越多；
+- API 与 Worker 抢同一批 CPU 和数据库连接，转码峰值会把在线请求一起拖慢；
+- API 要跑 N 个副本（HA/负载均衡），而转码并发应该独立于 API 副本数单独调。
+
+```yaml
+transcode:
+  enabled: true          # 转码总开关（关闭则不排任务、不跑 Worker）
+  embedInAPI: false      # 生产必须 false，Worker 由 cmd/worker 承担
+  workers: 4             # **每个 worker 进程**内的并发协程数
+  maxRetries: 2          # 失败重试上限（不含首次执行）
+  retryBackoff: 30s      # 退避基数：第 n 次失败后等 base*2^(n-1)（上限 1h）
+  lease: 10m             # 任务租约；Worker 在 lease/3 处续租
+  pollInterval: 3s       # 队列为空时的轮询周期
+  jobTimeout: 2h         # 单任务执行上限（ffmpeg 挂死兜底）
+  maxDurationSeconds: 1800  # 投稿时长上限（30min），投稿阶段即拒绝
+  metricsAddr: ""        # 可选：Worker 自身的 /metrics 监听地址，如 ":9101"
+```
+
+### 5.7.2 启动命令
+
+```bash
+# 首次（或升级后）先跑迁移：0043 给 transcode_job 加租约/退避/耗时列
+go run ./cmd/migrate -dsn "mysql://user:pass@tcp(db-host:3306)/dlidli?multiStatements=true"
+
+# 构建两个二进制
+go build -o bin/dlidli-api    ./cmd/api
+go build -o bin/dlidli-worker ./cmd/worker
+
+# 启动 API（不内嵌 Worker）
+./bin/dlidli-api -config configs/prod.yaml
+
+# 启动 Worker（可起多个进程；-workers 覆盖配置里的 transcode.workers）
+./bin/dlidli-worker -config configs/prod.yaml -id-prefix worker-a
+./bin/dlidli-worker -config configs/prod.yaml -id-prefix worker-b
+```
+
+参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `-config` | 与 API 共用同一份配置文件（默认 `configs/dev.yaml`） |
+| `-workers` | 覆盖 `transcode.workers`；0 = 用配置文件的值 |
+| `-id-prefix` | Worker 标识前缀，默认 `hostname/pid`。**同机多进程请显式区分**，否则 DB 里 `worker_id` 无法区分是哪个实例 |
+
+环境变量覆盖同样可用（与 API 一致）：`DLIDLI_TRANSCODE_WORKERS`、`DLIDLI_TRANSCODE_LEASE`、
+`DLIDLI_TRANSCODE_MAXRETRIES`、`DLIDLI_TRANSCODE_METRICSADDR` 等（前缀 `DLIDLI_`，key 中的 `.` 换成 `_`）。
+
+### 5.7.3 并行实例的注意事项
+
+| 事项 | 说明 |
+| --- | --- |
+| **并发安全由数据库保证，不需要额外配置** | 认领走 `SELECT … FOR UPDATE SKIP LOCKED` + 条件 `UPDATE … WHERE status=0` 校验 `RowsAffected`，加上租约回收。任意多个实例同时抢同一队列，只有一个能拿到某个任务。**不要**为了"避免冲突"给实例分配不同任务区间——那是把正确的分布式队列降级成静态分片。 |
+| **单机并发上限** | 每个 ffmpeg 进程会吃满一个核。`workers` 建议 ≤ 本机核数；要更多并发请**加实例**，而不是把 `workers` 调到超过核数（那只会让每个任务都变慢，积压时间指标反而恶化）。 |
+| **租约时长要大于"续租抖动"** | 默认 10min，续租周期 `lease/3`（约 3.3min）。若实例经常 GC 停顿或 DB 抖动，可调大到 20–30min。租约过短会导致"任务还在跑就被别人回收"——虽然续租失败会立刻放弃本任务，但仍是浪费。 |
+| **任务超时必须大于最长合法视频的转码耗时** | 默认 2h（给 4K 单机 CPU 转码留窗口）。超时按失败处理，会计入重试次数并可能进死信——别把它设得比真实最慢任务还小。 |
+| **滚动升级是安全的** | 新增列都带默认值。旧版 Worker 不写租约/退避列也能跑（它只认 `status=0`），可与新版混跑；升级后新任务自然带租约。 |
+| **优雅停机** | `SIGTERM` 后 Worker 停止认领新任务，在跑的任务最多跑到 `jobTimeout`；未跑完的任务在租约过期后被其他实例回收。容器场景请把 `terminationGracePeriodSeconds` 设得比 `lease` 略长，或直接依赖租约回收。 |
+| **多实例的 /metrics** | 每个实例指标里 `queue_depth`/`oldest_pending_seconds` 是**同一个 DB 口径**（都查库），所以多个实例上报同一个值——在 Prometheus 里对它们取 `max`（不要 `sum`，会翻倍）。`job_duration_seconds`、`jobs_processed_total`、`reclaimed_total` 是各实例自己的计数，取 `sum`。要抓 Worker 自身指标就配 `metricsAddr`（每个实例一个端口或不同实例错开端口）。 |
+
+### 5.7.4 运维口径
+
+```bash
+# 积压快照（需管理端权限 video:view；管理页面由另一张卡负责，此处只出接口）
+curl -H "Authorization: Bearer $ADMIN_TOKEN" \
+     https://api.example.com/api/v1/admin/videos/transcode/queue
+```
+
+```json
+{
+  "pending": 3, "running": 2, "success": 1, "failed": 0,
+  "oldest_pending_seconds": 2, "oldest_pending_job_id": 138,
+  "running_overdue": 0, "avg_duration_seconds": 1
+}
+```
+
+- **`oldest_pending_seconds` 是最该盯的指标**：队列长度会因瞬时投稿波动，而"最老的一个等了多久"
+  直接对应用户感知。持续上涨＝扩容不足或 Worker 挂了。
+- **`running_overdue > 0`** 表示有实例崩溃/被 kill 且任务还没被回收（租约未到期）。持续 >0 说明实例在反复异常退出。
+- **`failed` 增长** 说明有坏文件进了死信：按 `error_msg` 排查，修复源文件后可人工把该行 `status` 置回 0 重排。
+- 告警建议：`dlidli_transcode_oldest_pending_seconds > 1800`（半小时还没轮到）持续 10min 告警。
+
+### 5.7.5 扩容决策
+
+| 现象 | 动作 |
+| --- | --- |
+| `pending` 持续 > 0 且 `oldest_pending_seconds` 上涨 | 加 Worker 实例（或提高 `workers`，但不超过核数） |
+| `pending` 为 0、`running` 为 0 | 可以缩容到 1 个实例常驻 |
+| `running_overdue` 偶发 >0 且很快归零 | 正常（实例重启中，租约回收兜底） |
+| `running_overdue` 长期 >0 | 查实例是否被 OOMKill / 反复崩溃；必要时缩短 `lease` |
+
+---
+
 ## 6. 相关文档
 
 - [后端架构](/architecture/backend)：模块划分、API 规范、接口文档（Swagger）

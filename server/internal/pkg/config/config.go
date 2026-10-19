@@ -5,6 +5,7 @@ package config
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -93,8 +94,8 @@ type Live struct {
 	// CallbackToken SRS http_hooks 共享 token（?token= 或 X-Live-Callback-Token）。
 	// 为空时回调一律拒绝（fail-closed）：宁可推不了流，也不能让伪造回调改房间状态。
 	CallbackToken string
-	Audit         LiveAudit   // 截帧机审与快速切断（M4-LIV-05，spec §5E / plan §2D）
-	Replay        LiveReplay  // 直播回放（M4-LIV-14，spec LIV-14 / plan liv14）
+	Audit         LiveAudit  // 截帧机审与快速切断（M4-LIV-05，spec §5E / plan §2D）
+	Replay        LiveReplay // 直播回放（M4-LIV-14，spec LIV-14 / plan liv14）
 }
 
 // LiveReplay 直播回放配置（M4-LIV-14）。
@@ -210,9 +211,36 @@ type RateLimit struct {
 
 type Transcode struct {
 	Enabled     bool   // dev 内嵌 Worker；部署环境由独立 cmd/worker 承担
-	Workers     int    // 并发转码协程数
+	Workers     int    // 并发转码协程数（API 内嵌 worker 单进程；cmd/worker 每进程读同一值）
 	FfmpegPath  string // 缺省 "ffmpeg"（依赖 PATH）
 	FfprobePath string // 缺省 "ffprobe"
+
+	// 以下为水平扩容与积压治理参数（转码积压治理卡）。
+	// 语义统一：**同一个配置语义，API 内嵌 worker 与 cmd/worker 共用**——扩容靠多进程，
+	// 不靠把单进程的 Workers 调大（单进程协程数受 CPU 核数限制，进程数不受）。
+
+	// MaxRetries 失败重试上限（不含首次执行）。坏文件在第 MaxRetries+1 次失败后进终态 failed。
+	MaxRetries int
+	// RetryBackoff 失败退避基数：第 n 次失败后等 RetryBackoff*2^(n-1) 再可认领。
+	// 退避的意义不是"慢一点"，而是**防止坏任务在被回收的瞬间被其他 Worker 再次抢走**，
+	// 把多实例并发变成对同一个坏文件的热循环。
+	RetryBackoff time.Duration
+	// Lease 任务租约时长：认领后持有时长，Worker 在 Lease/3 处续租。
+	// 进程崩溃/被 kill 时租约自然过期，任务可被其他 Worker 回收——这是水平扩容的安全底线。
+	Lease time.Duration
+	// PollInterval 空闲轮询周期（队列为空时的等待时长）。
+	PollInterval time.Duration
+	// JobTimeout 单任务执行上限（ffmpeg/ffprobe 挂死兜底）。应大于最长合法视频的转码耗时。
+	JobTimeout time.Duration
+	// MaxDurationSeconds 投稿时长上限（秒）：超限在**投稿阶段**拒绝，不排转码任务。
+	// 0 表示不限制（不建议用于线上）。
+	MaxDurationSeconds int
+	// MetricsAddr 独立 Worker 自身的 /metrics 监听地址（形如 ":9101"）。
+	// 空＝不开（默认）：只有 API 暴露 /metrics 时，多实例 worker 的指标不会被抓全。
+	MetricsAddr string
+	// EmbedInAPI 是否在 API 进程内嵌转码 Worker（dev 便利）。
+	// 部署环境应为 false，改由独立 cmd/worker 运行，否则 API 重启会打断转码并放大僵尸任务。
+	EmbedInAPI bool
 }
 
 // Load 读取指定路径的 yaml 配置，并允许环境变量覆盖。
@@ -246,6 +274,26 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.Transcode.FfprobePath == "" {
 		cfg.Transcode.FfprobePath = "ffprobe"
+	}
+	// 转码积压治理：零值回落默认（配置写 0/负数时不改变既有行为，避免 ticker panic）。
+	tc := &cfg.Transcode
+	if tc.MaxRetries < 0 {
+		tc.MaxRetries = 0
+	}
+	if tc.RetryBackoff <= 0 {
+		tc.RetryBackoff = 30 * time.Second
+	}
+	if tc.Lease <= 0 {
+		tc.Lease = 10 * time.Minute
+	}
+	if tc.PollInterval <= 0 {
+		tc.PollInterval = 3 * time.Second
+	}
+	if tc.JobTimeout <= 0 {
+		tc.JobTimeout = 2 * time.Hour
+	}
+	if tc.MaxDurationSeconds <= 0 {
+		tc.MaxDurationSeconds = 30 * 60 // roadmap 缓解措施：内测投稿时长 ≤ 30min
 	}
 	if cfg.Search.Index == "" {
 		cfg.Search.Index = "dlidli_videos"
@@ -380,6 +428,15 @@ func setSchemaDefaults(v *viper.Viper) {
 	v.SetDefault("transcode.workers", 0)
 	v.SetDefault("transcode.ffmpegpath", "")
 	v.SetDefault("transcode.ffprobepath", "")
+	// 转码积压治理：内嵌 Worker 默认开（保持 dev 旧行为），部署配置里显式关掉。
+	v.SetDefault("transcode.metricsaddr", "")
+	v.SetDefault("transcode.embedinapi", true)
+	v.SetDefault("transcode.maxretries", 0)
+	v.SetDefault("transcode.retrybackoff", 0)
+	v.SetDefault("transcode.lease", 0)
+	v.SetDefault("transcode.pollinterval", 0)
+	v.SetDefault("transcode.jobtimeout", 0)
+	v.SetDefault("transcode.maxdurationseconds", 0)
 	v.SetDefault("search.esurl", "")
 	v.SetDefault("search.index", "")
 	v.SetDefault("search.pollseconds", 0)
