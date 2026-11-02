@@ -3,7 +3,7 @@
 //
 // 权限：页面 vip:view、套餐配置 vip:plan、补发硬币 vip:grant。
 // **改价与补发是独立权限点**：能看会员不等于能改价、更不等于能发币 —— 故按钮各自挂 v-perm。
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { apiErrorMessage, type AdminVipMember, type AdminVipPlan } from '@dlidli/api-client'
 import { adminApi } from '@/api'
@@ -44,6 +44,13 @@ async function loadPlans() {
 function isOnShelf(p: AdminVipPlan): boolean {
   return (p as AdminVipPlan & { _onShelf?: boolean })._onShelf === true
 }
+
+// 首屏默认停在「套餐配置」，**必须挂载即加载**：此前只有保存/上下架后才会 loadPlans()，
+// 而空表里没有操作按钮可点 —— 运营打开页面看到的是「暂无数据」，且没有任何入口能加载出来
+//（实测：接口 /admin/vip/plans 返回 all/list 各 3 条，页面却 0 行）。
+onMounted(() => {
+  loadPlans()
+})
 
 // 编辑弹窗：金额字段用**字符串**承接元输入，提交时统一走 yuanToFen 转分。
 const dialogVisible = ref(false)
@@ -217,6 +224,12 @@ function openMembers() {
   activeTab.value = 'members'
   searchMembers()
 }
+
+/** Tab 切换：两个 Tab 各自按需加载（回到「套餐配置」时刷新一次，避免看到过期价格）。 */
+function onTabChange(name: string) {
+  if (name === 'members') openMembers()
+  else loadPlans()
+}
 </script>
 
 <template>
@@ -227,7 +240,7 @@ function openMembers() {
     />
 
     <div class="page-card">
-      <el-tabs v-model="activeTab" @tab-change="(n: string) => n === 'members' && openMembers()">
+      <el-tabs v-model="activeTab" @tab-change="onTabChange">
         <!-- Tab1 套餐配置 -->
         <el-tab-pane label="套餐配置" name="plans">
           <div class="flex items-center justify-between mb-4">

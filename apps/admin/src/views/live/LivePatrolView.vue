@@ -4,16 +4,24 @@
 // 页面权限 live:audit（菜单），按钮权限 live:cut（切断/恢复）。
 // 两个 Tab 而非两个页面：巡查是一个连续动作——看到异常房间就地切断，
 // 再切到「违规记录」核对处置结果；拆成两个页面会把这条动线切断。
-import { onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { apiErrorMessage, type AdminLiveRoom, type AdminLiveViolation } from '@dlidli/api-client'
 import { adminApi } from '@/api'
 import { useApiAction } from '@/composables/useApiAction'
 import { usePagedList } from '@/composables/usePagedList'
+import { permissionStore } from '@/stores/permission'
 import PageHead from '@/components/PageHead.vue'
 
 const activeTab = ref('rooms')
 const { run } = useApiAction()
+
+// 按钮权限 live:cut 走**渲染期判定（v-if）**而非 v-perm 指令：
+// 权限是异步加载的，v-if 在权限到达后会自动重算，不需要指令补 updated 钩子；
+// 表格单元格在一次切 Tab 里会被反复 patch，能少一个指令挂点就少一类 vnode 错配风险。
+// （注：本页切 Tab 崩溃的真因已定位为 el-table 上的 v-loading，不是 v-perm——详见下方两处表格注释
+//  与 .dev-logs/debug-tabs/bisect.md；此处保留 v-if 属于取简单可靠的写法，不是原判据。）
+const canCut = computed(() => permissionStore.has('live:cut'))
 
 // ---- Tab1：直播中房间 ----
 const rooms = ref<AdminLiveRoom[]>([])
@@ -169,11 +177,17 @@ onUnmounted(stopPolling)
           <div class="flex items-center justify-between mb-3">
             <span class="text-3 text-text-2">
               每 15 秒自动刷新 · 共 {{ rooms.length }} 个直播中房间
+              <span v-if="roomsLoading" class="ml-2">加载中…</span>
             </span>
             <el-button class="pink-btn" @click="loadRooms"> 刷新 </el-button>
           </div>
 
-          <el-table v-loading="roomsLoading" :data="rooms" stripe>
+          <!-- 这里**不能用 v-loading**：v-loading 会把指令 dirs 挂到 el-table 组件 vnode 上，
+               本页「切 Tab + 表格首次收到行数据」发生在同一次 patch 里，旧 vnode 的 dirs 比新的短，
+               patchElement→invokeDirectiveHook 读 oldBindings[i].value 抛 TypeError，
+               componentUpdateFn 中断 → pane 的 display 停在旧值（切 Tab 后内容不切换）。
+               加载态改用同一区域内的文本提示，行为等价且不引入指令。 -->
+          <el-table :data="rooms" stripe>
             <el-table-column label="房间" min-width="200">
               <template #default="{ row }">
                 <div class="text-3.5 font-600">{{ row.title || '（未命名）' }}</div>
@@ -208,15 +222,14 @@ onUnmounted(stopPolling)
             <el-table-column label="操作" width="150" fixed="right">
               <template #default="{ row }">
                 <el-button
-                  v-if="row.ban_status !== 1"
-                  v-perm="'live:cut'"
+                  v-if="canCut && row.ban_status !== 1"
                   size="small"
                   type="danger"
                   @click="cutRoom(row)"
                 >
                   切断
                 </el-button>
-                <el-button v-else v-perm="'live:cut'" size="small" @click="restoreRoom(row)">
+                <el-button v-else-if="canCut" size="small" @click="restoreRoom(row)">
                   恢复
                 </el-button>
               </template>
@@ -254,9 +267,11 @@ onUnmounted(stopPolling)
             <el-button class="pink-btn" @click="searchViolations"> 查询 </el-button>
             <el-button @click="resetRoomFilter"> 重置 </el-button>
             <span class="text-3 text-text-2">共 {{ vTotal }} 条违规记录</span>
+            <span v-if="vLoading" class="text-3 text-text-2">加载中…</span>
           </div>
 
-          <el-table v-loading="vLoading" :data="violations" stripe>
+          <!-- 同上：v-loading 在本页会触发 Vue patch 崩溃（详见 Tab1 表格上方注释），加载态用文本提示。 -->
+          <el-table :data="violations" stripe>
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column label="房间 / 主播" min-width="160">
               <template #default="{ row }">
