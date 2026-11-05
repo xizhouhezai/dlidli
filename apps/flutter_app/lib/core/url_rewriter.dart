@@ -62,9 +62,16 @@ class UrlRewriter {
     final authorityEnd = pathStart < 0 ? url.length : pathStart;
     final oldAuthority = url.substring(authorityStart, authorityEnd);
 
-    // 后端下发端口（如 8000）优先保留；仅当缺失时用 apiBase 的端口
-    final backendPort = uri.hasPort && uri.port > 0 ? uri.port : base.port;
-    final newAuthority = backendPort > 0 ? '${base.host}:$backendPort' : base.host;
+    // **host 与 port 一律取当前 API 的**，不保留后端写死的端口。
+    //
+    // 踩过的坑：库里历史数据把封面存成 `http://127.0.0.1:8010/...`（另一套测试环境的端口），
+    // 早先实现只替换 host、保留原端口 → 得到 `http://10.0.2.2:8010/...`，
+    // 而 API 实际在 8000，封面全部加载失败（真机截图表现为空白卡片）。
+    // 静态资源与 API 同源（同一个 Go 服务既挂 /api 也挂 /static），
+    // 所以端口必须跟随 API，而不是跟随那条脏数据。
+    final newAuthority = base.hasPort && base.port > 0
+        ? '${base.host}:${base.port}'
+        : base.host;
 
     if (oldAuthority == newAuthority) return url;
 

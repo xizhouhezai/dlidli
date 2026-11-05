@@ -99,14 +99,15 @@ class VideoCardItem extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             if (url.isEmpty)
-              const ColoredBox(color: DliColors.surfaceSecondary)
+              _defaultCover()
             else
               Image.network(
                 url,
                 fit: BoxFit.cover,
-                // 加载失败不能崩、也不能留白洞：给中性底色兜底
-                errorBuilder: (_, __, ___) =>
-                    const ColoredBox(color: DliColors.surfaceSecondary),
+                // 加载失败用品牌默认封面兜底（与鸿蒙端同口径）。
+                // 实测踩到：库里存在封面记录但文件已丢失的稿件（如 VIP-02 验收样片），
+                // 只画中性底色的话，用户看到的是"空白卡片"，与"本来没封面"无法区分。
+                errorBuilder: (_, __, ___) => _defaultCover(),
                 loadingBuilder: (_, child, progress) => progress == null
                     ? child
                     : const ColoredBox(color: DliColors.surfaceSecondary),
@@ -130,6 +131,16 @@ class VideoCardItem extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// 品牌默认封面（与鸿蒙端 default_cover.png 同一份字节，md5 已核对）。
+  Widget _defaultCover() {
+    return Image.asset(
+      'assets/images/default_cover.png',
+      fit: BoxFit.cover,
+      // 资产本身缺失时退回中性底色，避免连兜底都崩
+      errorBuilder: (_, __, ___) => const ColoredBox(color: DliColors.surfaceSecondary),
     );
   }
 }
