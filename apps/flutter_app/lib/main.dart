@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/root_shell.dart';
 import 'core/env.dart';
+import 'core/theme.dart';
 
 void main() {
   runApp(const ProviderScope(child: DliDliApp()));
@@ -19,19 +20,11 @@ class DliDliApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 品牌粉（与 Web/鸿蒙端主色一致）
-    const brand = Color(0xFFFB7299);
-
     return MaterialApp(
       title: 'DliDli',
       debugShowCheckedModeBanner: Env.flavor != AppFlavor.prod,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: brand,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      // 主题 token 与鸿蒙端 Theme.ets 逐值对齐（见 core/theme.dart）
+      theme: DliTheme.light(),
       // FLT-05：鸿蒙「沉浸光感」在 Android/iOS 无等价能力，
       // 这里用普通背景 + 卡片层级降级，不做材质模拟。
       home: const RootShell(),
