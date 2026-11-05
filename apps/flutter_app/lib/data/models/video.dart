@@ -14,6 +14,8 @@ class VideoCard {
     required this.duration,
     required this.ownerName,
     this.viewCount = 0,
+    this.publishedAt,
+    this.categoryId,
   });
 
   final String bvid;
@@ -22,6 +24,11 @@ class VideoCard {
   final int duration;
   final String ownerName;
   final int viewCount;
+
+  /// 发布日期（信息流卡片 meta 行用；鸿蒙侧同样取 published_at ?? created_at）。
+  final DateTime? publishedAt;
+
+  final int? categoryId;
 
   factory VideoCard.fromJson(Map<String, dynamic> json) {
     final owner = json['owner'];
@@ -34,8 +41,35 @@ class VideoCard {
       duration: (json['duration'] as num?)?.toInt() ?? 0,
       ownerName: (owner is Map ? owner['nickname'] as String? : null) ?? '',
       viewCount: (stat is Map ? (stat['view'] as num?)?.toInt() : null) ?? 0,
+      publishedAt: _parseTime(json['published_at'] ?? json['created_at']),
+      categoryId: (json['category_id'] as num?)?.toInt(),
     );
   }
+
+  /// 后端时间形如 `2026-09-09T16:58:39+08:00`；解析失败返回 null（不让一条脏数据搞崩列表）。
+  static DateTime? _parseTime(Object? v) {
+    if (v is! String || v.isEmpty) return null;
+    return DateTime.tryParse(v);
+  }
+}
+
+/// 分区（首页横向分区栏）。后端 `/api/v1/categories` 返回。
+///
+/// 对齐鸿蒙 `model/Video.ets` 的 `Category`：`parent_id == 0` 为顶级分区。
+class Category {
+  const Category({required this.id, required this.name, this.parentId});
+
+  final int id;
+  final String name;
+  final int? parentId;
+
+  bool get isTopLevel => (parentId ?? 0) == 0;
+
+  factory Category.fromJson(Map<String, dynamic> json) => Category(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        name: (json['name'] as String?) ?? '',
+        parentId: (json['parent_id'] as num?)?.toInt(),
+      );
 }
 
 /// 分页结果。
