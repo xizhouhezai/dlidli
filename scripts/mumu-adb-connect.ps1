@@ -28,7 +28,11 @@ param(
   [string]$Index = ""
 )
 
-$ErrorActionPreference = "Stop"
+# 注意：**不能**用 "Stop"。PS 5.1 在 Stop 模式下会把原生命令（adb/MuMuManager）写到 stderr 的
+# 任何提示都升级为终止性异常，而 adb 的 "daemon not running" / "cannot connect to daemon"、
+# MuMuManager 的 RPC 提示都属于**预期内**输出 —— 会表现为「脚本莫名中断」。
+# 故统一用 Continue，靠 $LASTEXITCODE 与显式判断做失败处理。
+$ErrorActionPreference = "Continue"
 
 $mumuRoot    = "D:\Program Files\Netease\MuMu Player 12"
 $mumuManager = Join-Path $mumuRoot "nx_main\MuMuManager.exe"
@@ -94,15 +98,44 @@ if ($Status) {
   exit 0
 }
 
-if ($Restart) {
-  Write-Host "[i] 重启 adb server（断开所有设备后自动重连）"
-  & $AdbPath kill-server 2>$null | Out-Null
-  Start-Sleep -Milliseconds 600
+function Test-AdbServer {
+  return [bool](Get-NetTCPConnection -LocalPort 5037 -State Listen -ErrorAction SilentlyContinue)
 }
 
-# ---- 3. 连接并等 device ready ----
-& $AdbPath start-server 2>$null | Out-Null
-$conn = & $AdbPath connect $serial 2>&1
+if ($Restart) {
+  # ⚠ 已知坑（实测）：`adb kill-server` 会派生/等待 daemon，**在 PowerShell 里前台或 -Wait 调用都可能挂住**
+  # （daemon 继承管道句柄，PS 一直等；实测卡死 3 分钟以上）。所以这里**不自动 kill**，
+  # 而是先看 server 是否健康，不健康就打印可复制的命令让用户自己执行（用户手动跑不会卡）。
+  Write-Host "[i] -Restart：检查 adb server 健康状态（不在脚本内 kill-server，见脚本内注释）" -ForegroundColor DarkGray
+  if (Test-AdbServer) {
+    & $AdbPath devices 2>&1 | Out-Null
+    Write-Host "    server 在跑；如需硬重启，请手动执行（脚本内调用会卡住）："
+    Write-Host "      `"$AdbPath`" kill-server" -ForegroundColor DarkGray
+    Write-Host "      # 然后重跑本脚本（会自动 start-server）" -ForegroundColor DarkGray
+  } else {
+    Write-Host "    server 未运行，将由本脚本自动拉起"
+  }
+}
+
+# ---- 3. 确保 server 在跑（异步 + 轮询 5037，绝不在前台等 daemon）----
+if (-not (Test-AdbServer)) {
+  # 关键：必须 Start-Process 分离启动。前台 `& adb start-server` 会让 PS 等住 daemon 的句柄。
+  Start-Process -FilePath $AdbPath -ArgumentList 'start-server' -NoNewWindow -ErrorAction SilentlyContinue | Out-Null
+  $dl = (Get-Date).AddSeconds(25)
+  while ((Get-Date) -lt $dl -and -not (Test-AdbServer)) { Start-Sleep -Milliseconds 300 }
+}
+if (-not (Test-AdbServer)) {
+  Write-Host "[X] adb server 未能在 5037 端口就绪" -ForegroundColor Red
+  Write-Host "    手动排查（按序）：" -ForegroundColor Yellow
+  Write-Host "      1) `"$AdbPath`" kill-server        # 在独立终端里跑，不要放进脚本"
+  Write-Host "      2) Get-NetTCPConnection -LocalPort 5037 -State Listen | Select OwningProcess"
+  Write-Host "         # 若仍有进程占用，End-Process 掉它（通常是残留的旧 adb server）"
+  Write-Host "      3) 重跑本脚本"
+  exit 4
+}
+Write-Host "adb server: 5037 已就绪"
+
+$conn = (& $AdbPath connect $serial 2>&1) -join ' '
 Write-Host "connect  : $conn"
 
 $deadline = (Get-Date).AddSeconds($TimeoutSec)
