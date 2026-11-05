@@ -1,0 +1,32 @@
+name: dlidli_app
+description: "DliDli 视频社区 Flutter 移动端（Android + iOS）"
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # 状态管理：编译期安全的依赖注入 + AsyncValue 三态（见 docs/specs/flutter/plan.md §2.2）
+  flutter_riverpod: ^2.6.1
+
+  # 网络：拦截器做 token 注入与 401 单飞续期（plan §2.3）
+  dio: ^5.7.0
+
+  # 本地存储（plan §2.6 / FLT-02 FLT-04）
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
