@@ -30,3 +30,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    # 品牌默认封面：与鸿蒙端 apps/harmony/.../media/default_cover.png 同一份字节
+    # （md5 B93C45D8B384B44AB44E7D7ADC2033AA 核对一致），四端共用一套品牌资产
+    - assets/images/default_cover.png
