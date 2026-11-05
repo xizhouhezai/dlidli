@@ -8,14 +8,16 @@
 
 ### 基础设施（T-0x）
 
-- [ ] T-01 工程骨架与工程规范
+- [x] T-01 工程骨架与工程规范 `2026-11-05`
   - 覆盖：FLT-01、FLT-05、FLT-06
-  - 内容：`apps/flutter_app` 单工程双平台（`android` + `ios`）；目录分层 `lib/{core,data,features}`；`analysis_options.yaml` 严格模式；`flutter analyze` 零告警纳入闸门；CI 预留（Android 可在本机跑，iOS 需 macOS runner）；**平台适配层**：设计系统与导航骨架按 Android/iOS 各自原生习惯落地（返回手势、状态栏、安全区），鸿蒙「沉浸光感」在双端**降级为普通背景 + 卡片层级**（承 FLT-05），并提供「材质不可用不得影响可读性与可点性」的回归检查项
+  - 内容：`apps/flutter_app` 单工程双平台（`android` + `ios`）；目录分层 `lib/{core,data,app,features}`；`analysis_options.yaml` 严格模式；`flutter analyze` 零告警纳入闸门；CI 预留（Android 可在本机跑，iOS 需 macOS runner）；**平台适配层**：设计系统与导航骨架按 Android/iOS 各自原生习惯落地（返回手势、状态栏、安全区），鸿蒙「沉浸光感」在双端**降级为普通背景 + 卡片层级**（承 FLT-05），并提供「材质不可用不得影响可读性与可点性」的回归检查项
   - 验收：`flutter analyze` 0 issue；`flutter build apk --debug` 成功；双端各跑一次首屏，确认安全区/状态栏/返回手势正确且无内容被遮挡
-- [ ] T-02 网络层与统一信封
+  - 验证：`flutter analyze` **0 issue**；`flutter build apk --debug` **成功（208.1s）**；MuMu（Android 15/API35）装包启动，首屏渲染正常、状态栏/安全区无遮挡。**补齐两处模板缺口**（不改会静默失败）：Android 缺 `INTERNET` 权限、API 28+ 默认禁明文 HTTP → 加 `network_security_config.xml`（仅对 `10.0.2.2/localhost/127.0.0.1` 放开，生产仍强制 HTTPS）；`minSdk` 显式设 **26**（FLT-06）。iOS 工程目录已生成但**本机不可编译**（Windows 无 Xcode）
+- [x] T-02 网络层与统一信封 `2026-11-05`
   - 覆盖：FLT-03
   - 内容：dio 封装、`{code,message,data,trace_id}` 解析、按 `code` 判成败、错误码→可读文案映射、超时可重试态；端基址按平台切换（Android 模拟器 `10.0.2.2`、iOS 模拟器 `localhost`、真机走 `--dart-define`）
   - 验收：真实后端 `/health`、`/api/v1/videos` 双端各跑通；错误码映射单测通过
+  - 验证：MuMu 上**真实链路四项全通**（App 内自检页绿勾取证）：基址 `10.0.2.2:8000`、`/health ready=true mysql=up`、视频列表 `count=3`、**签名播放地址 3 档/720P/含签名=true**（FLT-14 前提就绪）。`flutter test` **18/18 通过**（含「并发 3 个 401 只续期 1 次」单飞回归）。**实测修掉 1 个真实缺陷**：后端下发的封面/播放地址是服务端视角 `http://localhost:8000/...`，端机 `localhost` 指向自身 → 封面全灰且不报错（极难定位）→ 新增 `UrlRewriter` 按 host 重写，**只换 authority 不重建 Uri**（重建会重排 query 致 `e/q/u/s` 签名失效），配 6 个单测锁口径（含「真实域名不改写」）。iOS 侧仅 `analyze` 通过，未构建
 - [ ] T-03 登录与会话
   - 覆盖：FLT-01、FLT-02、FLT-04
   - 内容：手机号验证码/密码登录、token 安全存储（Keystore/Keychain）、401 单飞续期重放、退出清理；**端侧存储层**：`flutter_secure_storage`（凭证）+ `shared_preferences`（弹幕展示设置）+ `sqflite`（观看进度与搜索历史等结构化缓存），并保证应用重启后设置与进度可恢复（承 FLT-04）
@@ -101,7 +103,7 @@
 
 | 里程碑 | 任务数 | 已完成 |
 | --- | :-: | :-: |
-| M5 一期（观看端） | 18 | 0 |
+| M5 一期（观看端） | 18 | 2 |
 
 ## 环境前置（非任务，开工条件）
 

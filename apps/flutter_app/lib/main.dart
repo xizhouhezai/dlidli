@@ -1,0 +1,40 @@
+/// DliDli Flutter 移动端（Android + iOS）入口。
+///
+/// 阶段：M5 一期 T-01 工程骨架 + T-02 网络层。
+/// 规格见 docs/specs/flutter/；本文件只做装配，业务在 features/ 下。
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'core/env.dart';
+import 'features/feed/feed_page.dart';
+
+void main() {
+  runApp(const ProviderScope(child: DliDliApp()));
+}
+
+class DliDliApp extends StatelessWidget {
+  const DliDliApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // 品牌粉（与 Web/鸿蒙端主色一致）
+    const brand = Color(0xFFFB7299);
+
+    return MaterialApp(
+      title: 'DliDli',
+      debugShowCheckedModeBanner: Env.flavor != AppFlavor.prod,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: brand,
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      // FLT-05：鸿蒙「沉浸光感」在 Android/iOS 无等价能力，
+      // 这里用普通背景 + 卡片层级降级，不做材质模拟。
+      home: const FeedPage(),
+    );
+  }
+}
