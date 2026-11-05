@@ -59,5 +59,15 @@ void main() {
       expect(out, isNot(contains('localhost')));
       expect(out, contains('/static/a.jpg'));
     });
+
+    test('后端写死的"脏端口"必须被纠正为 API 端口（真机踩过的坑）', () {
+      // 库里历史数据把封面存成 127.0.0.1:8010（另一套测试环境的端口），
+      // 而当前 API 在 8000。静态资源与 API 同源 → 端口必须跟随 API，
+      // 否则得到 http://10.0.2.2:8010/... 会加载失败（真机表现为空白卡片）。
+      final out = UrlRewriter.rewrite('http://127.0.0.1:8010/static/covers/a.jpg');
+      expect(out, contains(':8000'), reason: '端口应纠正为当前 API 端口');
+      expect(out, isNot(contains('8010')));
+      expect(out, contains('/static/covers/a.jpg'));
+    });
   });
 }
