@@ -58,3 +58,6 @@ Thumbs.db
 # logs
 *.log
 pnpm-debug.log*
+
+# Redis 运行快照（本地 dev 运行时由 redis-server 写出，非源码）
+dump.rdb

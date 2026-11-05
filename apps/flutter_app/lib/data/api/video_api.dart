@@ -9,6 +9,17 @@ class VideoApi {
 
   final ApiClient _client;
 
+  /// 分区列表（首页横向分区栏）。后端返回 `{list:[...]}`。
+  Future<List<Category>> categories() async {
+    final data = await _client.get('/api/v1/categories');
+    final raw = (data is Map<String, dynamic>) ? data['list'] : data;
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(Category.fromJson)
+        .toList(growable: false);
+  }
+
   /// 首页/列表。后端返回 `{list, total}`。
   Future<PagedVideos> list({
     int page = 1,
