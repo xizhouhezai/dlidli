@@ -148,6 +148,14 @@ export default defineConfig({
           ]
         },
         {
+          text: 'Flutter 移动端（Android + iOS）',
+          items: [
+            { text: 'spec 需求', link: '/specs/flutter/spec' },
+            { text: 'plan 方案', link: '/specs/flutter/plan' },
+            { text: 'tasks 任务', link: '/specs/flutter/tasks' }
+          ]
+        },
+        {
           text: '工程与端侧（横切）',
           items: [
             { text: 'tasks 任务', link: '/specs/engineering/tasks' }
@@ -207,7 +215,8 @@ export default defineConfig({
             { text: '路线图（Roadmap）', link: '/project/roadmap' },
             { text: '开发进度管理', link: '/project/progress' },
             { text: '协作规范', link: '/project/conventions' },
-            { text: '部署与运行指南', link: '/project/deployment' }
+            { text: '部署与运行指南', link: '/project/deployment' },
+            { text: 'MuMu 模拟器 adb 故障手册', link: '/project/mumu-adb-troubleshooting' }
           ]
         }
       ]
