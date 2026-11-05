@@ -71,6 +71,17 @@ adbd 通道建立后，监听套接字被已接受的连接占用，状态会显
 
 **别用端口 Listen 判断实例是否存活**，用 `player_state` 或直接 `adb connect`。
 
+### 坑 4：在 PowerShell 脚本里调 `adb kill-server` / `adb start-server` 会卡死
+
+实测：在 PS 5.1 里 `& adb kill-server`、`Start-Process -Wait`、甚至 `cmd /c "adb kill-server"` 都可能**挂住数分钟**——
+daemon 由 adb 派生后会继承管道句柄，PowerShell 一直等句柄关闭。
+
+**对策（脚本已内置）**：
+- `start-server`：只用 `Start-Process ... -NoNewWindow`（**不加 `-Wait`**）异步拉起，然后轮询 **5037 端口是否 Listen** 判定成功；
+- `kill-server`：**脚本不自动执行**，只在 server 不健康时打印命令，由用户在独立终端手动跑；
+- `$ErrorActionPreference` **不要设为 `Stop`**：它会把原生命令写到 stderr 的**预期内提示**（`daemon not running`、
+  `cannot connect to daemon`）升级成终止性异常，表现为「脚本莫名中断」。
+
 ## 3. 分场景处置表
 
 | 现象 | 判据 | 处置 |
