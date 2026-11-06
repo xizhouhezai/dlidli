@@ -41,11 +41,38 @@
 - 统一 envelope `{code,message,data,trace_id}`：**按 `code` 判成败，不按 HTTP 状态**（承 spec §3）。业务失败可能是 HTTP 200 + `code≠0`。
 - 端基址差异：Android 模拟器用 `10.0.2.2`，iOS 模拟器用 `localhost`，真机走配置注入（`--dart-define`）。
 
-### 2.4 播放器：`media_kit`（备选 `video_player`）
+### 2.4 播放器：**已定案 `video_player`**（T-10 实测结论，2026-11-06）
 
-- 首选 `media_kit`：底层 libmpv，HLS 支持好、可控制缓冲与倍速、跨 Android/iOS 行为一致。
-- 兜底 `video_player`（官方插件，ExoPlayer/AVPlayer）：若 `media_kit` 在 iOS 侧包体或稳定性不达标则回退。
-- **决策延后到 T-10 完成**（双端各跑一次同源片源后再定），避免拍脑袋。
+初版倾向 `media_kit`（libmpv），但 T-10 在真机上用**同一签名 HLS 片源**对比后**结论反转**。
+
+**实测数据**（MuMu Android 15/API35 / x86_64，片源 `tears_of_steel_720p`，1726x720 / 734s）：
+
+| 轮次 | `video_player`（ExoPlayer） | `media_kit`（libmpv） |
+| --- | --- | --- |
+| 1（冷启动） | **404 ms** ✅ | 881 ms ✅ |
+| 2（热缓存） | **139 ms** ✅ | 384 ms ✅ |
+| 3（热缓存） | **141 ms** ✅ | 220 ms ✅ |
+
+两者均能正常起播并渲染画面，但 `video_player` 在**每一轮都更快**（快 1.6~2.2 倍）。
+
+**定案 `video_player`**，理由（按权重排序）：
+
+1. **起播更快**：每轮实测均优，直接影响首帧感知（spec §4 的起播指标）。
+2. **包体更小**：同工程 debug APK `video_player` 205.3 MB vs 双播放器 248.1 MB，
+   **libmpv 单独贡献 +43 MB**。正式包 release 虽会裁剪，但增量依然显著。
+3. **集成成本更低**：`media_kit` 的 Android 依赖用 Kotlin 2.2.0 编译，
+   迫使项目把 `org.jetbrains.kotlin.android` 从 1.8.22 升到 2.1.0
+   （否则报 `incompatible version of Kotlin`）。为选一个更慢更大的播放器升级整个
+   工程的 Kotlin 工具链不划算。
+4. **官方插件**：ExoPlayer（Android）/ AVPlayer（iOS）均为系统级成熟方案，
+   iOS 侧无需引入 libmpv 的编译与审核负担。
+
+**保留项**：若后续出现 `video_player` 无法覆盖的场景（如需要倍速/硬解外的滤镜、
+或某格式 ExoPlayer 不支持），再按 §2.4 的原兜底路径切 `media_kit`；
+届时 Kotlin 2.1.0 的升级已就位，不会重复踩坑。
+
+> ⚠️ **iOS 侧未验证**：本机无 Xcode，只能确认 `video_player` 选型在 Android 成立。
+> iOS 走 AVPlayer，理论上同样可用，但**不得据此声称 iOS 已验证**（见 §3 风险表）。
 
 ### 2.5 弹幕渲染：`CustomPainter` 自绘轨道
 
