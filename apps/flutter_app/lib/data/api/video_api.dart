@@ -1,7 +1,8 @@
-/// 视频接口：直接复用既有后端契约，无需新增接口（spec §5）。
+﻿/// 视频接口：直接复用既有后端契约，无需新增接口（spec §5）。
 library;
 
 import '../../core/api_client.dart';
+import '../../core/api_error.dart';
 import '../models/video.dart';
 
 class VideoApi {
@@ -50,5 +51,26 @@ class VideoApi {
         .whereType<Map<String, dynamic>>()
         .map(VideoStream.fromJson)
         .toList(growable: false);
+  }
+
+  /// 稿件详情（含标题、UP 主、互动计数、简介、播放流）。
+  Future<VideoCard> detail(String bvid) async {
+    final data = await _client.get('/api/v1/videos/$bvid');
+    if (data is! Map<String, dynamic>) {
+      throw ApiError(kind: ApiErrorKind.malformed, message: '稿件详情为空');
+    }
+    return VideoCard.fromJson(data);
+  }
+
+  /// 读取播放进度（秒）。需登录；未登录时服务端返回业务错误，调用方应静默忽略。
+  Future<int> progress(String bvid) async {
+    final data = await _client.get('/api/v1/videos/$bvid/progress');
+    if (data is! Map<String, dynamic>) return 0;
+    return (data['position'] as num?)?.toInt() ?? 0;
+  }
+
+  /// 保存播放进度（秒）。需登录。
+  Future<void> saveProgress(String bvid, int position) async {
+    await _client.post('/api/v1/videos/$bvid/progress', body: {'position': position});
   }
 }

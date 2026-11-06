@@ -16,6 +16,8 @@ class VideoCard {
     this.viewCount = 0,
     this.publishedAt,
     this.categoryId,
+    this.stat = const VideoStat(),
+    this.description = '',
   });
 
   final String bvid;
@@ -25,6 +27,12 @@ class VideoCard {
   final String ownerName;
   final int viewCount;
 
+  /// 互动计数（播放页展示播放/点赞/投币）。
+  final VideoStat stat;
+
+  /// 稿件简介。
+  final String description;
+
   /// 发布日期（信息流卡片 meta 行用；鸿蒙侧同样取 published_at ?? created_at）。
   final DateTime? publishedAt;
 
@@ -32,7 +40,10 @@ class VideoCard {
 
   factory VideoCard.fromJson(Map<String, dynamic> json) {
     final owner = json['owner'];
-    final stat = json['stat'];
+    final statJson = json['stat'];
+    final stat = statJson is Map
+        ? VideoStat.fromJson(statJson.cast<String, dynamic>())
+        : const VideoStat();
     return VideoCard(
       bvid: (json['bvid'] as String?) ?? '',
       title: (json['title'] as String?) ?? '',
@@ -40,7 +51,9 @@ class VideoCard {
       cover: UrlRewriter.rewrite((json['cover'] as String?) ?? ''),
       duration: (json['duration'] as num?)?.toInt() ?? 0,
       ownerName: (owner is Map ? owner['nickname'] as String? : null) ?? '',
-      viewCount: (stat is Map ? (stat['view'] as num?)?.toInt() : null) ?? 0,
+      viewCount: stat.view,
+      stat: stat,
+      description: (json['description'] as String?) ?? '',
       publishedAt: _parseTime(json['published_at'] ?? json['created_at']),
       categoryId: (json['category_id'] as num?)?.toInt(),
     );
@@ -51,6 +64,37 @@ class VideoCard {
     if (v is! String || v.isEmpty) return null;
     return DateTime.tryParse(v);
   }
+}
+
+/// 互动计数（后端 `stat` 对象：view/like/coin/fav/danmaku/comment/share）。
+class VideoStat {
+  const VideoStat({
+    this.view = 0,
+    this.like = 0,
+    this.coin = 0,
+    this.fav = 0,
+    this.danmaku = 0,
+    this.comment = 0,
+    this.share = 0,
+  });
+
+  final int view;
+  final int like;
+  final int coin;
+  final int fav;
+  final int danmaku;
+  final int comment;
+  final int share;
+
+  factory VideoStat.fromJson(Map<String, dynamic> json) => VideoStat(
+        view: (json['view'] as num?)?.toInt() ?? 0,
+        like: (json['like'] as num?)?.toInt() ?? 0,
+        coin: (json['coin'] as num?)?.toInt() ?? 0,
+        fav: (json['fav'] as num?)?.toInt() ?? 0,
+        danmaku: (json['danmaku'] as num?)?.toInt() ?? 0,
+        comment: (json['comment'] as num?)?.toInt() ?? 0,
+        share: (json['share'] as num?)?.toInt() ?? 0,
+      );
 }
 
 /// 分区（首页横向分区栏）。后端 `/api/v1/categories` 返回。
@@ -100,11 +144,15 @@ class VideoStream {
     required this.quality,
     required this.format,
     required this.url,
+    this.isVipOnly = false,
   });
 
   final int quality;
   final String format;
   final String url;
+
+  /// 是否会员限定档位（服务端按用户身份下发时带 `vip_only` 标记）。
+  final bool isVipOnly;
 
   /// 清晰度中文标签（0 原画 / 360 / 720 / 1080 / 2160）。
   String get qualityLabel {
@@ -121,6 +169,7 @@ class VideoStream {
   factory VideoStream.fromJson(Map<String, dynamic> json) => VideoStream(
         quality: (json['quality'] as num?)?.toInt() ?? 0,
         format: (json['format'] as String?) ?? '',
+        isVipOnly: json['vip_only'] == true || json['is_vip_only'] == true,
         // 播放地址同样是服务端视角的 localhost，且带签名参数（e/q/u/s），
         // 重写只换 host:port，绝不重排 query —— 否则签名校验失败。
         url: UrlRewriter.rewrite((json['url'] as String?) ?? ''),
