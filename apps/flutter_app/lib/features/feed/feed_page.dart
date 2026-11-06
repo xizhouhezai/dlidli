@@ -16,7 +16,7 @@ import '../../core/api_error.dart';
 import '../../core/theme.dart';
 import '../../data/models/video.dart';
 import '../dev/diag_page.dart';
-import '../player/player_probe_page.dart';
+import '../player/play_page.dart';
 import 'widgets/video_card_item.dart';
 
 class FeedPage extends ConsumerStatefulWidget {
@@ -336,49 +336,10 @@ class _FeedGrid extends StatelessWidget {
   }
 
   void _openVideo(BuildContext context, VideoCard card) {
-    // T-10 阶段：点卡片进入播放器选型对比页（同一片源跑两个播放器）。
-    // T-11 落地播放页后，这里改为进入正式播放页。
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: DliColors.primary),
-      ),
+    // T-11：进入正式播放页（拉详情 → 取签名 HLS → 起播 → 清晰度切换 → 进度保存）
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => PlayPage(bvid: card.bvid)),
     );
-    _openProbe(context, card);
-  }
-
-  Future<void> _openProbe(BuildContext context, VideoCard card) async {
-    // 用 ProviderScope 容器直接读取（本类不是 ConsumerWidget，拿不到 ref）
-    final container = ProviderScope.containerOf(context, listen: false);
-    try {
-      final streams = await container.read(videoApiProvider).streams(card.bvid);
-      if (!context.mounted) return;
-      Navigator.of(context).pop(); // 关掉 loading
-      final hls = streams.where((s) => s.format == 'hls').toList();
-      if (hls.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('该稿件的 HLS 片源缺失：${card.title}')),
-        );
-        return;
-      }
-      // 取最高清晰度做对比（更能暴露解码压力）
-      hls.sort((a, b) => b.quality.compareTo(a.quality));
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => PlayerProbePage(
-            hlsUrl: hls.first.url,
-            title: '${card.title}  (${hls.first.qualityLabel})',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('获取播放地址失败：$e')),
-      );
-    }
   }
 
   /// 计算卡片格子高度：封面(宽*9/16) + 文本块 + 卡片内边距。
