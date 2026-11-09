@@ -69,9 +69,8 @@ class UrlRewriter {
     // 而 API 实际在 8000，封面全部加载失败（真机截图表现为空白卡片）。
     // 静态资源与 API 同源（同一个 Go 服务既挂 /api 也挂 /static），
     // 所以端口必须跟随 API，而不是跟随那条脏数据。
-    final newAuthority = base.hasPort && base.port > 0
-        ? '${base.host}:${base.port}'
-        : base.host;
+    final newAuthority =
+        base.hasPort && base.port > 0 ? '${base.host}:${base.port}' : base.host;
 
     if (oldAuthority == newAuthority) return url;
 

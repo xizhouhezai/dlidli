@@ -24,10 +24,7 @@ class _RootShellState extends State<RootShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [
-          FeedPage(),
-          ProfilePage(),
-        ],
+        children: const [FeedPage(), ProfilePage()],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

@@ -47,25 +47,32 @@ class FakeAdapter implements HttpClientAdapter {
 }
 
 Dio dioWith(HttpClientAdapter adapter) {
-  final dio = Dio(BaseOptions(baseUrl: 'http://test.local', validateStatus: (_) => true));
+  final dio = Dio(
+    BaseOptions(baseUrl: 'http://test.local', validateStatus: (_) => true),
+  );
   dio.httpClientAdapter = adapter;
   return dio;
 }
 
 /// 构造一个注入了假传输层的 AuthNotifier。
-AuthNotifier makeNotifier(TokenStore store, HttpClientAdapter adapter) => AuthNotifier(
+AuthNotifier makeNotifier(TokenStore store, HttpClientAdapter adapter) =>
+    AuthNotifier(
       api: AuthApi(ApiClient(tokenStore: store, dio: dioWith(adapter))),
       tokenStore: store,
     );
 
 /// 等状态机跑完启动恢复。
-Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 120));
+Future<void> settle() =>
+    Future<void>.delayed(const Duration(milliseconds: 120));
 
 void main() {
   group('启动恢复 restore()', () {
     test('本地无令牌 → 未登录', () async {
       final store = InMemoryTokenStore();
-      final n = makeNotifier(store, FakeAdapter((_) => (200, {'code': 0, 'message': 'ok', 'data': null})));
+      final n = makeNotifier(
+        store,
+        FakeAdapter((_) => (200, {'code': 0, 'message': 'ok', 'data': null})),
+      );
       await settle();
       expect(n.state, isA<AuthLoggedOut>());
     });
@@ -76,11 +83,14 @@ void main() {
 
       final adapter = FakeAdapter((o) {
         if (o.path.contains('/users/me')) {
-          return (200, {
-            'code': 0,
-            'message': 'ok',
-            'data': {'id': '1', 'nickname': '测试用户', 'level': 3},
-          });
+          return (
+            200,
+            {
+              'code': 0,
+              'message': 'ok',
+              'data': {'id': '1', 'nickname': '测试用户', 'level': 3},
+            },
+          );
         }
         return (200, {'code': 0, 'message': 'ok', 'data': null});
       });
@@ -97,9 +107,18 @@ void main() {
       await store.save(accessToken: 'a', refreshToken: 'r');
 
       final dio = Dio(BaseOptions(baseUrl: 'http://test.local'));
-      dio.interceptors.add(InterceptorsWrapper(onRequest: (o, h) {
-        h.reject(DioException(requestOptions: o, type: DioExceptionType.connectionError));
-      }));
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (o, h) {
+            h.reject(
+              DioException(
+                requestOptions: o,
+                type: DioExceptionType.connectionError,
+              ),
+            );
+          },
+        ),
+      );
 
       final n = AuthNotifier(
         api: AuthApi(ApiClient(tokenStore: store, dio: dio)),
@@ -160,11 +179,16 @@ void main() {
   group('登录 _persist', () {
     test('响应缺令牌时抛错且不写入存储', () async {
       final store = InMemoryTokenStore();
-      final adapter = FakeAdapter((_) => (200, {
+      final adapter = FakeAdapter(
+        (_) => (
+          200,
+          {
             'code': 0,
             'message': 'ok',
             'data': {'access_token': '', 'refresh_token': '', 'expires_in': 0},
-          }));
+          },
+        ),
+      );
 
       final n = makeNotifier(store, adapter);
       await settle();

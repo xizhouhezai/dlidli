@@ -41,9 +41,10 @@ class VideoCard {
   factory VideoCard.fromJson(Map<String, dynamic> json) {
     final owner = json['owner'];
     final statJson = json['stat'];
-    final stat = statJson is Map
-        ? VideoStat.fromJson(statJson.cast<String, dynamic>())
-        : const VideoStat();
+    final stat =
+        statJson is Map
+            ? VideoStat.fromJson(statJson.cast<String, dynamic>())
+            : const VideoStat();
     return VideoCard(
       bvid: (json['bvid'] as String?) ?? '',
       title: (json['title'] as String?) ?? '',
@@ -87,14 +88,14 @@ class VideoStat {
   final int share;
 
   factory VideoStat.fromJson(Map<String, dynamic> json) => VideoStat(
-        view: (json['view'] as num?)?.toInt() ?? 0,
-        like: (json['like'] as num?)?.toInt() ?? 0,
-        coin: (json['coin'] as num?)?.toInt() ?? 0,
-        fav: (json['fav'] as num?)?.toInt() ?? 0,
-        danmaku: (json['danmaku'] as num?)?.toInt() ?? 0,
-        comment: (json['comment'] as num?)?.toInt() ?? 0,
-        share: (json['share'] as num?)?.toInt() ?? 0,
-      );
+    view: (json['view'] as num?)?.toInt() ?? 0,
+    like: (json['like'] as num?)?.toInt() ?? 0,
+    coin: (json['coin'] as num?)?.toInt() ?? 0,
+    fav: (json['fav'] as num?)?.toInt() ?? 0,
+    danmaku: (json['danmaku'] as num?)?.toInt() ?? 0,
+    comment: (json['comment'] as num?)?.toInt() ?? 0,
+    share: (json['share'] as num?)?.toInt() ?? 0,
+  );
 }
 
 /// 分区（首页横向分区栏）。后端 `/api/v1/categories` 返回。
@@ -110,10 +111,10 @@ class Category {
   bool get isTopLevel => (parentId ?? 0) == 0;
 
   factory Category.fromJson(Map<String, dynamic> json) => Category(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        name: (json['name'] as String?) ?? '',
-        parentId: (json['parent_id'] as num?)?.toInt(),
-      );
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    name: (json['name'] as String?) ?? '',
+    parentId: (json['parent_id'] as num?)?.toInt(),
+  );
 }
 
 /// 分页结果。
@@ -167,11 +168,11 @@ class VideoStream {
   }
 
   factory VideoStream.fromJson(Map<String, dynamic> json) => VideoStream(
-        quality: (json['quality'] as num?)?.toInt() ?? 0,
-        format: (json['format'] as String?) ?? '',
-        isVipOnly: json['vip_only'] == true || json['is_vip_only'] == true,
-        // 播放地址同样是服务端视角的 localhost，且带签名参数（e/q/u/s），
-        // 重写只换 host:port，绝不重排 query —— 否则签名校验失败。
-        url: UrlRewriter.rewrite((json['url'] as String?) ?? ''),
-      );
+    quality: (json['quality'] as num?)?.toInt() ?? 0,
+    format: (json['format'] as String?) ?? '',
+    isVipOnly: json['vip_only'] == true || json['is_vip_only'] == true,
+    // 播放地址同样是服务端视角的 localhost，且带签名参数（e/q/u/s），
+    // 重写只换 host:port，绝不重排 query —— 否则签名校验失败。
+    url: UrlRewriter.rewrite((json['url'] as String?) ?? ''),
+  );
 }

@@ -108,23 +108,33 @@ class VideoCardItem extends StatelessWidget {
                 // 实测踩到：库里存在封面记录但文件已丢失的稿件（如 VIP-02 验收样片），
                 // 只画中性底色的话，用户看到的是"空白卡片"，与"本来没封面"无法区分。
                 errorBuilder: (_, __, ___) => _defaultCover(),
-                loadingBuilder: (_, child, progress) => progress == null
-                    ? child
-                    : const ColoredBox(color: DliColors.surfaceSecondary),
+                loadingBuilder:
+                    (_, child, progress) =>
+                        progress == null
+                            ? child
+                            : const ColoredBox(
+                              color: DliColors.surfaceSecondary,
+                            ),
               ),
             if (video.duration > 0)
               Align(
                 alignment: Alignment.bottomRight,
                 child: Container(
                   margin: const EdgeInsets.only(right: 6, bottom: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
                   decoration: const BoxDecoration(
                     color: DliColors.durationBadge,
                     borderRadius: BorderRadius.all(Radius.circular(4)),
                   ),
                   child: Text(
                     DliFormat.duration(video.duration),
-                    style: const TextStyle(fontSize: DliFont.caption, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: DliFont.caption,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -140,7 +150,8 @@ class VideoCardItem extends StatelessWidget {
       'assets/images/default_cover.png',
       fit: BoxFit.cover,
       // 资产本身缺失时退回中性底色，避免连兜底都崩
-      errorBuilder: (_, __, ___) => const ColoredBox(color: DliColors.surfaceSecondary),
+      errorBuilder:
+          (_, __, ___) => const ColoredBox(color: DliColors.surfaceSecondary),
     );
   }
 }
