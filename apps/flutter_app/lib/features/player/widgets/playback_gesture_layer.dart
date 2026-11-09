@@ -65,11 +65,7 @@ class GestureResolver {
 
 /// 拖动中显示的预览信息（时间 / 亮度 / 音量）。
 class GesturePreview {
-  const GesturePreview({
-    required this.kind,
-    required this.label,
-    this.icon,
-  });
+  const GesturePreview({required this.kind, required this.label, this.icon});
 
   final GestureKind kind;
   final String label;
@@ -211,7 +207,9 @@ class _PlaybackGestureLayerState extends State<PlaybackGestureLayer> {
     final isBrightness = _kind == GestureKind.brightness;
     // 写入系统；失败不影响手势反馈（部分设备有权限限制）
     if (isBrightness) {
-      ScreenBrightness().setApplicationScreenBrightness(level).catchError((_) {});
+      ScreenBrightness()
+          .setApplicationScreenBrightness(level)
+          .catchError((_) {});
       widget.onBrightnessChanged?.call(level);
     } else {
       VolumeController.instance.setVolume(level).catchError((_) {});

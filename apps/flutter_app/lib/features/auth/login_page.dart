@@ -1,4 +1,4 @@
-﻿/// 登录页（T-03 / FLT-01）。
+/// 登录页（T-03 / FLT-01）。
 ///
 /// 本期做**验证码登录**（主路径）：手机号 + 6 位验证码。
 /// 密码登录需要图形验证码（后端 `captcha_id`+`captcha_code` 必填，SVG 由端侧渲染），
@@ -96,10 +96,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _error = null;
     });
     try {
-      await ref.read(authProvider.notifier).loginBySms(
-            phone: _phone.text.trim(),
-            code: _code.text.trim(),
-          );
+      await ref
+          .read(authProvider.notifier)
+          .loginBySms(phone: _phone.text.trim(), code: _code.text.trim());
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on ApiError catch (e) {
@@ -152,7 +151,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   validator: (v) {
                     final s = (v ?? '').trim();
                     if (s.isEmpty) return '请输入手机号';
-                    if (!RegExp(r'^1[3-9]\d{9}$').hasMatch(s)) return '手机号格式不正确';
+                    if (!RegExp(r'^1[3-9]\d{9}$').hasMatch(s)) {
+                      return '手机号格式不正确';
+                    }
                     return null;
                   },
                 ),
@@ -183,9 +184,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     SizedBox(
                       height: 56,
                       child: OutlinedButton(
-                        onPressed: (_sending || _countdown > 0) ? null : _sendCode,
+                        onPressed:
+                            (_sending || _countdown > 0) ? null : _sendCode,
                         child: Text(
-                          _countdown > 0 ? '${_countdown}s' : (_sending ? '发送中' : '获取验证码'),
+                          _countdown > 0
+                              ? '${_countdown}s'
+                              : (_sending ? '发送中' : '获取验证码'),
                         ),
                       ),
                     ),
@@ -193,31 +197,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 if (_hint != null) ...[
                   const SizedBox(height: 12),
-                  Text(_hint!, style: const TextStyle(color: Colors.blue, fontSize: 12)),
+                  Text(
+                    _hint!,
+                    style: const TextStyle(color: Colors.blue, fontSize: 12),
+                  ),
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                  ),
                 ],
                 const SizedBox(height: 24),
                 SizedBox(
                   height: 48,
                   child: FilledButton(
                     onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('登录'),
+                    child:
+                        _submitting
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Text('登录'),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('密码登录需要图形验证码，将在后续版本提供')),
-                  ),
+                  onPressed:
+                      () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('密码登录需要图形验证码，将在后续版本提供')),
+                      ),
                   child: const Text('使用密码登录'),
                 ),
               ],

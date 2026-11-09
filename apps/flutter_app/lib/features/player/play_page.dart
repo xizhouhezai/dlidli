@@ -104,7 +104,10 @@ class _PlayPageState extends ConsumerState<PlayPage> {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
   }
 
   /// 切换全屏：横屏 + 隐藏系统栏；退出时恢复竖屏。
@@ -144,8 +147,9 @@ class _PlayPageState extends ConsumerState<PlayPage> {
       final streams = await api.streams(widget.bvid);
 
       // 只保留可用的 HLS 档位（mp4 直链也可播，但本期聚焦 HLS）
-      final hls = streams.where((s) => s.format == 'hls' && s.url.isNotEmpty).toList()
-        ..sort((a, b) => b.quality.compareTo(a.quality));
+      final hls =
+          streams.where((s) => s.format == 'hls' && s.url.isNotEmpty).toList()
+            ..sort((a, b) => b.quality.compareTo(a.quality));
       if (hls.isEmpty) {
         setState(() {
           _loading = false;
@@ -230,9 +234,10 @@ class _PlayPageState extends ConsumerState<PlayPage> {
 
     final old = _controller;
     // 换流前先记下当前进度，切换后要 seek 回去（否则用户以为从头开始）
-    final keep = old != null && _controller!.value.isInitialized
-        ? old.value.position.inSeconds
-        : seekTo;
+    final keep =
+        old != null && _controller!.value.isInitialized
+            ? old.value.position.inSeconds
+            : seekTo;
 
     setState(() {
       _loading = true;
@@ -283,7 +288,10 @@ class _PlayPageState extends ConsumerState<PlayPage> {
 
   void _startProgressTimer() {
     _progressTimer?.cancel();
-    _progressTimer = Timer.periodic(_progressInterval, (_) => _reportProgress());
+    _progressTimer = Timer.periodic(
+      _progressInterval,
+      (_) => _reportProgress(),
+    );
   }
 
   int _lastReported = -1;
@@ -320,11 +328,12 @@ class _PlayPageState extends ConsumerState<PlayPage> {
       ),
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: _loading && c == null
-            ? const Center(
-                child: CircularProgressIndicator(color: DliColors.primary),
-              )
-            : _error != null && c == null
+        body:
+            _loading && c == null
+                ? const Center(
+                  child: CircularProgressIndicator(color: DliColors.primary),
+                )
+                : _error != null && c == null
                 ? _ErrorView(error: _error!, onRetry: _load)
                 : _buildContent(c),
       ),
@@ -333,38 +342,39 @@ class _PlayPageState extends ConsumerState<PlayPage> {
 
   Widget _buildContent(VideoPlayerController? c) {
     final video = _video;
-    final playerArea = c != null && c.value.isInitialized
-        ? PlaybackGestureLayer(
-            controller: c,
-            onToggleControls: () => setState(() => _controlsVisible = !_controlsVisible),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                VideoPlayer(c),
-                if (_loading)
-                  const Center(
-                    child: CircularProgressIndicator(color: DliColors.primary),
-                  ),
-                if (_controlsVisible)
-                  _Controls(
-                    controller: c,
-                    speed: _speed,
-                    speedOptions: _speedOptions,
-                    onSpeedChanged: _applySpeed,
-                    fullscreen: _fullscreen,
-                    onToggleFullscreen: _toggleFullscreen,
-                  ),
-              ],
-            ),
-          )
-        : const ColoredBox(color: Colors.black);
+    final playerArea =
+        c != null && c.value.isInitialized
+            ? PlaybackGestureLayer(
+              controller: c,
+              onToggleControls:
+                  () => setState(() => _controlsVisible = !_controlsVisible),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  VideoPlayer(c),
+                  if (_loading)
+                    const Center(
+                      child: CircularProgressIndicator(
+                        color: DliColors.primary,
+                      ),
+                    ),
+                  if (_controlsVisible)
+                    _Controls(
+                      controller: c,
+                      speed: _speed,
+                      speedOptions: _speedOptions,
+                      onSpeedChanged: _applySpeed,
+                      fullscreen: _fullscreen,
+                      onToggleFullscreen: _toggleFullscreen,
+                    ),
+                ],
+              ),
+            )
+            : const ColoredBox(color: Colors.black);
 
     // 全屏：播放器铺满整个屏幕，隐藏下方信息区
     if (_fullscreen) {
-      return ColoredBox(
-        color: Colors.black,
-        child: Center(child: playerArea),
-      );
+      return ColoredBox(color: Colors.black, child: Center(child: playerArea));
     }
 
     return Column(
@@ -440,23 +450,26 @@ class _PlayPageState extends ConsumerState<PlayPage> {
                       vertical: DliSpace.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: i == _currentIndex
-                          ? DliColors.primary
-                          : DliColors.bgSurface,
+                      color:
+                          i == _currentIndex
+                              ? DliColors.primary
+                              : DliColors.bgSurface,
                       borderRadius: BorderRadius.circular(DliRadius.full),
                       border: Border.all(
-                        color: i == _currentIndex
-                            ? DliColors.primary
-                            : DliColors.border,
+                        color:
+                            i == _currentIndex
+                                ? DliColors.primary
+                                : DliColors.border,
                       ),
                     ),
                     child: Text(
                       _streams[i].qualityLabel,
                       style: TextStyle(
                         fontSize: DliFont.bodySm,
-                        color: i == _currentIndex
-                            ? DliColors.onPrimary
-                            : DliColors.text2,
+                        color:
+                            i == _currentIndex
+                                ? DliColors.onPrimary
+                                : DliColors.text2,
                       ),
                     ),
                   ),
@@ -601,7 +614,8 @@ class _SpeedButton extends StatelessWidget {
   final List<double> options;
   final ValueChanged<double> onChanged;
 
-  String _label(double s) => s == s.roundToDouble() ? '${s.toInt()}.0x' : '${s}x';
+  String _label(double s) =>
+      s == s.roundToDouble() ? '${s.toInt()}.0x' : '${s}x';
 
   @override
   Widget build(BuildContext context) {
@@ -609,24 +623,32 @@ class _SpeedButton extends StatelessWidget {
       tooltip: '倍速',
       initialValue: speed,
       onSelected: onChanged,
-      itemBuilder: (context) => [
-        for (final s in options)
-          PopupMenuItem(
-            value: s,
-            child: Row(
-              children: [
-                if (s == speed)
-                  const Icon(Icons.check, size: 16, color: DliColors.primary)
-                else
-                  const SizedBox(width: 16),
-                const SizedBox(width: DliSpace.sm),
-                Text(_label(s)),
-              ],
-            ),
-          ),
-      ],
+      itemBuilder:
+          (context) => [
+            for (final s in options)
+              PopupMenuItem(
+                value: s,
+                child: Row(
+                  children: [
+                    if (s == speed)
+                      const Icon(
+                        Icons.check,
+                        size: 16,
+                        color: DliColors.primary,
+                      )
+                    else
+                      const SizedBox(width: 16),
+                    const SizedBox(width: DliSpace.sm),
+                    Text(_label(s)),
+                  ],
+                ),
+              ),
+          ],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: DliSpace.sm, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DliSpace.sm,
+          vertical: 4,
+        ),
         decoration: BoxDecoration(
           color: const Color(0x66000000),
           borderRadius: BorderRadius.circular(DliRadius.sm),

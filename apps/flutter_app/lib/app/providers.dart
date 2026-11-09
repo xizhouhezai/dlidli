@@ -65,13 +65,12 @@ class FeedState {
     int? page,
     bool? hasMore,
     bool? loadingMore,
-  }) =>
-      FeedState(
-        items: items ?? this.items,
-        page: page ?? this.page,
-        hasMore: hasMore ?? this.hasMore,
-        loadingMore: loadingMore ?? this.loadingMore,
-      );
+  }) => FeedState(
+    items: items ?? this.items,
+    page: page ?? this.page,
+    hasMore: hasMore ?? this.hasMore,
+    loadingMore: loadingMore ?? this.loadingMore,
+  );
 }
 
 class FeedNotifier extends StateNotifier<AsyncValue<FeedState>> {
@@ -79,10 +78,10 @@ class FeedNotifier extends StateNotifier<AsyncValue<FeedState>> {
     required VideoApi api,
     required FeedSort sort,
     required int categoryId,
-  })  : _api = api,
-        _sort = sort,
-        _categoryId = categoryId,
-        super(const AsyncValue.loading()) {
+  }) : _api = api,
+       _sort = sort,
+       _categoryId = categoryId,
+       super(const AsyncValue.loading()) {
     loadFirstPage();
   }
 
@@ -144,12 +143,13 @@ class FeedNotifier extends StateNotifier<AsyncValue<FeedState>> {
 }
 
 /// 信息流：**依赖排序与分区**，切换时自动重建并重新拉第一页。
-final feedProvider = StateNotifierProvider.autoDispose<FeedNotifier, AsyncValue<FeedState>>(
-  (ref) {
-    return FeedNotifier(
-      api: ref.watch(videoApiProvider),
-      sort: ref.watch(sortProvider),
-      categoryId: ref.watch(selectedCategoryProvider),
-    );
-  },
-);
+final feedProvider =
+    StateNotifierProvider.autoDispose<FeedNotifier, AsyncValue<FeedState>>((
+      ref,
+    ) {
+      return FeedNotifier(
+        api: ref.watch(videoApiProvider),
+        sort: ref.watch(sortProvider),
+        categoryId: ref.watch(selectedCategoryProvider),
+      );
+    });

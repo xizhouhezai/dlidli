@@ -48,7 +48,11 @@ class _DiagPageState extends ConsumerState<DiagPage> {
       final data = await client.get('/health');
       final m = data is Map ? data : const {};
       final ready = m['ready'] == true;
-      add('/health', ready, 'ready=$ready mysql=${(m['components'] as Map?)?['mysql']}');
+      add(
+        '/health',
+        ready,
+        'ready=$ready mysql=${(m['components'] as Map?)?['mysql']}',
+      );
     } catch (e) {
       add('/health', false, '$e');
     }
@@ -66,8 +70,12 @@ class _DiagPageState extends ConsumerState<DiagPage> {
       if (paged.list.isNotEmpty) {
         final streams = await api.streams(paged.list.first.bvid);
         final hls = streams.where((s) => s.format == 'hls');
-        final sample = hls.isNotEmpty ? hls.first : (streams.isEmpty ? null : streams.first);
-        final signed = sample != null &&
+        final sample =
+            hls.isNotEmpty
+                ? hls.first
+                : (streams.isEmpty ? null : streams.first);
+        final signed =
+            sample != null &&
             sample.url.contains('e=') &&
             sample.url.contains('s=');
         add(
@@ -112,7 +120,10 @@ class _DiagPageState extends ConsumerState<DiagPage> {
               title: Text(r.name, style: DliTextStyles.body),
               subtitle: Text(
                 r.detail,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: DliFont.caption),
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: DliFont.caption,
+                ),
               ),
             ),
         ],

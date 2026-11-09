@@ -1,4 +1,4 @@
-﻿/// 鉴权状态：登录 / 登出 / 启动恢复（FLT-01、FLT-02）。
+/// 鉴权状态：登录 / 登出 / 启动恢复（FLT-01、FLT-02）。
 ///
 /// 关键行为：
 /// - 登录成功**立即**把令牌写进安全存储（不是"先返回再异步存"），
@@ -38,12 +38,10 @@ class AuthLoggedIn extends AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier({
-    required AuthApi api,
-    required TokenStore tokenStore,
-  })  : _api = api,
-        _tokenStore = tokenStore,
-        super(const AuthUnknown()) {
+  AuthNotifier({required AuthApi api, required TokenStore tokenStore})
+    : _api = api,
+      _tokenStore = tokenStore,
+      super(const AuthUnknown()) {
     restore();
   }
 
@@ -78,7 +76,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String code,
     String? inviteCode,
   }) async {
-    final pair = await _api.loginBySms(phone: phone, code: code, inviteCode: inviteCode);
+    final pair = await _api.loginBySms(
+      phone: phone,
+      code: code,
+      inviteCode: inviteCode,
+    );
     await _persist(pair);
   }
 
@@ -116,10 +118,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// "界面显示已登录、重启后掉线"，比直接报错更难排查。
   Future<void> _persist(TokenPair pair) async {
     if (pair.accessToken.isEmpty || pair.refreshToken.isEmpty) {
-      throw ApiError(
-        kind: ApiErrorKind.malformed,
-        message: '登录响应缺少令牌',
-      );
+      throw ApiError(kind: ApiErrorKind.malformed, message: '登录响应缺少令牌');
     }
     await _tokenStore.save(
       accessToken: pair.accessToken,
@@ -133,7 +132,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Profile? profileCache;
 }
 
-final authApiProvider = Provider<AuthApi>((ref) => AuthApi(ref.watch(apiClientProvider)));
+final authApiProvider = Provider<AuthApi>(
+  (ref) => AuthApi(ref.watch(apiClientProvider)),
+);
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(

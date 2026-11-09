@@ -66,7 +66,8 @@ class _PlayerProbePageState extends State<PlayerProbePage> {
         _result = PlayerProbeResult(
           ok: true,
           loadMs: sw.elapsedMilliseconds,
-          detail: '${c.value.size.width.toInt()}x${c.value.size.height.toInt()} '
+          detail:
+              '${c.value.size.width.toInt()}x${c.value.size.height.toInt()} '
               'duration=${c.value.duration.inSeconds}s',
         );
       });
@@ -110,14 +111,13 @@ class _PlayerProbePageState extends State<PlayerProbePage> {
                 r == null
                     ? Icons.hourglass_empty
                     : (r.ok ? Icons.check_circle : Icons.cancel),
-                color: r == null
-                    ? DliColors.text3
-                    : (r.ok ? Colors.green : Colors.red),
+                color:
+                    r == null
+                        ? DliColors.text3
+                        : (r.ok ? Colors.green : Colors.red),
               ),
               title: Text(
-                r == null
-                    ? '探测中…'
-                    : (r.ok ? '起播成功' : '起播失败'),
+                r == null ? '探测中…' : (r.ok ? '起播成功' : '起播失败'),
                 style: DliTextStyles.cardTitle,
               ),
               subtitle: Column(
@@ -145,18 +145,18 @@ class _PlayerProbePageState extends State<PlayerProbePage> {
           const SizedBox(height: DliSpace.sm),
           _ready && _vp != null
               ? AspectRatio(
-                  aspectRatio: _vp!.value.aspectRatio,
-                  child: VideoPlayer(_vp!),
-                )
+                aspectRatio: _vp!.value.aspectRatio,
+                child: VideoPlayer(_vp!),
+              )
               : Container(
-                  height: 160,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: DliColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(DliRadius.md),
-                  ),
-                  child: Text('未就绪', style: DliTextStyles.caption),
+                height: 160,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: DliColors.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(DliRadius.md),
                 ),
+                child: Text('未就绪', style: DliTextStyles.caption),
+              ),
         ],
       ),
     );

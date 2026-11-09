@@ -7,7 +7,10 @@ library;
 abstract class TokenStore {
   Future<String?> readAccessToken();
   Future<String?> readRefreshToken();
-  Future<void> save({required String accessToken, required String refreshToken});
+  Future<void> save({
+    required String accessToken,
+    required String refreshToken,
+  });
   Future<void> clear();
 }
 
@@ -23,7 +26,10 @@ class InMemoryTokenStore implements TokenStore {
   Future<String?> readRefreshToken() async => _refresh;
 
   @override
-  Future<void> save({required String accessToken, required String refreshToken}) async {
+  Future<void> save({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
     _access = accessToken;
     _refresh = refreshToken;
   }

@@ -23,11 +23,11 @@ class ApiEnvelope {
   bool get isOk => code == 0;
 
   factory ApiEnvelope.fromJson(Map<String, dynamic> json) => ApiEnvelope(
-        code: (json['code'] as num?)?.toInt() ?? -1,
-        message: (json['message'] as String?) ?? '',
-        data: json['data'],
-        traceId: json['trace_id'] as String?,
-      );
+    code: (json['code'] as num?)?.toInt() ?? -1,
+    message: (json['message'] as String?) ?? '',
+    data: json['data'],
+    traceId: json['trace_id'] as String?,
+  );
 }
 
 /// 错误分类：决定 UI 该展示什么、是否可重试。

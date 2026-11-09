@@ -51,8 +51,9 @@ lib/
 ## 校验
 
 ```powershell
+dart format lib test     # 格式统一（期望输出 0 changed）
 flutter analyze          # 必须 0 issue（闸门）
-flutter test             # 18 个用例：信封解析 / 错误分类 / 401 单飞续期 / URL 重写
+flutter test             # 59 个用例：信封/错误分类/401 单飞/URL 重写/鉴权/token 对齐/播放/手势
 flutter build apk --debug
 ```
 
