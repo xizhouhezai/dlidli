@@ -1,4 +1,4 @@
-﻿/// 首页：分区栏 + 推荐/最新/最热 + 双列信息流。
+/// 首页：分区栏 + 推荐/最新/最热 + 双列信息流。
 ///
 /// **布局逐项对齐鸿蒙端 `pages/home/HomePage.ets`**：
 /// - 双列 `columnsTemplate('1fr 1fr')` → Flutter 用 `SliverGrid` 两列
@@ -77,25 +77,36 @@ class _FeedPageState extends ConsumerState<FeedPage> {
           child: Column(
             children: [
               _Header(
-                onRefresh: () => ref.read(feedProvider.notifier).loadFirstPage(),
-                onDiag: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const DiagPage()),
-                ),
+                onRefresh:
+                    () => ref.read(feedProvider.notifier).loadFirstPage(),
+                onDiag:
+                    () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const DiagPage()),
+                    ),
               ),
               Expanded(
                 child: async.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: DliColors.primary),
-                  ),
-                  error: (err, _) => _ErrorView(
-                    error: err,
-                    onRetry: () => ref.read(feedProvider.notifier).loadFirstPage(),
-                  ),
-                  data: (state) => _FeedGrid(
-                    state: state,
-                    controller: _scroll,
-                    onRefresh: () => ref.read(feedProvider.notifier).loadFirstPage(),
-                  ),
+                  loading:
+                      () => const Center(
+                        child: CircularProgressIndicator(
+                          color: DliColors.primary,
+                        ),
+                      ),
+                  error:
+                      (err, _) => _ErrorView(
+                        error: err,
+                        onRetry:
+                            () =>
+                                ref.read(feedProvider.notifier).loadFirstPage(),
+                      ),
+                  data:
+                      (state) => _FeedGrid(
+                        state: state,
+                        controller: _scroll,
+                        onRefresh:
+                            () =>
+                                ref.read(feedProvider.notifier).loadFirstPage(),
+                      ),
                 ),
               ),
             ],
@@ -157,7 +168,8 @@ class _Header extends ConsumerWidget {
                 return ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: cats.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: DliSpace.lg),
+                  separatorBuilder:
+                      (_, __) => const SizedBox(width: DliSpace.lg),
                   itemBuilder: (context, i) {
                     final isAll = i == 0;
                     final id = isAll ? 0 : cats[i - 1].id;
@@ -165,8 +177,11 @@ class _Header extends ConsumerWidget {
                     return _CategoryChip(
                       label: label,
                       active: selectedCategory == id,
-                      onTap: () =>
-                          ref.read(selectedCategoryProvider.notifier).state = id,
+                      onTap:
+                          () =>
+                              ref
+                                  .read(selectedCategoryProvider.notifier)
+                                  .state = id,
                     );
                   },
                 );
@@ -181,21 +196,27 @@ class _Header extends ConsumerWidget {
                 _SortTab(
                   label: '推荐',
                   active: sort == FeedSort.recommend,
-                  onTap: () =>
-                      ref.read(sortProvider.notifier).state = FeedSort.recommend,
+                  onTap:
+                      () =>
+                          ref.read(sortProvider.notifier).state =
+                              FeedSort.recommend,
                 ),
               _SortTab(
                 label: '最新',
                 active: sort == FeedSort.newest,
-                onTap: () => ref.read(sortProvider.notifier).state = FeedSort.newest,
+                onTap:
+                    () =>
+                        ref.read(sortProvider.notifier).state = FeedSort.newest,
               ),
               _SortTab(
                 label: '最热',
                 active: sort == FeedSort.hot,
-                onTap: () => ref.read(sortProvider.notifier).state = FeedSort.hot,
+                onTap:
+                    () => ref.read(sortProvider.notifier).state = FeedSort.hot,
               ),
               const Spacer(),
-              if (feed != null) Text('共 ${feed.items.length} 项', style: DliTextStyles.caption),
+              if (feed != null)
+                Text('共 ${feed.items.length} 项', style: DliTextStyles.caption),
             ],
           ),
           const SizedBox(height: DliSpace.sm),
@@ -206,7 +227,11 @@ class _Header extends ConsumerWidget {
 }
 
 class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.label, required this.active, required this.onTap});
+  const _CategoryChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -233,7 +258,11 @@ class _CategoryChip extends StatelessWidget {
 }
 
 class _SortTab extends StatelessWidget {
-  const _SortTab({required this.label, required this.active, required this.onTap});
+  const _SortTab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -313,21 +342,21 @@ class _FeedGrid extends StatelessWidget {
                 mainAxisSpacing: DliSpace.lg,
                 mainAxisExtent: _cardExtent(context),
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) {
-                  final v = state.items[i];
-                  return VideoCardItem(
-                    video: v,
-                    showDate: true,
-                    onTap: (card) => _openVideo(context, card),
-                  );
-                },
-                childCount: state.items.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, i) {
+                final v = state.items[i];
+                return VideoCardItem(
+                  video: v,
+                  showDate: true,
+                  onTap: (card) => _openVideo(context, card),
+                );
+              }, childCount: state.items.length),
             ),
           ),
           SliverToBoxAdapter(
-            child: _LoadMoreHint(loading: state.loadingMore, done: !state.hasMore),
+            child: _LoadMoreHint(
+              loading: state.loadingMore,
+              done: !state.hasMore,
+            ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: DliSpace.xl)),
         ],
@@ -337,9 +366,9 @@ class _FeedGrid extends StatelessWidget {
 
   void _openVideo(BuildContext context, VideoCard card) {
     // T-11：进入正式播放页（拉详情 → 取签名 HLS → 起播 → 清晰度切换 → 进度保存）
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => PlayPage(bvid: card.bvid)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => PlayPage(bvid: card.bvid)));
   }
 
   /// 计算卡片格子高度：封面(宽*9/16) + 文本块 + 卡片内边距。
@@ -350,8 +379,7 @@ class _FeedGrid extends StatelessWidget {
   double _cardExtent(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     // 两列 + 页面左右 padding + 列间距
-    final cardWidth =
-        (screenWidth - DliSpace.page * 2 - DliSpace.md) / 2;
+    final cardWidth = (screenWidth - DliSpace.page * 2 - DliSpace.md) / 2;
     const textBlock = 52.0;
     const paddings = DliSpace.sm * 2 + DliSpace.xs;
     return cardWidth * 9 / 16 + textBlock + paddings;
@@ -370,13 +398,17 @@ class _LoadMoreHint extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: DliSpace.lg),
       child: Center(
-        child: loading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: DliColors.primary),
-              )
-            : const Text('没有更多了', style: DliTextStyles.caption),
+        child:
+            loading
+                ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: DliColors.primary,
+                  ),
+                )
+                : const Text('没有更多了', style: DliTextStyles.caption),
       ),
     );
   }
@@ -405,7 +437,10 @@ class _ErrorView extends StatelessWidget {
             if (api?.traceId != null)
               Padding(
                 padding: const EdgeInsets.only(top: DliSpace.xs),
-                child: Text('trace: ${api!.traceId}', style: DliTextStyles.caption),
+                child: Text(
+                  'trace: ${api!.traceId}',
+                  style: DliTextStyles.caption,
+                ),
               ),
             if (canRetry) ...[
               const SizedBox(height: DliSpace.lg),

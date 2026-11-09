@@ -1,4 +1,4 @@
-﻿/// 视频接口：直接复用既有后端契约，无需新增接口（spec §5）。
+/// 视频接口：直接复用既有后端契约，无需新增接口（spec §5）。
 library;
 
 import '../../core/api_client.dart';
@@ -37,7 +37,9 @@ class VideoApi {
         if (categoryId != null) 'category_id': categoryId,
       },
     );
-    if (data is! Map<String, dynamic>) return const PagedVideos(list: [], total: 0);
+    if (data is! Map<String, dynamic>) {
+      return const PagedVideos(list: [], total: 0);
+    }
     return PagedVideos.fromJson(data);
   }
 
@@ -71,6 +73,9 @@ class VideoApi {
 
   /// 保存播放进度（秒）。需登录。
   Future<void> saveProgress(String bvid, int position) async {
-    await _client.post('/api/v1/videos/$bvid/progress', body: {'position': position});
+    await _client.post(
+      '/api/v1/videos/$bvid/progress',
+      body: {'position': position},
+    );
   }
 }

@@ -22,28 +22,30 @@ class ApiClient {
     String? baseUrl,
     Dio? dio,
     Dio? refreshDio,
-  })  : _tokenStore = tokenStore,
-        _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? Env.apiBase,
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 20),
-                sendTimeout: const Duration(seconds: 20),
-                // 只要不抛异常就行：业务成败由信封 code 决定，故这里统一允许，
-                // 状态码判断放在下面 fromDioError 里做（便于区分 401/403/5xx）。
-                validateStatus: (_) => true,
-              ),
-            ),
-        _refreshDio = refreshDio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? Env.apiBase,
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 20),
-                validateStatus: (_) => true,
-              ),
-            ) {
+  }) : _tokenStore = tokenStore,
+       _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: baseUrl ?? Env.apiBase,
+               connectTimeout: const Duration(seconds: 10),
+               receiveTimeout: const Duration(seconds: 20),
+               sendTimeout: const Duration(seconds: 20),
+               // 只要不抛异常就行：业务成败由信封 code 决定，故这里统一允许，
+               // 状态码判断放在下面 fromDioError 里做（便于区分 401/403/5xx）。
+               validateStatus: (_) => true,
+             ),
+           ),
+       _refreshDio =
+           refreshDio ??
+           Dio(
+             BaseOptions(
+               baseUrl: baseUrl ?? Env.apiBase,
+               connectTimeout: const Duration(seconds: 10),
+               receiveTimeout: const Duration(seconds: 20),
+               validateStatus: (_) => true,
+             ),
+           ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -77,11 +79,17 @@ class ApiClient {
   Future<Object?> get(String path, {Map<String, dynamic>? query}) =>
       _request(path, method: 'GET', query: query);
 
-  Future<Object?> post(String path, {Object? body, Map<String, dynamic>? query}) =>
-      _request(path, method: 'POST', body: body, query: query);
+  Future<Object?> post(
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+  }) => _request(path, method: 'POST', body: body, query: query);
 
-  Future<Object?> put(String path, {Object? body, Map<String, dynamic>? query}) =>
-      _request(path, method: 'PUT', body: body, query: query);
+  Future<Object?> put(
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+  }) => _request(path, method: 'PUT', body: body, query: query);
 
   Future<Object?> delete(String path, {Object? body}) =>
       _request(path, method: 'DELETE', body: body);
@@ -206,21 +214,18 @@ class ApiClient {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return ApiError(
-          kind: ApiErrorKind.timeout,
-          message: '网络超时，请检查网络后重试',
-        );
+        return ApiError(kind: ApiErrorKind.timeout, message: '网络超时，请检查网络后重试');
       case DioExceptionType.connectionError:
-        return ApiError(
-          kind: ApiErrorKind.network,
-          message: '网络连接失败，请检查网络后重试',
-        );
+        return ApiError(kind: ApiErrorKind.network, message: '网络连接失败，请检查网络后重试');
       case DioExceptionType.badResponse:
         final status = e.response?.statusCode ?? 0;
         return ApiError(
-          kind: status == 401
-              ? ApiErrorKind.unauthorized
-              : (status >= 500 ? ApiErrorKind.server : ApiErrorKind.business),
+          kind:
+              status == 401
+                  ? ApiErrorKind.unauthorized
+                  : (status >= 500
+                      ? ApiErrorKind.server
+                      : ApiErrorKind.business),
           message: ErrorMessages.forStatus(status),
           statusCode: status,
         );
@@ -231,10 +236,7 @@ class ApiClient {
       // 兜底：dio 后续版本可能新增类型（例如 transformTimeout），
       // 用 default 而不是穷尽匹配，避免升级 dio 就编译不过。
       default:
-        return ApiError(
-          kind: ApiErrorKind.network,
-          message: '网络异常，请稍后重试',
-        );
+        return ApiError(kind: ApiErrorKind.network, message: '网络异常，请稍后重试');
     }
   }
 }

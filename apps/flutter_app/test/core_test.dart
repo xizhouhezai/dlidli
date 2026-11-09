@@ -51,10 +51,7 @@ class FakeAdapter implements HttpClientAdapter {
 
 Dio dioWith(FakeAdapter adapter) {
   final dio = Dio(
-    BaseOptions(
-      baseUrl: 'http://test.local',
-      validateStatus: (_) => true,
-    ),
+    BaseOptions(baseUrl: 'http://test.local', validateStatus: (_) => true),
   );
   dio.httpClientAdapter = adapter;
   return dio;
@@ -102,23 +99,35 @@ void main() {
 
   group('ApiClient 基本行为', () {
     test('成功响应直接返回 data', () async {
-      final adapter = FakeAdapter((_) => (200, {
+      final adapter = FakeAdapter(
+        (_) => (
+          200,
+          {
             'code': 0,
             'message': 'ok',
             'data': {'x': 42},
-          }));
-      final client = ApiClient(tokenStore: InMemoryTokenStore(), dio: dioWith(adapter));
+          },
+        ),
+      );
+      final client = ApiClient(
+        tokenStore: InMemoryTokenStore(),
+        dio: dioWith(adapter),
+      );
       final data = await client.get('/anything');
       expect(data, {'x': 42});
     });
 
     test('业务失败抛 ApiError(business) 并带 traceId', () async {
-      final adapter = FakeAdapter((_) => (200, {
-            'code': 20003,
-            'message': '账号或密码错误',
-            'trace_id': 'trace-abc',
-          }));
-      final client = ApiClient(tokenStore: InMemoryTokenStore(), dio: dioWith(adapter));
+      final adapter = FakeAdapter(
+        (_) => (
+          200,
+          {'code': 20003, 'message': '账号或密码错误', 'trace_id': 'trace-abc'},
+        ),
+      );
+      final client = ApiClient(
+        tokenStore: InMemoryTokenStore(),
+        dio: dioWith(adapter),
+      );
 
       await expectLater(
         client.get('/x'),
@@ -133,8 +142,13 @@ void main() {
     });
 
     test('HTTP 5xx 归为 server 且可重试', () async {
-      final adapter = FakeAdapter((_) => (500, {'code': 50000, 'message': '内部错误'}));
-      final client = ApiClient(tokenStore: InMemoryTokenStore(), dio: dioWith(adapter));
+      final adapter = FakeAdapter(
+        (_) => (500, {'code': 50000, 'message': '内部错误'}),
+      );
+      final client = ApiClient(
+        tokenStore: InMemoryTokenStore(),
+        dio: dioWith(adapter),
+      );
 
       await expectLater(
         client.get('/x'),
@@ -149,7 +163,9 @@ void main() {
     test('请求头自动带 Bearer token', () async {
       final store = InMemoryTokenStore();
       await store.save(accessToken: 'tk-123', refreshToken: 'rf-1');
-      final adapter = FakeAdapter((_) => (200, {'code': 0, 'message': 'ok', 'data': null}));
+      final adapter = FakeAdapter(
+        (_) => (200, {'code': 0, 'message': 'ok', 'data': null}),
+      );
       final client = ApiClient(tokenStore: store, dio: dioWith(adapter));
 
       await client.get('/x');
@@ -174,11 +190,14 @@ void main() {
 
       final refreshAdapter = FakeAdapter((_) {
         refreshCalls++;
-        return (200, {
-          'code': 0,
-          'message': 'ok',
-          'data': {'access_token': 'new-token', 'refresh_token': 'rf-new'},
-        });
+        return (
+          200,
+          {
+            'code': 0,
+            'message': 'ok',
+            'data': {'access_token': 'new-token', 'refresh_token': 'rf-new'},
+          },
+        );
       });
 
       final client = ApiClient(
@@ -204,9 +223,13 @@ void main() {
       final store = InMemoryTokenStore();
       await store.save(accessToken: 'old', refreshToken: 'rf-old');
 
-      final mainAdapter = FakeAdapter((_) => (401, {'code': 20002, 'message': '令牌已过期'}));
+      final mainAdapter = FakeAdapter(
+        (_) => (401, {'code': 20002, 'message': '令牌已过期'}),
+      );
       // refresh 端点也失败
-      final refreshAdapter = FakeAdapter((_) => (200, {'code': 20002, 'message': '刷新令牌无效'}));
+      final refreshAdapter = FakeAdapter(
+        (_) => (200, {'code': 20002, 'message': '刷新令牌无效'}),
+      );
 
       final client = ApiClient(
         tokenStore: store,
@@ -216,7 +239,13 @@ void main() {
 
       await expectLater(
         client.get('/x'),
-        throwsA(isA<ApiError>().having((e) => e.kind, 'kind', ApiErrorKind.unauthorized)),
+        throwsA(
+          isA<ApiError>().having(
+            (e) => e.kind,
+            'kind',
+            ApiErrorKind.unauthorized,
+          ),
+        ),
       );
       expect(await store.readAccessToken(), isNull, reason: '续期失败必须清理本地凭证');
     });

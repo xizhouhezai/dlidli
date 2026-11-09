@@ -12,16 +12,45 @@ import 'package:dlidli_app/data/models/video.dart';
 void main() {
   group('VideoStream', () {
     test('清晰度标签：原画/4K/普通档', () {
-      expect(const VideoStream(quality: 0, format: 'hls', url: 'u').qualityLabel, '原画');
-      expect(const VideoStream(quality: 720, format: 'hls', url: 'u').qualityLabel, '720P');
-      expect(const VideoStream(quality: 1080, format: 'hls', url: 'u').qualityLabel, '1080P');
-      expect(const VideoStream(quality: 2160, format: 'hls', url: 'u').qualityLabel, '4K');
+      expect(
+        const VideoStream(quality: 0, format: 'hls', url: 'u').qualityLabel,
+        '原画',
+      );
+      expect(
+        const VideoStream(quality: 720, format: 'hls', url: 'u').qualityLabel,
+        '720P',
+      );
+      expect(
+        const VideoStream(quality: 1080, format: 'hls', url: 'u').qualityLabel,
+        '1080P',
+      );
+      expect(
+        const VideoStream(quality: 2160, format: 'hls', url: 'u').qualityLabel,
+        '4K',
+      );
     });
 
     test('会员限定标记解析', () {
-      expect(VideoStream.fromJson({'quality': 1080, 'format': 'hls', 'vip_only': true}).isVipOnly, isTrue);
-      expect(VideoStream.fromJson({'quality': 1080, 'format': 'hls', 'is_vip_only': true}).isVipOnly, isTrue);
-      expect(VideoStream.fromJson({'quality': 1080, 'format': 'hls'}).isVipOnly, isFalse);
+      expect(
+        VideoStream.fromJson({
+          'quality': 1080,
+          'format': 'hls',
+          'vip_only': true,
+        }).isVipOnly,
+        isTrue,
+      );
+      expect(
+        VideoStream.fromJson({
+          'quality': 1080,
+          'format': 'hls',
+          'is_vip_only': true,
+        }).isVipOnly,
+        isTrue,
+      );
+      expect(
+        VideoStream.fromJson({'quality': 1080, 'format': 'hls'}).isVipOnly,
+        isFalse,
+      );
     });
 
     test('播放地址走 UrlRewriter（服务端 localhost 在端机不可路由）', () {
@@ -33,7 +62,8 @@ void main() {
       final s = VideoStream.fromJson({
         'quality': 720,
         'format': 'hls',
-        'url': 'http://localhost:8000/static/videos/hls/1/0/720/index.m3u8?e=1&q=720&u=0&s=abc',
+        'url':
+            'http://localhost:8000/static/videos/hls/1/0/720/index.m3u8?e=1&q=720&u=0&s=abc',
       });
       expect(s.url, isNot(contains('localhost')));
       expect(s.url, contains(':8000'));
@@ -51,7 +81,15 @@ void main() {
         'duration': 100,
         'description': '简介内容',
         'owner': {'nickname': 'UP主'},
-        'stat': {'view': 1234, 'like': 56, 'coin': 7, 'fav': 8, 'danmaku': 9, 'comment': 10, 'share': 11},
+        'stat': {
+          'view': 1234,
+          'like': 56,
+          'coin': 7,
+          'fav': 8,
+          'danmaku': 9,
+          'comment': 10,
+          'share': 11,
+        },
       });
       expect(c.ownerName, 'UP主');
       expect(c.stat.view, 1234);
@@ -63,7 +101,12 @@ void main() {
     });
 
     test('stat 缺失时安全降级为 0（不抛异常）', () {
-      final c = VideoCard.fromJson({'bvid': 'BV1', 'title': 't', 'cover': '', 'duration': 0});
+      final c = VideoCard.fromJson({
+        'bvid': 'BV1',
+        'title': 't',
+        'cover': '',
+        'duration': 0,
+      });
       expect(c.stat.view, 0);
       expect(c.stat.like, 0);
       expect(c.description, '');
@@ -115,7 +158,8 @@ void main() {
       UrlRewriter.baseUrlOverride = 'http://10.0.2.2:8000';
       addTearDown(() => UrlRewriter.baseUrlOverride = null);
 
-      const signed = 'http://127.0.0.1:8010/static/videos/hls/9/0/720/index.m3u8'
+      const signed =
+          'http://127.0.0.1:8010/static/videos/hls/9/0/720/index.m3u8'
           '?e=1793952452&q=720&u=0&s=ef61';
       final out = UrlRewriter.rewrite(signed);
       expect(out, contains('http://10.0.2.2:8000'));

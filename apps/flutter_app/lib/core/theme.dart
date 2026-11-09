@@ -104,7 +104,10 @@ class DliTextStyles {
     fontWeight: FontWeight.w600,
   );
 
-  static const TextStyle body = TextStyle(fontSize: DliFont.body, color: DliColors.text1);
+  static const TextStyle body = TextStyle(
+    fontSize: DliFont.body,
+    color: DliColors.text1,
+  );
 
   /// 卡片标题：两行截断（对齐鸿蒙 VideoCardItem 的 BODY_SM + maxLines 2）。
   static const TextStyle cardTitle = TextStyle(
@@ -114,7 +117,10 @@ class DliTextStyles {
   );
 
   /// 卡片 meta：播放量 · UP 主 · 日期（CAPTION + text_tertiary）。
-  static const TextStyle caption = TextStyle(fontSize: DliFont.caption, color: DliColors.text3);
+  static const TextStyle caption = TextStyle(
+    fontSize: DliFont.caption,
+    color: DliColors.text3,
+  );
 
   static const TextStyle tabLabel = TextStyle(fontSize: DliFont.tabLabel);
 }
@@ -180,7 +186,10 @@ class DliTheme {
             borderRadius: BorderRadius.all(Radius.circular(DliRadius.full)),
           ),
           minimumSize: const Size(0, 44),
-          textStyle: const TextStyle(fontSize: DliFont.body, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontSize: DliFont.body,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -206,7 +215,11 @@ class DliTheme {
           borderSide: BorderSide(color: DliColors.primary),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: DliColors.border, thickness: 0.5, space: 0.5),
+      dividerTheme: const DividerThemeData(
+        color: DliColors.border,
+        thickness: 0.5,
+        space: 0.5,
+      ),
       cardTheme: const CardThemeData(
         color: DliColors.bgSurface,
         elevation: 0,

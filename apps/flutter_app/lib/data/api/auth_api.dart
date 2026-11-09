@@ -19,7 +19,10 @@ class AuthApi {
 
   /// 发送短信验证码。dev 环境会返回 `debugCode`（生产为 null）。
   Future<String?> sendSmsCode(String phone) async {
-    final data = await _client.post('/api/v1/auth/sms-code', body: {'phone': phone});
+    final data = await _client.post(
+      '/api/v1/auth/sms-code',
+      body: {'phone': phone},
+    );
     if (data is Map<String, dynamic>) return data['debug_code'] as String?;
     return null;
   }
@@ -30,11 +33,15 @@ class AuthApi {
     required String code,
     String? inviteCode,
   }) async {
-    final data = await _client.post('/api/v1/auth/login/sms', body: {
-      'phone': phone,
-      'code': code,
-      if (inviteCode != null && inviteCode.isNotEmpty) 'invite_code': inviteCode,
-    });
+    final data = await _client.post(
+      '/api/v1/auth/login/sms',
+      body: {
+        'phone': phone,
+        'code': code,
+        if (inviteCode != null && inviteCode.isNotEmpty)
+          'invite_code': inviteCode,
+      },
+    );
     return TokenPair.fromJson(_asMap(data));
   }
 
@@ -45,12 +52,15 @@ class AuthApi {
     required String captchaId,
     required String captchaCode,
   }) async {
-    final data = await _client.post('/api/v1/auth/login/password', body: {
-      'account': account,
-      'password': password,
-      'captcha_id': captchaId,
-      'captcha_code': captchaCode,
-    });
+    final data = await _client.post(
+      '/api/v1/auth/login/password',
+      body: {
+        'account': account,
+        'password': password,
+        'captcha_id': captchaId,
+        'captcha_code': captchaCode,
+      },
+    );
     return TokenPair.fromJson(_asMap(data));
   }
 
@@ -68,7 +78,10 @@ class AuthApi {
 
   /// 登出：吊销刷新令牌（失败不阻断本地清理）。
   Future<void> logout(String refreshToken) async {
-    await _client.post('/api/v1/auth/logout', body: {'refresh_token': refreshToken});
+    await _client.post(
+      '/api/v1/auth/logout',
+      body: {'refresh_token': refreshToken},
+    );
   }
 
   Map<String, dynamic> _asMap(Object? data) =>

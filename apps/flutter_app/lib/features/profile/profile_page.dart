@@ -45,13 +45,17 @@ class _GuestView extends StatelessWidget {
           const Text('登录后查看更多内容'),
           if (reason != null) ...[
             const SizedBox(height: 6),
-            Text(reason!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              reason!,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
           const SizedBox(height: 20),
           FilledButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<bool>(builder: (_) => const LoginPage()),
-            ),
+            onPressed:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<bool>(builder: (_) => const LoginPage()),
+                ),
             child: const Text('登录 / 注册'),
           ),
         ],
@@ -123,14 +127,21 @@ class _LoggedInView extends ConsumerWidget {
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('退出登录'),
-        content: const Text('确定要退出当前账号吗？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('退出')),
-        ],
-      ),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('退出登录'),
+            content: const Text('确定要退出当前账号吗？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('退出'),
+              ),
+            ],
+          ),
     );
     if (ok == true) {
       await ref.read(authProvider.notifier).logout();

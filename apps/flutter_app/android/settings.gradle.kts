@@ -19,10 +19,11 @@ pluginManagement {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.7.0" apply false
-    // Kotlin 1.8.22：定案用 `video_player`（ExoPlayer）后**无需升级**。
-    // 曾因评测 `media_kit` 临时升到 2.1.0（其依赖用 Kotlin 2.2.0 编译，
-    // 1.8 会报 "incompatible version of Kotlin"）；定案后已回退。
-    id("org.jetbrains.kotlin.android") version "1.8.22" apply false
+    // Kotlin 2.1.0：`screen_brightness`（T-12 手势调亮度）用到了
+    // KotlinAndroidProjectExtension.compilerOptions(Function1)，该 API 是 KGP 2.x 才有的。
+    // 停留在 1.8.22 会在构建期直接报 "What went wrong: 'void ...compilerOptions(...)'"。
+    // 历史：曾因评测 media_kit 升到 2.1.0 后回退；这次是 T-12 的硬性依赖，保留 2.1.0。
+    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
 }
 
 include(":app")

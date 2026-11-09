@@ -19,13 +19,14 @@ class TokenPair {
   final Profile? user;
 
   factory TokenPair.fromJson(Map<String, dynamic> json) => TokenPair(
-        accessToken: (json['access_token'] as String?) ?? '',
-        refreshToken: (json['refresh_token'] as String?) ?? '',
-        expiresIn: (json['expires_in'] as num?)?.toInt() ?? 0,
-        user: json['user'] is Map<String, dynamic>
+    accessToken: (json['access_token'] as String?) ?? '',
+    refreshToken: (json['refresh_token'] as String?) ?? '',
+    expiresIn: (json['expires_in'] as num?)?.toInt() ?? 0,
+    user:
+        json['user'] is Map<String, dynamic>
             ? Profile.fromJson(json['user'] as Map<String, dynamic>)
             : null,
-      );
+  );
 }
 
 /// 用户资料。
@@ -47,13 +48,13 @@ class Profile {
   final bool isVip;
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
-        id: json['id']?.toString(),
-        nickname: (json['nickname'] as String?) ?? '',
-        avatar: (json['avatar'] as String?) ?? '',
-        signature: (json['signature'] as String?) ?? '',
-        level: (json['level'] as num?)?.toInt() ?? 0,
-        isVip: json['is_vip'] == true,
-      );
+    id: json['id']?.toString(),
+    nickname: (json['nickname'] as String?) ?? '',
+    avatar: (json['avatar'] as String?) ?? '',
+    signature: (json['signature'] as String?) ?? '',
+    level: (json['level'] as num?)?.toInt() ?? 0,
+    isVip: json['is_vip'] == true,
+  );
 }
 
 /// 图形验证码：后端给的是 **SVG 字符串**（不是图片 URL）。
@@ -64,7 +65,7 @@ class Captcha {
   final String svg;
 
   factory Captcha.fromJson(Map<String, dynamic> json) => Captcha(
-        id: (json['id'] as String?) ?? '',
-        svg: (json['svg'] as String?) ?? '',
-      );
+    id: (json['id'] as String?) ?? '',
+    svg: (json['svg'] as String?) ?? '',
+  );
 }
